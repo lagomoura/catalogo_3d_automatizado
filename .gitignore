@@ -1,0 +1,14 @@
+# Top-level catch-all; per-folder .gitignore files have the specifics
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+backend/catalog.db
+backend/catalog.db-journal
+backend/storage/original/*
+backend/storage/styled/*
+!backend/storage/original/.gitkeep
+!backend/storage/styled/.gitkeep
+frontend/node_modules/
+frontend/dist/
+.DS_Store

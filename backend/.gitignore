@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+catalog.db
+catalog.db-journal
+storage/original/*
+storage/styled/*
+!storage/original/.gitkeep
+!storage/styled/.gitkeep

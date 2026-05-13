@@ -1,0 +1,13 @@
+Keep the 3D-printed product exactly as it is — same shape, same geometry, same proportions, same size, same orientation of every part. Do not redesign, redraw, deform, rescale, or invent any detail of the product.
+
+Change ONLY these things:
+
+1. Recolor the product to a single solid catalog color. Pick one from: warm white, bone, light stone grey, charcoal, deep navy, dusty teal, sage green, terracotta, mustard. Apply uniformly with natural shading. The new color must clearly differ from the original.
+
+2. Replace the background with a clean minimalist neutral seamless backdrop (white or very soft warm grey). Soft studio lighting, subtle shadow under the object. Remove any clutter, props, hands or distractions.
+
+3. Re-center the product with generous negative space, roughly 70% frame occupancy. You may slightly change the camera angle (gentle 3/4 perspective) without distorting the object.
+
+4. Remove every watermark, signature, caption, URL, social-media handle, username, copyright notice, and any text overlay that is not physically part of the printed product.
+
+Output: a polished e-commerce catalog photo, editorial product-photography aesthetic, crisp focus, neutral white balance, matte 3D-printed plastic finish.
