@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { resolveStorageUrl } from "../api/client";
 import type { CatalogImage } from "../types";
 
@@ -42,7 +43,7 @@ export function ImageLightbox({ images, startIndex, title, onClose }: Props) {
   if (total === 0) return null;
   const current = images[index];
 
-  return (
+  return createPortal(
     <div
       className="lightbox"
       role="dialog"
@@ -125,6 +126,7 @@ export function ImageLightbox({ images, startIndex, title, onClose }: Props) {
           ))}
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -190,6 +190,14 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.card:hover:not(.card--selectable) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: #d4d4d4;
 }
 
 .card__image {
@@ -208,29 +216,50 @@ body {
 }
 
 .card__body {
-  padding: 0.85rem 1rem 1rem;
+  padding: 0.85rem 1rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1;
 }
 
 .card__title {
-  margin: 0 0 0.4rem;
+  margin: 0;
   font-size: 1rem;
   line-height: 1.3;
+  font-weight: 600;
 }
 
 .card__link {
-  font-size: 0.8rem;
-  color: var(--accent);
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
   text-decoration: none;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .card__link:hover {
-  text-decoration: underline;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.card__link-arrow {
+  font-size: 0.85rem;
+  line-height: 1;
 }
 
 .card__thumbs {
   display: flex;
   gap: 0.35rem;
-  margin-top: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .card__thumbs img {
@@ -343,8 +372,43 @@ body {
 
 .card__actions {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.6rem;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+.card__action-btn {
+  flex: 1;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.card__action-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--fg);
+}
+
+.card__action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card__action-btn--danger {
+  color: var(--error);
+}
+
+.card__action-btn--danger:hover:not(:disabled) {
+  background: rgba(185, 28, 28, 0.08);
+  color: var(--error);
 }
 
 .card__edit {
@@ -369,7 +433,7 @@ body {
 }
 
 .card__error {
-  margin: 0.5rem 0 0;
+  margin: 0;
   font-size: 0.8rem;
   color: var(--error);
 }
@@ -399,97 +463,117 @@ body {
 .thumb__overlay {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.18s ease;
+}
+
+.thumb__overlay > * {
+  pointer-events: inherit;
 }
 
 .thumb:hover .thumb__overlay,
 .thumb:focus-within .thumb__overlay {
   opacity: 1;
+  pointer-events: auto;
 }
 
-.thumb--cover .thumb__overlay {
-  gap: 0.55rem;
+.thumb__overlay--cover {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(0, 0, 0, 0) 35%,
+    rgba(0, 0, 0, 0) 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
 }
 
-.thumb__action {
+.thumb__corner {
+  position: absolute;
+  top: 0.5rem;
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  background: rgba(0, 0, 0, 0.35);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.45);
   color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.3rem 0.55rem;
-  border-radius: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.thumb--cover .thumb__action {
-  font-size: 0.8rem;
-  padding: 0.45rem 0.8rem;
+.thumb__corner:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.85);
+  transform: scale(1.08);
 }
 
-.thumb__action:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.6);
-}
-
-.thumb__action:disabled {
-  opacity: 0.6;
+.thumb__corner:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.thumb__action--danger {
-  border-color: rgba(255, 180, 180, 0.85);
-  color: #ffd7d7;
+.thumb__corner--left {
+  left: 0.5rem;
 }
 
-.thumb__action--danger:hover:not(:disabled) {
-  background: rgba(185, 28, 28, 0.55);
+.thumb__corner--right {
+  right: 0.5rem;
 }
 
-.thumb__action--accent {
-  border-color: rgba(147, 197, 253, 0.9);
-  color: #dbeafe;
-  background: rgba(37, 99, 235, 0.45);
+.thumb__corner--danger:hover:not(:disabled) {
+  background: rgba(185, 28, 28, 0.85);
+  border-color: #fecaca;
 }
 
-.thumb__action--accent:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.75);
+.thumb:not(.thumb--cover) .thumb__corner {
+  width: 22px;
+  height: 22px;
+  font-size: 0.85rem;
+  top: 3px;
 }
 
-.thumb--3d {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 0;
-  overflow: hidden;
-  background: #f4f4f0;
+.thumb:not(.thumb--cover) .thumb__corner--left {
+  left: 3px;
 }
 
-.thumb--3d model-viewer {
-  display: block;
-  width: 100%;
-  height: 100%;
-  --poster-color: transparent;
+.thumb:not(.thumb--cover) .thumb__corner--right {
+  right: 3px;
 }
 
-.thumb__action--back {
+.thumb__cta {
   position: absolute;
-  top: 0.6rem;
-  left: 0.6rem;
-  z-index: 2;
-  background: rgba(0, 0, 0, 0.55);
-  border-color: rgba(255, 255, 255, 0.65);
+  left: 50%;
+  bottom: 0.85rem;
+  transform: translateX(-50%);
+  appearance: none;
+  border: none;
+  background: var(--accent);
   color: white;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 
-.thumb__action--back:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.75);
+.thumb__cta:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateX(-50%) translateY(-1px);
+}
+
+.thumb__cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .thumb--pending img {
@@ -539,9 +623,9 @@ body {
 }
 
 .card__category {
-  display: inline-block;
-  margin: 0.15rem 0 0.45rem;
-  padding: 0.15rem 0.5rem;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.15rem 0.55rem;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--accent);

@@ -8,6 +8,7 @@ import {
 } from "../api/client";
 import type { CatalogImage, CatalogItem, CategoryNode } from "../types";
 import { ImageLightbox } from "./ImageLightbox";
+import { Model3DLightbox } from "./Model3DLightbox";
 
 interface Props {
   item: CatalogItem;
@@ -35,7 +36,7 @@ export function CatalogCard({
   const [pendingImageId, setPendingImageId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lightboxStart, setLightboxStart] = useState<number | null>(null);
-  const [viewing3d, setViewing3d] = useState(false);
+  const [showing3d, setShowing3d] = useState(false);
 
   useEffect(() => {
     if (!editing) {
@@ -158,13 +159,7 @@ export function CatalogCard({
         />
       )}
 
-      {viewing3d && item.model_3d_url ? (
-        <Model3DCover
-          src={resolveStorageUrl(item.model_3d_url)}
-          alt={item.name}
-          onBack={() => setViewing3d(false)}
-        />
-      ) : cover ? (
+      {cover ? (
         <Thumb
           image={cover}
           alt={item.name}
@@ -174,7 +169,7 @@ export function CatalogCard({
           onDelete={() => handleDeleteImage(cover.id)}
           onOpen={selectionMode ? undefined : () => setLightboxStart(0)}
           onView3d={
-            item.model_3d_url && !selectionMode ? () => setViewing3d(true) : undefined
+            item.model_3d_url && !selectionMode ? () => setShowing3d(true) : undefined
           }
           large
         />
@@ -259,29 +254,9 @@ export function CatalogCard({
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
         >
-          Ver original
+          <span>Ver original</span>
+          <span className="card__link-arrow" aria-hidden="true">↗</span>
         </a>
-
-        {!selectionMode && !editing && (
-          <div className="card__actions">
-            <button
-              type="button"
-              className="btn btn--small btn--ghost"
-              onClick={() => setEditing(true)}
-              disabled={busy}
-            >
-              Renombrar
-            </button>
-            <button
-              type="button"
-              className="btn btn--small btn--danger-ghost"
-              onClick={handleDeleteItem}
-              disabled={busy}
-            >
-              {busy ? "…" : "Eliminar"}
-            </button>
-          </div>
-        )}
 
         {error && <p className="card__error">{error}</p>}
 
@@ -301,6 +276,29 @@ export function CatalogCard({
             ))}
           </div>
         )}
+
+        {!selectionMode && !editing && (
+          <div className="card__actions">
+            <button
+              type="button"
+              className="card__action-btn"
+              onClick={() => setEditing(true)}
+              disabled={busy}
+              title="Renombrar"
+            >
+              Renombrar
+            </button>
+            <button
+              type="button"
+              className="card__action-btn card__action-btn--danger"
+              onClick={handleDeleteItem}
+              disabled={busy}
+              title="Eliminar producto"
+            >
+              {busy ? "…" : "Eliminar"}
+            </button>
+          </div>
+        )}
       </div>
 
       {lightboxStart !== null && item.images.length > 0 && (
@@ -309,6 +307,14 @@ export function CatalogCard({
           startIndex={lightboxStart}
           title={item.name}
           onClose={() => setLightboxStart(null)}
+        />
+      )}
+
+      {showing3d && item.model_3d_url && (
+        <Model3DLightbox
+          src={resolveStorageUrl(item.model_3d_url)}
+          title={item.name}
+          onClose={() => setShowing3d(false)}
         />
       )}
     </article>
@@ -371,11 +377,37 @@ function Thumb({
         loading="lazy"
       />
       {!disabled && (
-        <div className="thumb__overlay">
-          {onView3d && (
+        <div className={`thumb__overlay${large ? " thumb__overlay--cover" : ""}`}>
+          <button
+            type="button"
+            className="thumb__corner thumb__corner--left"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRestyle();
+            }}
+            disabled={isPending}
+            title="Re-estilizar con Gemini"
+            aria-label="Re-estilizar"
+          >
+            ↻
+          </button>
+          <button
+            type="button"
+            className="thumb__corner thumb__corner--right thumb__corner--danger"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            disabled={isPending}
+            title="Eliminar imagen"
+            aria-label="Eliminar"
+          >
+            ×
+          </button>
+          {large && onView3d && (
             <button
               type="button"
-              className="thumb__action thumb__action--accent"
+              className="thumb__cta"
               onClick={(e) => {
                 e.stopPropagation();
                 onView3d();
@@ -386,30 +418,6 @@ function Thumb({
               Vista 3D
             </button>
           )}
-          <button
-            type="button"
-            className="thumb__action"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRestyle();
-            }}
-            disabled={isPending}
-            title="Re-estilizar con Gemini"
-          >
-            Re-estilizar
-          </button>
-          <button
-            type="button"
-            className="thumb__action thumb__action--danger"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            disabled={isPending}
-            title="Eliminar imagen"
-          >
-            Borrar
-          </button>
         </div>
       )}
       {isPending && <div className="thumb__spinner" aria-label="Procesando" />}
@@ -417,36 +425,3 @@ function Thumb({
   );
 }
 
-interface Model3DCoverProps {
-  src: string;
-  alt: string;
-  onBack: () => void;
-}
-
-function Model3DCover({ src, alt, onBack }: Model3DCoverProps) {
-  return (
-    <div className="thumb thumb--cover thumb--3d" onClick={(e) => e.stopPropagation()}>
-      <model-viewer
-        src={src}
-        alt={alt}
-        camera-controls
-        auto-rotate
-        shadow-intensity="1"
-        exposure="1"
-        loading="lazy"
-        style={{ width: "100%", height: "100%", backgroundColor: "#f4f4f0" }}
-      />
-      <button
-        type="button"
-        className="thumb__action thumb__action--back"
-        onClick={(e) => {
-          e.stopPropagation();
-          onBack();
-        }}
-        title="Volver a la imagen"
-      >
-        ← Vista 2D
-      </button>
-    </div>
-  );
-}
