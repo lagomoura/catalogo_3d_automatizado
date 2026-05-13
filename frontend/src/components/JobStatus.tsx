@@ -8,6 +8,7 @@ const STATUS_LABEL: Record<Job["status"], string> = {
   pending: "En cola",
   scraping: "Extrayendo datos",
   styling: "Estilizando con FLUX Kontext",
+  generating_3d: "Generando vista 3D",
   done: "Listo",
   failed: "Fallado",
 };

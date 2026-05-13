@@ -452,6 +452,46 @@ body {
   background: rgba(185, 28, 28, 0.55);
 }
 
+.thumb__action--accent {
+  border-color: rgba(147, 197, 253, 0.9);
+  color: #dbeafe;
+  background: rgba(37, 99, 235, 0.45);
+}
+
+.thumb__action--accent:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.75);
+}
+
+.thumb--3d {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  overflow: hidden;
+  background: #f4f4f0;
+}
+
+.thumb--3d model-viewer {
+  display: block;
+  width: 100%;
+  height: 100%;
+  --poster-color: transparent;
+}
+
+.thumb__action--back {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.55);
+  border-color: rgba(255, 255, 255, 0.65);
+  color: white;
+}
+
+.thumb__action--back:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.75);
+}
+
 .thumb--pending img {
   opacity: 0.4;
 }

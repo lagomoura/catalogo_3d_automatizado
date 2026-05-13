@@ -35,6 +35,7 @@ export function CatalogCard({
   const [pendingImageId, setPendingImageId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lightboxStart, setLightboxStart] = useState<number | null>(null);
+  const [viewing3d, setViewing3d] = useState(false);
 
   useEffect(() => {
     if (!editing) {
@@ -157,7 +158,13 @@ export function CatalogCard({
         />
       )}
 
-      {cover ? (
+      {viewing3d && item.model_3d_url ? (
+        <Model3DCover
+          src={resolveStorageUrl(item.model_3d_url)}
+          alt={item.name}
+          onBack={() => setViewing3d(false)}
+        />
+      ) : cover ? (
         <Thumb
           image={cover}
           alt={item.name}
@@ -166,6 +173,9 @@ export function CatalogCard({
           onRestyle={() => handleRestyleImage(cover.id)}
           onDelete={() => handleDeleteImage(cover.id)}
           onOpen={selectionMode ? undefined : () => setLightboxStart(0)}
+          onView3d={
+            item.model_3d_url && !selectionMode ? () => setViewing3d(true) : undefined
+          }
           large
         />
       ) : (
@@ -313,6 +323,7 @@ interface ThumbProps {
   onRestyle: () => void;
   onDelete: () => void;
   onOpen?: () => void;
+  onView3d?: () => void;
   large?: boolean;
 }
 
@@ -324,6 +335,7 @@ function Thumb({
   onRestyle,
   onDelete,
   onOpen,
+  onView3d,
   large = false,
 }: ThumbProps) {
   const className = large ? "thumb thumb--cover" : "thumb";
@@ -360,6 +372,20 @@ function Thumb({
       />
       {!disabled && (
         <div className="thumb__overlay">
+          {onView3d && (
+            <button
+              type="button"
+              className="thumb__action thumb__action--accent"
+              onClick={(e) => {
+                e.stopPropagation();
+                onView3d();
+              }}
+              disabled={isPending}
+              title="Ver en 3D"
+            >
+              Vista 3D
+            </button>
+          )}
           <button
             type="button"
             className="thumb__action"
@@ -387,6 +413,40 @@ function Thumb({
         </div>
       )}
       {isPending && <div className="thumb__spinner" aria-label="Procesando" />}
+    </div>
+  );
+}
+
+interface Model3DCoverProps {
+  src: string;
+  alt: string;
+  onBack: () => void;
+}
+
+function Model3DCover({ src, alt, onBack }: Model3DCoverProps) {
+  return (
+    <div className="thumb thumb--cover thumb--3d" onClick={(e) => e.stopPropagation()}>
+      <model-viewer
+        src={src}
+        alt={alt}
+        camera-controls
+        auto-rotate
+        shadow-intensity="1"
+        exposure="1"
+        loading="lazy"
+        style={{ width: "100%", height: "100%", backgroundColor: "#f4f4f0" }}
+      />
+      <button
+        type="button"
+        className="thumb__action thumb__action--back"
+        onClick={(e) => {
+          e.stopPropagation();
+          onBack();
+        }}
+        title="Volver a la imagen"
+      >
+        ← Vista 2D
+      </button>
     </div>
   );
 }
