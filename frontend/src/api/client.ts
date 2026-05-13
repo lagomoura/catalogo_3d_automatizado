@@ -21,10 +21,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await resp.json()) as T;
 }
 
-export function createJob(url: string, n_images: number): Promise<Job> {
+export function createJob(url: string, n_images: number, generate_3d: boolean = true): Promise<Job> {
   return request<Job>("/api/jobs", {
     method: "POST",
-    body: JSON.stringify({ url, n_images }),
+    body: JSON.stringify({ url, n_images, generate_3d }),
   });
 }
 
@@ -35,6 +35,10 @@ export function getJob(jobId: number): Promise<Job> {
 export function getCatalog(categoryId: number | null = null): Promise<CatalogItem[]> {
   const qs = categoryId != null ? `?category_id=${categoryId}` : "";
   return request<CatalogItem[]>(`/api/catalog${qs}`);
+}
+
+export function getCatalogItem(id: number): Promise<CatalogItem> {
+  return request<CatalogItem>(`/api/catalog/${id}`);
 }
 
 export function getCategories(): Promise<CategoryNode[]> {

@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from "react";
 
 interface Props {
-  onSubmit: (url: string, n: number) => Promise<void> | void;
+  onSubmit: (url: string, n: number, generate3d: boolean) => Promise<void> | void;
   disabled?: boolean;
 }
 
 export function SubmitForm({ onSubmit, disabled }: Props) {
   const [url, setUrl] = useState("");
   const [n, setN] = useState(4);
+  const [generate3d, setGenerate3d] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +22,7 @@ export function SubmitForm({ onSubmit, disabled }: Props) {
     }
     setBusy(true);
     try {
-      await onSubmit(trimmed, n);
+      await onSubmit(trimmed, n, generate3d);
       setUrl("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear el job");
@@ -57,6 +58,15 @@ export function SubmitForm({ onSubmit, disabled }: Props) {
       <button type="submit" disabled={busy || disabled}>
         {busy ? "Enviando…" : "Procesar"}
       </button>
+      <label className="field field--3d">
+        <input
+          type="checkbox"
+          checked={generate3d}
+          onChange={(e) => setGenerate3d(e.target.checked)}
+          disabled={busy || disabled}
+        />
+        <span>Generar vista 3D (Trellis 2, ~1 min extra)</span>
+      </label>
       {error && <p className="form-error">{error}</p>}
     </form>
   );
