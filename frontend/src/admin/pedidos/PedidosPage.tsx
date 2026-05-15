@@ -1,0 +1,94 @@
+import { useCallback, useEffect, useState } from "react";
+import {
+  advanceOrder,
+  createOrder,
+  deleteOrder,
+  getCatalog,
+  getContacts,
+  getOrders,
+  setOrderPayment,
+  setOrderPriority,
+  startOrder,
+  type OrderCreatePayload,
+} from "../../api/client";
+import type { CatalogItem, Contact, Order, OrderPriority } from "../../types";
+import { OrderForm } from "./OrderForm";
+import { OrderQueue } from "./OrderQueue";
+
+export function PedidosPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [filterProductId, setFilterProductId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshOrders = useCallback(async () => {
+    setOrders(
+      await getOrders({
+        catalog_item_id: filterProductId ?? undefined,
+      }),
+    );
+  }, [filterProductId]);
+
+  useEffect(() => {
+    refreshOrders().catch((e) =>
+      setError(e instanceof Error ? e.message : "Error al cargar pedidos"),
+    );
+  }, [refreshOrders]);
+
+  useEffect(() => {
+    getContacts().then(setContacts).catch(() => undefined);
+    getCatalog().then(setCatalog).catch(() => undefined);
+  }, []);
+
+  const run = useCallback(
+    async (action: () => Promise<unknown>) => {
+      setError(null);
+      try {
+        await action();
+        await Promise.all([
+          refreshOrders(),
+          getContacts().then(setContacts),
+        ]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo completar la acción");
+      }
+    },
+    [refreshOrders],
+  );
+
+  const handleCreate = useCallback(
+    async (p: OrderCreatePayload) => {
+      // Errores se propagan al formulario; igual refrescamos al terminar.
+      await createOrder(p);
+      await Promise.all([refreshOrders(), getContacts().then(setContacts)]);
+    },
+    [refreshOrders],
+  );
+
+  return (
+    <div className="pedidos">
+      {error && <p className="error-banner">{error}</p>}
+
+      <OrderForm
+        catalog={catalog}
+        contacts={contacts}
+        onCreate={handleCreate}
+      />
+
+      <OrderQueue
+        orders={orders}
+        catalog={catalog}
+        filterProductId={filterProductId}
+        onFilterChange={setFilterProductId}
+        onStart={(id) => void run(() => startOrder(id))}
+        onAdvance={(id) => void run(() => advanceOrder(id))}
+        onPayment={(id, paid) => void run(() => setOrderPayment(id, paid))}
+        onPriority={(id, p: OrderPriority | null) =>
+          void run(() => setOrderPriority(id, p))
+        }
+        onDelete={(id) => void run(() => deleteOrder(id))}
+      />
+    </div>
+  );
+}

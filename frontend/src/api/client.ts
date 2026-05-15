@@ -5,6 +5,10 @@ import type {
   CategoryNode,
   Contact,
   Job,
+  Order,
+  OrderPriority,
+  OrderStatus,
+  PaymentStatus,
   TransactionKind,
 } from "../types";
 
@@ -205,6 +209,86 @@ export function createContact(payload: {
 
 export function deleteContact(id: number): Promise<void> {
   return request<void>(`/api/cash/contacts/${id}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos
+// ---------------------------------------------------------------------------
+
+export interface OrderFilters {
+  catalog_item_id?: number;
+  order_status?: OrderStatus;
+  payment_status?: PaymentStatus;
+}
+
+export interface OrderCreatePayload {
+  catalog_item_id: number;
+  quantity: number;
+  note?: string | null;
+  contact_id?: number | null;
+  person_label?: string | null;
+  save_contact?: boolean;
+  priority?: OrderPriority | null;
+}
+
+export interface OrderUpdatePayload {
+  quantity?: number;
+  note?: string | null;
+  priority?: OrderPriority | null;
+  clear_priority?: boolean;
+  contact_id?: number | null;
+  clear_contact?: boolean;
+  person_label?: string | null;
+}
+
+export function getOrders(filters: OrderFilters = {}): Promise<Order[]> {
+  return request<Order[]>(`/api/orders${buildQuery(filters)}`);
+}
+
+export function createOrder(payload: OrderCreatePayload): Promise<Order> {
+  return request<Order>(`/api/orders`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateOrder(
+  id: number,
+  payload: OrderUpdatePayload,
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startOrder(id: number): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/start`, { method: "POST" });
+}
+
+export function advanceOrder(id: number): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/advance`, { method: "POST" });
+}
+
+export function setOrderPayment(id: number, paid: boolean): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/payment`, {
+    method: "POST",
+    body: JSON.stringify({ paid }),
+  });
+}
+
+export function setOrderPriority(
+  id: number,
+  priority: OrderPriority | null,
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/priority`, {
+    method: "PATCH",
+    body: JSON.stringify({ priority }),
+  });
+}
+
+export function deleteOrder(id: number): Promise<void> {
+  return request<void>(`/api/orders/${id}`, { method: "DELETE" });
 }
 
 export function resolveStorageUrl(relativeOrAbsolute: string): string {

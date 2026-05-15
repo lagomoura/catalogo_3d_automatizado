@@ -1785,3 +1785,239 @@ body {
     justify-content: flex-start;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Pedidos
+--------------------------------------------------------------------------- */
+
+.pedidos {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.product-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.6rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.product-pick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--card-bg);
+  cursor: pointer;
+  text-align: left;
+}
+
+.product-pick-card img,
+.product-pick-card__ph {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.product-pick-card__name {
+  font-size: 0.74rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-pick-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.qty-stepper__value {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.priority-seg {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.priority-seg__btn {
+  flex: 1;
+  min-width: 38px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.priority-seg__btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pedidos-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.pedidos-filter select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--fg);
+}
+
+.pedidos-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pedidos-section h3 {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+}
+
+.order-card {
+  flex-direction: row;
+  gap: 0.85rem;
+  padding: 0.75rem;
+  align-items: stretch;
+}
+
+.order-card.is-front {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.order-card.is-running {
+  border-color: var(--credit);
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+}
+
+.order-card__media img,
+.order-card__ph {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.order-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.order-card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.order-card__badges {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.order-card__meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.order-card__note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--fg);
+}
+
+.order-card__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.badge--pagado {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--credit);
+}
+
+.badge--pendiente {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+
+.badge--ejecutando {
+  background: rgba(37, 99, 235, 0.14);
+  color: var(--accent);
+}
+
+.badge--creado,
+.badge--ejecutado,
+.badge--entregado,
+.badge--prio {
+  background: rgba(107, 107, 107, 0.14);
+  color: var(--muted);
+}
+
+.badge--prio {
+  color: var(--fg);
+}
+
+@media (max-width: 640px) {
+  .order-card {
+    flex-direction: column;
+  }
+
+  .order-card__media img,
+  .order-card__ph {
+    width: 100%;
+    height: 160px;
+  }
+}

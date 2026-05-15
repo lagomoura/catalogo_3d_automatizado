@@ -7,10 +7,11 @@ import { SubmitForm } from "../components/SubmitForm";
 import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job } from "../types";
 import { CajaPage } from "./caja/CajaPage";
+import { PedidosPage } from "./pedidos/PedidosPage";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
-type Tab = "catalogo" | "caja";
+type Tab = "catalogo" | "caja" | "pedidos";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("catalogo");
@@ -117,6 +118,15 @@ export default function AdminPage() {
         >
           Control de caja
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "pedidos"}
+          className={`tab ${tab === "pedidos" ? "tab--active" : ""}`}
+          onClick={() => setTab("pedidos")}
+        >
+          Pedidos
+        </button>
       </nav>
 
       {tab === "catalogo" ? (
@@ -136,8 +146,10 @@ export default function AdminPage() {
             onItemsRemoved={handleItemsRemoved}
           />
         </>
-      ) : (
+      ) : tab === "caja" ? (
         <CajaPage />
+      ) : (
+        <PedidosPage />
       )}
     </div>
   );

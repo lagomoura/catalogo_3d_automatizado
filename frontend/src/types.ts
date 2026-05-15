@@ -102,6 +102,26 @@ export interface CashSummary {
   by_product: ProductPoint[];
 }
 
+export type OrderStatus = "CREADO" | "EJECUTANDO" | "EJECUTADO" | "ENTREGADO";
+export type PaymentStatus = "PENDIENTE" | "PAGADO";
+export type OrderPriority = 1 | 2 | 3;
+
+export interface Order {
+  id: number;
+  catalog_item: { id: number; name: string } | null;
+  catalog_cover_url: string | null;
+  contact: { id: number; name: string } | null;
+  person_label: string | null;
+  quantity: number;
+  note: string | null;
+  order_status: OrderStatus;
+  payment_status: PaymentStatus;
+  priority: OrderPriority | null;
+  created_at: string;
+  started_at: string | null;
+  updated_at: string;
+}
+
 declare global {
   namespace JSX {
     interface IntrinsicElements {
