@@ -59,6 +59,49 @@ export interface CatalogItem {
   model_3d_url: string | null;
 }
 
+export type TransactionKind = "credit" | "debit";
+
+export interface Contact {
+  id: number;
+  name: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface CashTransaction {
+  id: number;
+  kind: TransactionKind;
+  amount: number;
+  occurred_on: string;
+  description: string | null;
+  product_label: string | null;
+  catalog_item: { id: number; name: string } | null;
+  contact: { id: number; name: string } | null;
+  person_label: string | null;
+  created_at: string;
+}
+
+export interface MonthlyPoint {
+  month: string;
+  credit: number;
+  debit: number;
+}
+
+export interface ProductPoint {
+  label: string;
+  credit: number;
+  debit: number;
+}
+
+export interface CashSummary {
+  balance: number;
+  total_credit: number;
+  total_debit: number;
+  count: number;
+  monthly: MonthlyPoint[];
+  by_product: ProductPoint[];
+}
+
 declare global {
   namespace JSX {
     interface IntrinsicElements {

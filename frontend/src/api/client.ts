@@ -1,4 +1,12 @@
-import type { CatalogItem, CategoryNode, Job } from "../types";
+import type {
+  CashSummary,
+  CashTransaction,
+  CatalogItem,
+  CategoryNode,
+  Contact,
+  Job,
+  TransactionKind,
+} from "../types";
 
 const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string | undefined) ??
@@ -95,6 +103,108 @@ export function restyleCatalogImage(itemId: number, imageId: number): Promise<Ca
   return request<CatalogItem>(`/api/catalog/${itemId}/images/${imageId}/restyle`, {
     method: "POST",
   });
+}
+
+// ---------------------------------------------------------------------------
+// Control de caja
+// ---------------------------------------------------------------------------
+
+export interface TransactionFilters {
+  start?: string;
+  end?: string;
+  kind?: TransactionKind;
+  contact_id?: number;
+  q?: string;
+}
+
+export interface CashTransactionPayload {
+  kind: TransactionKind;
+  amount: number;
+  occurred_on: string;
+  description?: string | null;
+  product_label?: string | null;
+  catalog_item_id?: number | null;
+  contact_id?: number | null;
+  person_label?: string | null;
+  save_contact?: boolean;
+}
+
+export interface CashTransactionUpdatePayload {
+  kind?: TransactionKind;
+  amount?: number;
+  occurred_on?: string;
+  description?: string | null;
+  product_label?: string | null;
+  catalog_item_id?: number | null;
+  clear_catalog_item?: boolean;
+  contact_id?: number | null;
+  clear_contact?: boolean;
+  person_label?: string | null;
+}
+
+function buildQuery(params: object): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "" && v !== null) qs.set(k, String(v));
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
+export function getCashTransactions(
+  filters: TransactionFilters = {},
+): Promise<CashTransaction[]> {
+  return request<CashTransaction[]>(
+    `/api/cash/transactions${buildQuery(filters)}`,
+  );
+}
+
+export function createCashTransaction(
+  payload: CashTransactionPayload,
+): Promise<CashTransaction> {
+  return request<CashTransaction>(`/api/cash/transactions`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateCashTransaction(
+  id: number,
+  payload: CashTransactionUpdatePayload,
+): Promise<CashTransaction> {
+  return request<CashTransaction>(`/api/cash/transactions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteCashTransaction(id: number): Promise<void> {
+  return request<void>(`/api/cash/transactions/${id}`, { method: "DELETE" });
+}
+
+export function getCashSummary(range: {
+  start?: string;
+  end?: string;
+} = {}): Promise<CashSummary> {
+  return request<CashSummary>(`/api/cash/summary${buildQuery(range)}`);
+}
+
+export function getContacts(): Promise<Contact[]> {
+  return request<Contact[]>(`/api/cash/contacts`);
+}
+
+export function createContact(payload: {
+  name: string;
+  notes?: string | null;
+}): Promise<Contact> {
+  return request<Contact>(`/api/cash/contacts`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteContact(id: number): Promise<void> {
+  return request<void>(`/api/cash/contacts/${id}`, { method: "DELETE" });
 }
 
 export function resolveStorageUrl(relativeOrAbsolute: string): string {

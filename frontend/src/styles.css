@@ -1347,3 +1347,441 @@ body {
     position: static;
   }
 }
+
+/* ===========================================================================
+   Control de caja
+   =========================================================================== */
+
+:root {
+  --credit: #059669;
+  --debit: #dc2626;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.caja {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.btn--sm {
+  height: 30px;
+  padding: 0 0.6rem;
+  font-size: 0.78rem;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.hint--ok {
+  color: var(--credit);
+  font-weight: 600;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  accent-color: var(--accent);
+  width: 1rem;
+  height: 1rem;
+}
+
+/* --- Dashboard --------------------------------------------------------- */
+
+.caja-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.caja-dash__head,
+.caja-range {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.caja-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.caja-range input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--fg);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.2rem 1.3rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+}
+
+.stat-card--credit::before {
+  background: var(--credit);
+}
+
+.stat-card--debit::before {
+  background: var(--debit);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.stat-card__value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.stat-card--credit .stat-card__value {
+  color: var(--credit);
+}
+
+.stat-card--debit .stat-card__value {
+  color: var(--debit);
+}
+
+.stat-card__sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.chart-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem 0.6rem;
+}
+
+.chart-card h4 {
+  margin: 0 0 0.8rem;
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+
+/* --- Form -------------------------------------------------------------- */
+
+.caja-form {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.caja-form__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.caja-form__head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.kind-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.kind-toggle__btn {
+  appearance: none;
+  border: none;
+  background: var(--card-bg);
+  color: var(--muted);
+  padding: 0.5rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.kind-toggle__btn.is-active.is-credit {
+  background: var(--credit);
+  color: #fff;
+}
+
+.kind-toggle__btn.is-active.is-debit {
+  background: var(--debit);
+  color: #fff;
+}
+
+.caja-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.caja-form__desc {
+  grid-column: 1 / -1;
+}
+
+.caja-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.caja-form .field label {
+  font-weight: 600;
+}
+
+.caja-form input,
+.caja-form select,
+.txn-toolbar input,
+.txn-toolbar select {
+  font-size: 0.95rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.caja-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* --- Transaction list -------------------------------------------------- */
+
+.txn-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+}
+
+.txn-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.txn-toolbar h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.txn-toolbar__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.txn-toolbar__sep {
+  color: var(--muted);
+}
+
+.txn-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.txn-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.txn-row {
+  display: grid;
+  grid-template-columns: 100px 90px 1.3fr 1fr 1.4fr 130px 150px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.txn-row--head {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+
+.txn-row:last-child {
+  border-bottom: none;
+}
+
+.txn-row:not(.txn-row--head):hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.txn-desc {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.txn-amount-col {
+  text-align: right;
+}
+
+.txn-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.txn-amount.is-credit {
+  color: var(--credit);
+}
+
+.txn-amount.is-debit {
+  color: var(--debit);
+}
+
+.txn-actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.badge--credit {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--credit);
+}
+
+.badge--debit {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--debit);
+}
+
+@media (max-width: 760px) {
+  .txn-row--head {
+    display: none;
+  }
+
+  .txn-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.75rem;
+    padding: 0.9rem 0.4rem;
+  }
+
+  .txn-row span[data-label]::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+
+  .txn-amount-col {
+    text-align: left;
+  }
+
+  .txn-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}

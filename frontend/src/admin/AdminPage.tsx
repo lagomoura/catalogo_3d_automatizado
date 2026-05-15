@@ -6,10 +6,14 @@ import { JobStatus } from "../components/JobStatus";
 import { SubmitForm } from "../components/SubmitForm";
 import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job } from "../types";
+import { CajaPage } from "./caja/CajaPage";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
+type Tab = "catalogo" | "caja";
+
 export default function AdminPage() {
+  const [tab, setTab] = useState<Tab>("catalogo");
   const [activeJobs, setActiveJobs] = useState<Job[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -94,20 +98,47 @@ export default function AdminPage() {
         </p>
       </header>
 
-      <SubmitForm onSubmit={handleSubmit} />
+      <nav className="tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "catalogo"}
+          className={`tab ${tab === "catalogo" ? "tab--active" : ""}`}
+          onClick={() => setTab("catalogo")}
+        >
+          Catálogo
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "caja"}
+          className={`tab ${tab === "caja" ? "tab--active" : ""}`}
+          onClick={() => setTab("caja")}
+        >
+          Control de caja
+        </button>
+      </nav>
 
-      <JobStatus jobs={activeJobs} />
+      {tab === "catalogo" ? (
+        <>
+          <SubmitForm onSubmit={handleSubmit} />
 
-      {catalogError && <p className="error-banner">{catalogError}</p>}
+          <JobStatus jobs={activeJobs} />
 
-      <CatalogGrid
-        items={catalog}
-        categories={categories}
-        filterCategoryId={filterCategoryId}
-        onFilterChange={setFilterCategoryId}
-        onItemChanged={handleItemChanged}
-        onItemsRemoved={handleItemsRemoved}
-      />
+          {catalogError && <p className="error-banner">{catalogError}</p>}
+
+          <CatalogGrid
+            items={catalog}
+            categories={categories}
+            filterCategoryId={filterCategoryId}
+            onFilterChange={setFilterCategoryId}
+            onItemChanged={handleItemChanged}
+            onItemsRemoved={handleItemsRemoved}
+          />
+        </>
+      ) : (
+        <CajaPage />
+      )}
     </div>
   );
 }
