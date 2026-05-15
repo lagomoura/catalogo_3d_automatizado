@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { resolveStorageUrl } from "../../api/client";
-import type { CatalogItem, Order, OrderPriority } from "../../types";
+import type { CatalogItem, Order, OrderPriority, OrderStatus } from "../../types";
 
 interface Props {
   orders: Order[];
@@ -16,13 +16,20 @@ interface Props {
 
 const PRIORITIES: (OrderPriority | null)[] = [null, 1, 2, 3];
 
+const STATUS_LABEL: Record<OrderStatus, string> = {
+  CREADO: "En cola",
+  EJECUTANDO: "En producción",
+  EJECUTADO: "Listo",
+  ENTREGADO: "Entregado",
+};
+
 function buyer(o: Order): string {
   return o.contact?.name ?? o.person_label ?? "—";
 }
 
-function advanceLabel(status: Order["order_status"]): string | null {
-  if (status === "EJECUTANDO") return "Marcar ejecutado";
-  if (status === "EJECUTADO") return "Marcar entregado";
+function advanceLabel(status: OrderStatus): string | null {
+  if (status === "EJECUTANDO") return "Marcar listo →";
+  if (status === "EJECUTADO") return "Entregar →";
   return null;
 }
 
@@ -43,15 +50,19 @@ function OrderCard({
 >) {
   const paid = order.payment_status === "PAGADO";
   const running = order.order_status === "EJECUTANDO";
+  const creado = order.order_status === "CREADO";
   const adv = advanceLabel(order.order_status);
 
   return (
-    <div
-      className={`card order-card ${running ? "is-running" : ""} ${
-        isFront ? "is-front" : ""
-      }`}
+    <article
+      className="ticket"
+      data-status={order.order_status}
+      data-front={creado && isFront ? "true" : undefined}
+      data-paid={paid ? "true" : "false"}
     >
-      <div className="order-card__media">
+      <span className="ticket__spine" aria-hidden="true" />
+
+      <div className="ticket__photo">
         {order.catalog_cover_url ? (
           <img
             src={resolveStorageUrl(order.catalog_cover_url)}
@@ -59,35 +70,63 @@ function OrderCard({
             loading="lazy"
           />
         ) : (
-          <div className="order-card__ph">Sin imagen</div>
+          <div className="ticket__photo-ph">s/imagen</div>
         )}
+        {running && (
+          <span className="ticket__live">
+            <i aria-hidden="true" />
+            EN VIVO
+          </span>
+        )}
+        {creado && isFront && <span className="ticket__next">PRÓXIMO</span>}
       </div>
-      <div className="order-card__body">
-        <div className="order-card__top">
-          <strong>{order.catalog_item?.name ?? "(producto eliminado)"}</strong>
-          <div className="order-card__badges">
-            <span className={`badge badge--${order.order_status.toLowerCase()}`}>
-              {order.order_status}
+
+      <div className="ticket__main">
+        <header className="ticket__head">
+          <div className="ticket__titlewrap">
+            <h4 className="ticket__product">
+              {order.catalog_item?.name ?? "(producto eliminado)"}
+            </h4>
+            <span className="ticket__sub">
+              <span className="ticket__id">#{order.id}</span>
+              <span className="chip chip--status">
+                <i className="chip__dot" aria-hidden="true" />
+                {STATUS_LABEL[order.order_status]}
+              </span>
+              <span className="chip chip--pay">
+                {paid ? "✓ Pagado" : "⏳ Sin pagar"}
+              </span>
             </span>
-            <span
-              className={`badge ${paid ? "badge--pagado" : "badge--pendiente"}`}
-            >
-              {order.payment_status}
-            </span>
-            {order.priority != null && (
-              <span className="badge badge--prio">#{order.priority}</span>
-            )}
           </div>
+          {order.priority != null && (
+            <span
+              className="ticket__prio"
+              data-prio={order.priority}
+              title={`Prioridad ${order.priority}`}
+            >
+              P{order.priority}
+            </span>
+          )}
+        </header>
+
+        <div className="ticket__meta">
+          <span className="ticket__buyer">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6Z" />
+            </svg>
+            {buyer(order)}
+          </span>
+          <span className="ticket__qty">×{order.quantity}</span>
+          {order.note && <span className="ticket__note">“{order.note}”</span>}
         </div>
 
-        <div className="order-card__meta">
-          <span>👤 {buyer(order)}</span>
-          <span>✕{order.quantity}</span>
-        </div>
-        {order.note && <p className="order-card__note">{order.note}</p>}
-
-        {order.order_status === "CREADO" && (
-          <div className="priority-seg" role="group" aria-label="Prioridad">
+        {creado && (
+          <div
+            className="priority-seg priority-seg--ticket"
+            role="group"
+            aria-label="Prioridad"
+          >
+            <span className="priority-seg__label">Prioridad</span>
             {PRIORITIES.map((p) => (
               <button
                 type="button"
@@ -95,6 +134,7 @@ function OrderCard({
                 className={`priority-seg__btn ${
                   order.priority === p ? "is-active" : ""
                 }`}
+                data-prio={p ?? "none"}
                 onClick={() => onPriority(order.id, p)}
               >
                 {p === null ? "—" : `#${p}`}
@@ -103,22 +143,22 @@ function OrderCard({
           </div>
         )}
 
-        <div className="order-card__actions">
-          {order.order_status === "CREADO" && (
+        <div className="ticket__actions">
+          {creado && (
             <button
               type="button"
-              className="btn btn--primary btn--sm"
+              className="tbtn tbtn--go"
               disabled={!isFront}
               onClick={() => onStart(order.id)}
               title={isFront ? "" : "Esperando turno en la cola"}
             >
-              {isFront ? "Iniciar" : "Esperando turno"}
+              {isFront ? "▶ Iniciar" : "Esperando"}
             </button>
           )}
           {adv && (
             <button
               type="button"
-              className="btn btn--primary btn--sm"
+              className="tbtn tbtn--advance"
               onClick={() => onAdvance(order.id)}
             >
               {adv}
@@ -126,25 +166,26 @@ function OrderCard({
           )}
           <button
             type="button"
-            className="btn btn--sm"
+            className="tbtn tbtn--pay"
             onClick={() => onPayment(order.id, !paid)}
+            title={paid ? "Marcar como pendiente" : "Marcar como pagado"}
           >
-            {paid ? "Marcar PENDIENTE" : "Marcar PAGADO"}
+            {paid ? "↺ Pago" : "$ Cobrar"}
           </button>
           <button
             type="button"
-            className="btn btn--danger btn--sm"
+            className="tbtn tbtn--del"
             disabled={running}
-            title={running ? "No se puede borrar en ejecución" : ""}
+            title={running ? "No se puede borrar en ejecución" : "Borrar"}
             onClick={() => {
               if (window.confirm("¿Borrar este pedido?")) onDelete(order.id);
             }}
           >
-            Borrar
+            ✕
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -165,74 +206,104 @@ export function OrderQueue({
   const done = orders.filter(
     (o) => o.order_status === "EJECUTADO" || o.order_status === "ENTREGADO",
   );
+  const unpaid = orders.filter((o) => o.payment_status === "PENDIENTE").length;
+  const delivered = orders.filter(
+    (o) => o.order_status === "ENTREGADO",
+  ).length;
   const frontId = queue[0]?.id ?? null;
+  const activeName = running[0]?.catalog_item?.name ?? null;
 
   return (
-    <div className="pedidos-list">
-      <div className="pedidos-filter">
-        <label htmlFor="pedidos-prod-filter">Filtrar por producto</label>
+    <div className="board">
+      <div className="board__bar">
+        <div className="stats">
+          <div className="stat" data-tone="run">
+            <span className="stat__num">{running.length}</span>
+            <span className="stat__lbl">
+              En producción
+              {activeName && (
+                <em className="stat__hint" title={activeName}>
+                  {activeName}
+                </em>
+              )}
+            </span>
+          </div>
+          <div className="stat" data-tone="queue">
+            <span className="stat__num">{queue.length}</span>
+            <span className="stat__lbl">En cola</span>
+          </div>
+          <div className="stat" data-tone="warn">
+            <span className="stat__num">{unpaid}</span>
+            <span className="stat__lbl">Sin pagar</span>
+          </div>
+          <div className="stat" data-tone="done">
+            <span className="stat__num">{delivered}</span>
+            <span className="stat__lbl">Entregados</span>
+          </div>
+        </div>
+
         <select
-          id="pedidos-prod-filter"
+          aria-label="Filtrar por producto"
+          className="board__filter"
           value={filterProductId == null ? "" : String(filterProductId)}
           onChange={(e) =>
             onFilterChange(e.target.value ? Number(e.target.value) : null)
           }
         >
-          <option value="">— Todos —</option>
+          <option value="">Todos los productos</option>
           {sortedCatalog.map((it) => (
             <option key={it.id} value={String(it.id)}>
               {it.name}
             </option>
           ))}
         </select>
-        {filterProductId != null && (
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => onFilterChange(null)}
-          >
-            Limpiar
-          </button>
-        )}
       </div>
 
-      <section className="pedidos-section">
-        <h3>En ejecución</h3>
-        {running.length === 0 ? (
-          <p className="hint">Ningún pedido en ejecución.</p>
-        ) : (
-          running.map((o) => (
-            <OrderCard key={o.id} order={o} isFront={false} {...handlers} />
-          ))
-        )}
-      </section>
+      {orders.length === 0 && (
+        <p className="board__empty">
+          No hay pedidos{filterProductId != null ? " para este producto" : ""}.
+          Creá uno arriba.
+        </p>
+      )}
 
-      <section className="pedidos-section">
-        <h3>Cola ({queue.length})</h3>
-        {queue.length === 0 ? (
-          <p className="hint">La cola está vacía.</p>
-        ) : (
-          queue.map((o) => (
-            <OrderCard
-              key={o.id}
-              order={o}
-              isFront={o.id === frontId}
-              {...handlers}
-            />
-          ))
-        )}
-      </section>
-
-      <section className="pedidos-section">
-        <h3>Listos / Entregados ({done.length})</h3>
-        {done.length === 0 ? (
-          <p className="hint">Todavía no hay pedidos finalizados.</p>
-        ) : (
-          done.map((o) => (
+      {running.length > 0 && (
+        <section className="rail" data-rail="run">
+          {running.map((o) => (
             <OrderCard key={o.id} order={o} isFront={false} {...handlers} />
-          ))
-        )}
-      </section>
+          ))}
+        </section>
+      )}
+
+      {queue.length > 0 && (
+        <section className="rail" data-rail="queue">
+          <header className="rail__head">
+            Cola <span className="rail__count">{queue.length}</span>
+          </header>
+          <div className="board__grid">
+            {queue.map((o) => (
+              <OrderCard
+                key={o.id}
+                order={o}
+                isFront={o.id === frontId}
+                {...handlers}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {done.length > 0 && (
+        <section className="rail" data-rail="done">
+          <header className="rail__head">
+            Listos / Entregados <span className="rail__count">{done.length}</span>
+          </header>
+          <div className="board__grid">
+            {done.map((o) => (
+              <OrderCard key={o.id} order={o} isFront={false} {...handlers} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
