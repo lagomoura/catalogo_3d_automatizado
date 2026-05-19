@@ -2768,7 +2768,7 @@ body {
 
 .cost-editor__row {
   display: grid;
-  grid-template-columns: 1fr 130px auto;
+  grid-template-columns: 1fr 120px auto auto;
   gap: 0.5rem;
   align-items: center;
 }
@@ -2777,11 +2777,26 @@ body {
   width: 100%;
 }
 
+.cost-editor__scope {
+  white-space: nowrap;
+}
+
+.cost-editor__scope[data-scope="order"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .cost-editor__foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cost-editor__foot-actions {
+  display: flex;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 

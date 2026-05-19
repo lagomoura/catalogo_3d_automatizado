@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   advanceOrder,
+  appendOrderCost,
   createOrder,
   deleteOrder,
   getCatalog,
@@ -101,6 +102,17 @@ export function PedidosPage({
     [refreshOrders],
   );
 
+  const handleAppendCost = useCallback(
+    async (
+      id: number,
+      item: { concept: string; amount: number; per_unit?: boolean },
+    ) => {
+      await appendOrderCost(id, item);
+      await refreshOrders();
+    },
+    [refreshOrders],
+  );
+
   return (
     <div className="pedidos">
       {error && <p className="error-banner">{error}</p>}
@@ -127,6 +139,7 @@ export function PedidosPage({
         }
         onUpdate={handleUpdate}
         onSaveCosts={handleSaveCosts}
+        onAppendCost={handleAppendCost}
         onDelete={(id) => void run(() => deleteOrder(id))}
       />
     </div>

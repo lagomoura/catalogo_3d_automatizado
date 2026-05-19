@@ -7,6 +7,7 @@ import type { Contact, Order, OrderPriority } from "../../types";
 import { formatARS } from "../../utils/format";
 import { computeProfitability } from "../calculadora/calc";
 import { ContactPicker, type PersonValue } from "../caja/ContactPicker";
+import { ExtraCostModal } from "./ExtraCostModal";
 
 interface Props {
   order: Order;
@@ -19,6 +20,8 @@ interface Props {
 interface CostRow {
   concept: string;
   amount: string;
+  /** true: costo por unidad (×cantidad). false: costo único del pedido. */
+  perUnit: boolean;
 }
 
 const PRIORITIES: (OrderPriority | null)[] = [null, 1, 2, 3];
@@ -47,22 +50,27 @@ export function OrderEditModal({
     order.cost_items.map((c) => ({
       concept: c.concept,
       amount: String(c.amount),
+      perUnit: c.per_unit,
     })),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [extraOpen, setExtraOpen] = useState(false);
 
   const paid = order.payment_status === "PAGADO";
 
-  // Los conceptos son SIEMPRE unitarios; la rentabilidad usa la cantidad.
+  // Los conceptos per-unidad escalan con la cantidad; los fijos cuentan una vez.
   const prof = useMemo(() => {
-    const unitCosts = costRows.map((r) => {
+    const items = costRows.map((r) => {
       const n = Number(r.amount);
-      return Number.isFinite(n) && n >= 0 ? n : 0;
+      return {
+        amount: Number.isFinite(n) && n >= 0 ? n : 0,
+        per_unit: r.perUnit,
+      };
     });
     const v = value.trim() === "" ? null : Number(value);
     return computeProfitability(
-      unitCosts,
+      items,
       quantity,
       v != null && Number.isFinite(v) ? v : null,
     );
@@ -73,7 +81,10 @@ export function OrderEditModal({
       rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
     );
   const addCost = () =>
-    setCostRows((rows) => [...rows, { concept: "", amount: "" }]);
+    setCostRows((rows) => [
+      ...rows,
+      { concept: "", amount: "", perUnit: true },
+    ]);
   const removeCost = (i: number) =>
     setCostRows((rows) => rows.filter((_, idx) => idx !== i));
 
@@ -129,7 +140,7 @@ export function OrderEditModal({
         setError(`Monto inválido en "${concept}"`);
         return;
       }
-      costItems.push({ concept, amount: amt });
+      costItems.push({ concept, amount: amt, per_unit: r.perUnit });
     }
 
     setBusy(true);
@@ -148,7 +159,8 @@ export function OrderEditModal({
   };
 
   return (
-    <div
+    <>
+      <div
       className="order-modal"
       role="dialog"
       aria-modal="true"
@@ -260,9 +272,10 @@ export function OrderEditModal({
 
         <div className="cost-editor">
           <div className="cost-editor__head">
-            <h4>Costos por unidad</h4>
+            <h4>Costos del pedido</h4>
             <span className="hint">
-              Cada concepto es costo unitario · no cambia el valor ni la caja
+              "×u" = costo por unidad · "fijo" = único del pedido · no cambia
+              el valor ni la caja
             </span>
           </div>
 
@@ -291,6 +304,19 @@ export function OrderEditModal({
               />
               <button
                 type="button"
+                className="btn btn--sm btn--ghost cost-editor__scope"
+                data-scope={r.perUnit ? "unit" : "order"}
+                onClick={() => patchCost(i, { perUnit: !r.perUnit })}
+                title={
+                  r.perUnit
+                    ? "Costo por unidad (se multiplica por la cantidad)"
+                    : "Costo único del pedido (cuenta una sola vez)"
+                }
+              >
+                {r.perUnit ? "×u" : "fijo"}
+              </button>
+              <button
+                type="button"
                 className="btn btn--sm btn--ghost"
                 onClick={() => removeCost(i)}
                 aria-label="Eliminar concepto"
@@ -301,13 +327,22 @@ export function OrderEditModal({
           ))}
 
           <div className="cost-editor__foot">
-            <button
-              type="button"
-              className="btn btn--sm btn--ghost"
-              onClick={addCost}
-            >
-              + Agregar concepto
-            </button>
+            <div className="cost-editor__foot-actions">
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={addCost}
+              >
+                + Agregar concepto
+              </button>
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() => setExtraOpen(true)}
+              >
+                + Costo extra (reimpresión)
+              </button>
+            </div>
             <span className="cost-editor__sum">
               Costo unitario: <strong>{formatARS(prof.unitCost)}</strong>
             </span>
@@ -358,6 +393,20 @@ export function OrderEditModal({
           </button>
         </div>
       </form>
-    </div>
+      </div>
+      {extraOpen && (
+        <ExtraCostModal
+          order={order}
+          onClose={() => setExtraOpen(false)}
+          onSubmit={({ concept, amount }) => {
+            setCostRows((rows) => [
+              ...rows,
+              { concept, amount: String(amount), perUnit: false },
+            ]);
+            setExtraOpen(false);
+          }}
+        />
+      )}
+    </>
   );
 }

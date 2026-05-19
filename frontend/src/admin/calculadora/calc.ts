@@ -101,9 +101,13 @@ export function computeQuote(
   };
 }
 
-/** Rentabilidad de un pedido: los conceptos de costo son SIEMPRE unitarios. */
+/**
+ * Rentabilidad de un pedido. Los conceptos `per_unit` escalan con la cantidad;
+ * los costos únicos del pedido (reimpresión / extras) cuentan una sola vez.
+ */
 export interface Profitability {
   quantity: number;
+  /** Suma de los costos por unidad (sin multiplicar por la cantidad). */
   unitCost: number;
   totalCost: number;
   revenue: number;
@@ -112,19 +116,29 @@ export interface Profitability {
   marginPct: number | null;
 }
 
+export interface CostItemForProfit {
+  amount: number;
+  per_unit: boolean;
+}
+
 export function computeProfitability(
-  unitCosts: number[],
+  items: CostItemForProfit[],
   quantity: number,
   revenue: number | null,
 ): Profitability {
-  const unitCost = round2(unitCosts.reduce((a, b) => a + b, 0));
   const qty = Math.max(1, Math.floor(quantity || 1));
-  const totalCost = round2(unitCost * qty);
+  const perUnit = round2(
+    items.filter((i) => i.per_unit).reduce((a, b) => a + b.amount, 0),
+  );
+  const perOrder = round2(
+    items.filter((i) => !i.per_unit).reduce((a, b) => a + b.amount, 0),
+  );
+  const totalCost = round2(perUnit * qty + perOrder);
   const rev = revenue ?? 0;
   const profit = round2(rev - totalCost);
   return {
     quantity: qty,
-    unitCost,
+    unitCost: perUnit,
     totalCost,
     revenue: rev,
     profit,

@@ -61,7 +61,10 @@ export function CalculadoraPage({ onCreateOrder }: Props) {
   const prof = useMemo(
     () =>
       computeProfitability(
-        breakdownToCostItems(breakdown).map((c) => c.amount),
+        breakdownToCostItems(breakdown).map((c) => ({
+          amount: c.amount,
+          per_unit: true,
+        })),
         quantity,
         charge,
       ),

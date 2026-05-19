@@ -401,6 +401,8 @@ export interface OrderFilters {
 export interface OrderCostItemInput {
   concept: string;
   amount: number;
+  /** Omitido = true en el server (costo por unidad). */
+  per_unit?: boolean;
 }
 
 export interface OrderCreatePayload {
@@ -455,6 +457,16 @@ export function replaceOrderCosts(
   return request<Order>(`/api/orders/${id}/costs`, {
     method: "PUT",
     body: JSON.stringify({ items }),
+  });
+}
+
+export function appendOrderCost(
+  id: number,
+  item: { concept: string; amount: number; per_unit?: boolean },
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/costs/item`, {
+    method: "POST",
+    body: JSON.stringify(item),
   });
 }
 

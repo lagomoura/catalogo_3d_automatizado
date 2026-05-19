@@ -228,6 +228,8 @@ export interface OrderCostItem {
   id: number;
   concept: string;
   amount: number;
+  /** true: costo por unidad (×cantidad). false: costo único del pedido. */
+  per_unit: boolean;
   sort_order: number;
 }
 

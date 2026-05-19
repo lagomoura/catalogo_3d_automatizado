@@ -14,6 +14,7 @@ import type {
   OrderStatus,
 } from "../../types";
 import { OrderEditModal } from "./OrderEditModal";
+import { ExtraCostModal } from "./ExtraCostModal";
 
 interface Props {
   orders: Order[];
@@ -27,6 +28,10 @@ interface Props {
   onPriority: (id: number, priority: OrderPriority | null) => void;
   onUpdate: (id: number, payload: OrderUpdatePayload) => Promise<void>;
   onSaveCosts: (id: number, items: OrderCostItemInput[]) => Promise<void>;
+  onAppendCost: (
+    id: number,
+    item: { concept: string; amount: number; per_unit?: boolean },
+  ) => Promise<void>;
   onDelete: (id: number) => void;
 }
 
@@ -57,11 +62,13 @@ function OrderCard({
   onPayment,
   onPriority,
   onEdit,
+  onExtraCost,
   onDelete,
 }: {
   order: Order;
   isFront: boolean;
   onEdit: (order: Order) => void;
+  onExtraCost: (order: Order) => void;
 } & Pick<
   Props,
   "onStart" | "onAdvance" | "onPayment" | "onPriority" | "onDelete"
@@ -73,7 +80,10 @@ function OrderCard({
   const prof =
     order.cost_items.length > 0 && order.value != null
       ? computeProfitability(
-          order.cost_items.map((c) => c.amount),
+          order.cost_items.map((c) => ({
+            amount: c.amount,
+            per_unit: c.per_unit,
+          })),
           order.quantity,
           order.value,
         )
@@ -228,6 +238,14 @@ function OrderCard({
           </button>
           <button
             type="button"
+            className="tbtn tbtn--edit"
+            onClick={() => onExtraCost(order)}
+            title="Agregar costo extra / reimpresión"
+          >
+            ＋ Costo extra
+          </button>
+          <button
+            type="button"
             className="tbtn tbtn--del"
             disabled={running}
             title={running ? "No se puede borrar en ejecución" : "Borrar"}
@@ -251,9 +269,12 @@ export function OrderQueue({
   onFilterChange,
   onUpdate,
   onSaveCosts,
+  onAppendCost,
   ...handlers
 }: Props) {
   const [editing, setEditing] = useState<Order | null>(null);
+  const [extraFor, setExtraFor] = useState<Order | null>(null);
+  const [extraBusy, setExtraBusy] = useState(false);
 
   const sortedCatalog = useMemo(
     () => [...catalog].sort((a, b) => a.name.localeCompare(b.name)),
@@ -263,6 +284,9 @@ export function OrderQueue({
   // Reflejar la versión más reciente del pedido que se está editando.
   const editingOrder = editing
     ? orders.find((o) => o.id === editing.id) ?? editing
+    : null;
+  const extraOrder = extraFor
+    ? orders.find((o) => o.id === extraFor.id) ?? extraFor
     : null;
 
   const running = orders.filter((o) => o.order_status === "EJECUTANDO");
@@ -338,6 +362,7 @@ export function OrderQueue({
               order={o}
               isFront={false}
               onEdit={setEditing}
+              onExtraCost={setExtraFor}
               {...handlers}
             />
           ))}
@@ -356,6 +381,7 @@ export function OrderQueue({
                 order={o}
                 isFront={o.id === frontId}
                 onEdit={setEditing}
+                onExtraCost={setExtraFor}
                 {...handlers}
               />
             ))}
@@ -375,6 +401,7 @@ export function OrderQueue({
                 order={o}
                 isFront={false}
                 onEdit={setEditing}
+                onExtraCost={setExtraFor}
                 {...handlers}
               />
             ))}
@@ -389,6 +416,27 @@ export function OrderQueue({
           onClose={() => setEditing(null)}
           onSave={onUpdate}
           onSaveCosts={onSaveCosts}
+        />
+      )}
+
+      {extraOrder && (
+        <ExtraCostModal
+          order={extraOrder}
+          busy={extraBusy}
+          onClose={() => setExtraFor(null)}
+          onSubmit={async ({ concept, amount }) => {
+            setExtraBusy(true);
+            try {
+              await onAppendCost(extraOrder.id, {
+                concept,
+                amount,
+                per_unit: false,
+              });
+              setExtraFor(null);
+            } finally {
+              setExtraBusy(false);
+            }
+          }}
         />
       )}
     </div>
