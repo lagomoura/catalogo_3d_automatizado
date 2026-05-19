@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   deleteCatalogImage,
   deleteCatalogItem,
@@ -7,6 +7,7 @@ import {
   updateCatalogItem,
 } from "../api/client";
 import type { CatalogImage, CatalogItem, CategoryNode } from "../types";
+import { getCategoryColor } from "../utils/categoryColor";
 import { ImageLightbox } from "./ImageLightbox";
 import { Model3DLightbox } from "./Model3DLightbox";
 
@@ -135,6 +136,7 @@ export function CatalogCard({
   };
 
   const cover = item.images[0];
+  const catColor = getCategoryColor(item.category);
   const cardClass = [
     "card",
     selectionMode ? "card--selectable" : "",
@@ -147,6 +149,7 @@ export function CatalogCard({
     <article
       className={cardClass}
       onClick={selectionMode ? handleCardClick : undefined}
+      style={{ "--cat": catColor } as CSSProperties}
     >
       {selectionMode && (
         <input
@@ -175,6 +178,10 @@ export function CatalogCard({
         />
       ) : (
         <div className="card__image card__image--empty">sin imagen</div>
+      )}
+
+      {item.model_3d_url && (
+        <span className="card__badge-3d" title="Tiene modelo 3D">3D</span>
       )}
 
       <div className="card__body">
@@ -240,9 +247,13 @@ export function CatalogCard({
           </div>
         ) : (
           <>
-            <h3 className="card__title">{item.name}</h3>
-            {item.category && (
+            <h3 className="card__title" title={item.name}>{item.name}</h3>
+            {item.category ? (
               <span className="card__category">{item.category.name_es}</span>
+            ) : (
+              <span className="card__category card__category--none">
+                Sin categoría
+              </span>
             )}
           </>
         )}

@@ -25,13 +25,22 @@ export function CatalogGrid({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleItems = useMemo(() => {
+    if (!normalizedQuery) return items;
+    return items.filter((it) => it.name.toLowerCase().includes(normalizedQuery));
+  }, [items, normalizedQuery]);
 
   const presentIds = useMemo(() => new Set(items.map((it) => it.id)), [items]);
   const validSelected = useMemo(
     () => Array.from(selectedIds).filter((id) => presentIds.has(id)),
     [selectedIds, presentIds],
   );
-  const allSelected = items.length > 0 && validSelected.length === items.length;
+  const allVisibleSelected =
+    visibleItems.length > 0 &&
+    visibleItems.every((it) => selectedIds.has(it.id));
 
   const exitSelectionMode = useCallback(() => {
     setSelectionMode(false);
@@ -49,12 +58,12 @@ export function CatalogGrid({
   }, []);
 
   const toggleSelectAll = useCallback(() => {
-    if (allSelected) {
+    if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(items.map((it) => it.id)));
+      setSelectedIds(new Set(visibleItems.map((it) => it.id)));
     }
-  }, [allSelected, items]);
+  }, [allVisibleSelected, visibleItems]);
 
   const handleBulkDelete = useCallback(async () => {
     if (validSelected.length === 0) return;
@@ -100,15 +109,32 @@ export function CatalogGrid({
     [validSelected, onItemChanged, exitSelectionMode],
   );
 
-  const emptyMessage = filterCategoryId !== null
-    ? "No hay productos en esta categoría."
-    : "Aún no hay modelos en el catálogo. Envía una URL para empezar.";
+  const emptyMessage = normalizedQuery
+    ? `No hay productos que coincidan con "${query.trim()}".`
+    : filterCategoryId !== null
+      ? "No hay productos en esta categoría."
+      : "Aún no hay modelos en el catálogo. Envía una URL para empezar.";
 
   return (
     <section className="catalog">
       <div className="catalog__toolbar">
-        <h2>Catálogo ({items.length})</h2>
+        <h2 className="catalog__title">
+          Catálogo
+          <span className="catalog__count">
+            {normalizedQuery
+              ? `${visibleItems.length} de ${items.length}`
+              : items.length}
+          </span>
+        </h2>
         <div className="catalog__toolbar-actions">
+          <input
+            type="search"
+            className="catalog__search"
+            placeholder="Buscar por nombre…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar productos por nombre"
+          />
           <CategoryFilter
             categories={categories}
             value={filterCategoryId}
@@ -143,9 +169,9 @@ export function CatalogGrid({
               type="button"
               className="btn btn--small btn--ghost"
               onClick={toggleSelectAll}
-              disabled={items.length === 0 || bulkBusy}
+              disabled={visibleItems.length === 0 || bulkBusy}
             >
-              {allSelected ? "Deseleccionar todo" : "Seleccionar todo"}
+              {allVisibleSelected ? "Deseleccionar todo" : "Seleccionar todo"}
             </button>
             <span className="bulk-bar__count">
               {validSelected.length} seleccionado{validSelected.length === 1 ? "" : "s"}
@@ -190,11 +216,11 @@ export function CatalogGrid({
       )}
 
       {bulkError && <p className="error-banner">{bulkError}</p>}
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <p className="catalog__empty">{emptyMessage}</p>
       ) : (
         <div className="grid">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <CatalogCard
               key={item.id}
               item={item}
