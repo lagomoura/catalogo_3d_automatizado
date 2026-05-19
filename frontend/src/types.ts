@@ -68,6 +68,15 @@ export interface Contact {
   created_at: string;
 }
 
+export interface Account {
+  id: number;
+  name: string;
+  opening_balance: number;
+  sort_order: number;
+  archived: boolean;
+  created_at: string;
+}
+
 export interface CashTransaction {
   id: number;
   kind: TransactionKind;
@@ -78,7 +87,16 @@ export interface CashTransaction {
   catalog_item: { id: number; name: string } | null;
   contact: { id: number; name: string } | null;
   person_label: string | null;
+  account: { id: number; name: string } | null;
+  category: string | null;
   created_at: string;
+}
+
+export interface CashTransactionPage {
+  items: CashTransaction[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface MonthlyPoint {
@@ -93,18 +111,135 @@ export interface ProductPoint {
   debit: number;
 }
 
+export interface CategoryPoint {
+  category: string;
+  credit: number;
+  debit: number;
+}
+
+export interface ContactPoint {
+  contact: string;
+  credit: number;
+  debit: number;
+}
+
+export interface DailyPoint {
+  day: string;
+  credit: number;
+  debit: number;
+  net: number;
+  cumulative: number;
+}
+
+export interface AccountBalance {
+  account_id: number;
+  name: string;
+  opening_balance: number;
+  credit: number;
+  debit: number;
+  balance: number;
+}
+
+export interface PeriodTotals {
+  total_credit: number;
+  total_debit: number;
+  balance: number;
+  count: number;
+}
+
 export interface CashSummary {
   balance: number;
+  net: number;
+  opening_balance: number;
   total_credit: number;
   total_debit: number;
   count: number;
   monthly: MonthlyPoint[];
   by_product: ProductPoint[];
+  by_category: CategoryPoint[];
+  by_contact: ContactPoint[];
+  daily: DailyPoint[];
+  accounts: AccountBalance[];
+  previous: PeriodTotals | null;
+}
+
+export interface RecurringExpense {
+  id: number;
+  concept: string;
+  amount: number;
+  category: string | null;
+  account: { id: number; name: string } | null;
+  day_of_month: number | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface Receivable {
+  order_id: number;
+  value: number;
+  contact: string | null;
+  product: string | null;
+  order_status: OrderStatus;
+  quantity: number;
+  created_at: string;
+}
+
+export interface ReceivablesSummary {
+  total: number;
+  count: number;
+  items: Receivable[];
+}
+
+export interface ProfitRow {
+  label: string;
+  orders_count: number;
+  units: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin_pct: number;
+}
+
+export interface ProfitabilitySummary {
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin_pct: number;
+  orders_count: number;
+  orders_without_cost: number;
+  by_product: ProfitRow[];
+}
+
+export interface ContactStatement {
+  contact: { id: number; name: string };
+  total_credit: number;
+  total_debit: number;
+  balance: number;
+  transactions: CashTransaction[];
+  receivables_total: number;
+  receivables: Receivable[];
 }
 
 export type OrderStatus = "CREADO" | "EJECUTANDO" | "EJECUTADO" | "ENTREGADO";
 export type PaymentStatus = "PENDIENTE" | "PAGADO";
 export type OrderPriority = 1 | 2 | 3;
+
+export interface OrderCostItem {
+  id: number;
+  concept: string;
+  amount: number;
+  sort_order: number;
+}
+
+/** Cotización que la calculadora entrega al formulario de pedido. */
+export interface PendingQuote {
+  /** Total a cobrar por TODO el pedido (= total unitario × cantidad). */
+  value: number;
+  /** Cantidad de unidades de la cotización (precarga la cantidad del pedido). */
+  quantity: number;
+  /** Conceptos de costo POR UNIDAD a snapshotear en el pedido. */
+  costItems: { concept: string; amount: number }[];
+}
 
 export interface Order {
   id: number;
@@ -113,10 +248,12 @@ export interface Order {
   contact: { id: number; name: string } | null;
   person_label: string | null;
   quantity: number;
+  value: number | null;
   note: string | null;
   order_status: OrderStatus;
   payment_status: PaymentStatus;
   priority: OrderPriority | null;
+  cost_items: OrderCostItem[];
   created_at: string;
   started_at: string | null;
   updated_at: string;

@@ -1,16 +1,32 @@
-import { useMemo } from "react";
-import { resolveStorageUrl } from "../../api/client";
-import type { CatalogItem, Order, OrderPriority, OrderStatus } from "../../types";
+import { useMemo, useState } from "react";
+import {
+  resolveStorageUrl,
+  type OrderCostItemInput,
+  type OrderUpdatePayload,
+} from "../../api/client";
+import { formatARS } from "../../utils/format";
+import { computeProfitability } from "../calculadora/calc";
+import type {
+  CatalogItem,
+  Contact,
+  Order,
+  OrderPriority,
+  OrderStatus,
+} from "../../types";
+import { OrderEditModal } from "./OrderEditModal";
 
 interface Props {
   orders: Order[];
   catalog: CatalogItem[];
+  contacts: Contact[];
   filterProductId: number | null;
   onFilterChange: (id: number | null) => void;
   onStart: (id: number) => void;
   onAdvance: (id: number) => void;
   onPayment: (id: number, paid: boolean) => void;
   onPriority: (id: number, priority: OrderPriority | null) => void;
+  onUpdate: (id: number, payload: OrderUpdatePayload) => Promise<void>;
+  onSaveCosts: (id: number, items: OrderCostItemInput[]) => Promise<void>;
   onDelete: (id: number) => void;
 }
 
@@ -40,10 +56,12 @@ function OrderCard({
   onAdvance,
   onPayment,
   onPriority,
+  onEdit,
   onDelete,
 }: {
   order: Order;
   isFront: boolean;
+  onEdit: (order: Order) => void;
 } & Pick<
   Props,
   "onStart" | "onAdvance" | "onPayment" | "onPriority" | "onDelete"
@@ -52,6 +70,14 @@ function OrderCard({
   const running = order.order_status === "EJECUTANDO";
   const creado = order.order_status === "CREADO";
   const adv = advanceLabel(order.order_status);
+  const prof =
+    order.cost_items.length > 0 && order.value != null
+      ? computeProfitability(
+          order.cost_items.map((c) => c.amount),
+          order.quantity,
+          order.value,
+        )
+      : null;
 
   return (
     <article
@@ -117,6 +143,19 @@ function OrderCard({
             {buyer(order)}
           </span>
           <span className="ticket__qty">×{order.quantity}</span>
+          {order.value != null && (
+            <span className="ticket__value">{formatARS(order.value)}</span>
+          )}
+          {prof && (
+            <span
+              className="ticket__profit"
+              data-tone={prof.profit >= 0 ? "ok" : "bad"}
+              title={`Costo total ${formatARS(prof.totalCost)} · Ganancia ${formatARS(prof.profit)}`}
+            >
+              {prof.profit >= 0 ? "▲" : "▼"} {formatARS(prof.profit)}
+              {prof.marginPct != null && ` (${prof.marginPct}%)`}
+            </span>
+          )}
           {order.note && <span className="ticket__note">“{order.note}”</span>}
         </div>
 
@@ -167,10 +206,25 @@ function OrderCard({
           <button
             type="button"
             className="tbtn tbtn--pay"
+            disabled={!paid && order.value == null}
             onClick={() => onPayment(order.id, !paid)}
-            title={paid ? "Marcar como pendiente" : "Marcar como pagado"}
+            title={
+              paid
+                ? "Revertir el cobro (elimina el ingreso de caja)"
+                : order.value == null
+                  ? "Cargá el valor del pedido para poder cobrarlo"
+                  : "Cobrar y registrar el ingreso en caja"
+            }
           >
             {paid ? "↺ Pago" : "$ Cobrar"}
+          </button>
+          <button
+            type="button"
+            className="tbtn tbtn--edit"
+            onClick={() => onEdit(order)}
+            title="Editar pedido"
+          >
+            ✎ Editar
           </button>
           <button
             type="button"
@@ -192,14 +246,24 @@ function OrderCard({
 export function OrderQueue({
   orders,
   catalog,
+  contacts,
   filterProductId,
   onFilterChange,
+  onUpdate,
+  onSaveCosts,
   ...handlers
 }: Props) {
+  const [editing, setEditing] = useState<Order | null>(null);
+
   const sortedCatalog = useMemo(
     () => [...catalog].sort((a, b) => a.name.localeCompare(b.name)),
     [catalog],
   );
+
+  // Reflejar la versión más reciente del pedido que se está editando.
+  const editingOrder = editing
+    ? orders.find((o) => o.id === editing.id) ?? editing
+    : null;
 
   const running = orders.filter((o) => o.order_status === "EJECUTANDO");
   const queue = orders.filter((o) => o.order_status === "CREADO");
@@ -269,7 +333,13 @@ export function OrderQueue({
       {running.length > 0 && (
         <section className="rail" data-rail="run">
           {running.map((o) => (
-            <OrderCard key={o.id} order={o} isFront={false} {...handlers} />
+            <OrderCard
+              key={o.id}
+              order={o}
+              isFront={false}
+              onEdit={setEditing}
+              {...handlers}
+            />
           ))}
         </section>
       )}
@@ -285,6 +355,7 @@ export function OrderQueue({
                 key={o.id}
                 order={o}
                 isFront={o.id === frontId}
+                onEdit={setEditing}
                 {...handlers}
               />
             ))}
@@ -299,10 +370,26 @@ export function OrderQueue({
           </header>
           <div className="board__grid">
             {done.map((o) => (
-              <OrderCard key={o.id} order={o} isFront={false} {...handlers} />
+              <OrderCard
+                key={o.id}
+                order={o}
+                isFront={false}
+                onEdit={setEditing}
+                {...handlers}
+              />
             ))}
           </div>
         </section>
+      )}
+
+      {editingOrder && (
+        <OrderEditModal
+          order={editingOrder}
+          contacts={contacts}
+          onClose={() => setEditing(null)}
+          onSave={onUpdate}
+          onSaveCosts={onSaveCosts}
+        />
       )}
     </div>
   );

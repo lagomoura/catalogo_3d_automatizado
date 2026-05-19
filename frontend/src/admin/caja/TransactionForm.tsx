@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import type {
-  CashTransactionPayload,
-  CashTransactionUpdatePayload,
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  type CashTransactionPayload,
+  type CashTransactionUpdatePayload,
 } from "../../api/client";
-import type { CashTransaction, CatalogItem, Contact, TransactionKind } from "../../types";
+import type {
+  Account,
+  CashTransaction,
+  CatalogItem,
+  Contact,
+  TransactionKind,
+} from "../../types";
 import { todayISO } from "../../utils/format";
 import { ContactPicker, type PersonValue } from "./ContactPicker";
 
@@ -13,6 +21,7 @@ const NONE = "__none__";
 interface Props {
   catalog: CatalogItem[];
   contacts: Contact[];
+  accounts: Account[];
   editing: CashTransaction | null;
   onCreate: (p: CashTransactionPayload) => Promise<void>;
   onUpdate: (id: number, p: CashTransactionUpdatePayload) => Promise<void>;
@@ -22,6 +31,7 @@ interface Props {
 export function TransactionForm({
   catalog,
   contacts,
+  accounts,
   editing,
   onCreate,
   onUpdate,
@@ -33,6 +43,8 @@ export function TransactionForm({
   const [description, setDescription] = useState("");
   const [productSel, setProductSel] = useState<string>(NONE);
   const [productFree, setProductFree] = useState("");
+  const [accountId, setAccountId] = useState<string>("");
+  const [category, setCategory] = useState("");
   const [person, setPerson] = useState<PersonValue>({
     contactId: null,
     personLabel: "",
@@ -47,6 +59,8 @@ export function TransactionForm({
     setAmount(String(editing.amount));
     setDate(editing.occurred_on.slice(0, 10));
     setDescription(editing.description ?? "");
+    setAccountId(editing.account ? String(editing.account.id) : "");
+    setCategory(editing.category ?? "");
     if (editing.catalog_item) {
       setProductSel(String(editing.catalog_item.id));
       setProductFree("");
@@ -71,9 +85,14 @@ export function TransactionForm({
     setDescription("");
     setProductSel(NONE);
     setProductFree("");
+    setAccountId("");
+    setCategory("");
     setPerson({ contactId: null, personLabel: "", saveContact: false });
     setError(null);
   };
+
+  const categoryOptions =
+    kind === "credit" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const sortedCatalog = useMemo(
     () => [...catalog].sort((a, b) => a.name.localeCompare(b.name)),
@@ -96,6 +115,8 @@ export function TransactionForm({
       productSel !== FREE && productSel !== NONE ? Number(productSel) : null;
     const freeLabel = productSel === FREE ? productFree.trim() || null : null;
     const personLabel = person.personLabel.trim();
+    const acctId = accountId ? Number(accountId) : null;
+    const cat = category.trim() || null;
 
     setBusy(true);
     setError(null);
@@ -107,9 +128,12 @@ export function TransactionForm({
           occurred_on: date,
           description: description.trim() || null,
           product_label: freeLabel,
+          category: cat,
         };
         if (catalogId !== null) payload.catalog_item_id = catalogId;
         else payload.clear_catalog_item = true;
+        if (acctId !== null) payload.account_id = acctId;
+        else payload.clear_account = true;
         if (person.contactId !== null) payload.contact_id = person.contactId;
         else payload.clear_contact = true;
         payload.person_label = person.contactId === null ? personLabel || null : null;
@@ -124,6 +148,8 @@ export function TransactionForm({
           catalog_item_id: catalogId,
           contact_id: person.contactId,
           person_label: person.contactId === null ? personLabel || null : null,
+          account_id: acctId,
+          category: cat,
           save_contact: person.saveContact,
         };
         await onCreate(payload);
@@ -207,6 +233,40 @@ export function TransactionForm({
               onChange={(e) => setProductFree(e.target.value)}
             />
           )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="caja-account">Cuenta / método</label>
+          <select
+            id="caja-account"
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+          >
+            <option value="">— Sin cuenta —</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={String(a.id)}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="caja-category">Categoría</label>
+          <input
+            id="caja-category"
+            list="caja-category-options"
+            type="text"
+            placeholder={kind === "credit" ? "Venta…" : "Filamento/Insumos…"}
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            autoComplete="off"
+          />
+          <datalist id="caja-category-options">
+            {categoryOptions.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         <ContactPicker contacts={contacts} value={person} onChange={setPerson} />

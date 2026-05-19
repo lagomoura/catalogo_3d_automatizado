@@ -1,14 +1,20 @@
 import type {
+  Account,
   CashSummary,
   CashTransaction,
+  CashTransactionPage,
   CatalogItem,
   CategoryNode,
   Contact,
+  ContactStatement,
   Job,
   Order,
   OrderPriority,
   OrderStatus,
   PaymentStatus,
+  ProfitabilitySummary,
+  ReceivablesSummary,
+  RecurringExpense,
   TransactionKind,
 } from "../types";
 
@@ -113,12 +119,33 @@ export function restyleCatalogImage(itemId: number, imageId: number): Promise<Ca
 // Control de caja
 // ---------------------------------------------------------------------------
 
+/** Categorías sugeridas (el backend acepta texto libre). */
+export const INCOME_CATEGORIES = ["Venta", "Seña/Anticipo", "Reintegro", "Otros"];
+export const EXPENSE_CATEGORIES = [
+  "Filamento/Insumos",
+  "Electricidad",
+  "Mantenimiento",
+  "Repuestos",
+  "Envío",
+  "Publicidad",
+  "Comisiones",
+  "Impuestos",
+  "Alquiler",
+  "Sueldos",
+  "Herramientas",
+  "Otros",
+];
+
 export interface TransactionFilters {
   start?: string;
   end?: string;
   kind?: TransactionKind;
   contact_id?: number;
+  account_id?: number;
+  category?: string;
   q?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface CashTransactionPayload {
@@ -130,6 +157,8 @@ export interface CashTransactionPayload {
   catalog_item_id?: number | null;
   contact_id?: number | null;
   person_label?: string | null;
+  account_id?: number | null;
+  category?: string | null;
   save_contact?: boolean;
 }
 
@@ -144,6 +173,9 @@ export interface CashTransactionUpdatePayload {
   contact_id?: number | null;
   clear_contact?: boolean;
   person_label?: string | null;
+  account_id?: number | null;
+  clear_account?: boolean;
+  category?: string | null;
 }
 
 function buildQuery(params: object): string {
@@ -157,10 +189,14 @@ function buildQuery(params: object): string {
 
 export function getCashTransactions(
   filters: TransactionFilters = {},
-): Promise<CashTransaction[]> {
-  return request<CashTransaction[]>(
+): Promise<CashTransactionPage> {
+  return request<CashTransactionPage>(
     `/api/cash/transactions${buildQuery(filters)}`,
   );
+}
+
+export function cashExportUrl(filters: TransactionFilters = {}): string {
+  return `${API_BASE}/api/cash/transactions/export${buildQuery(filters)}`;
 }
 
 export function createCashTransaction(
@@ -211,6 +247,123 @@ export function deleteContact(id: number): Promise<void> {
   return request<void>(`/api/cash/contacts/${id}`, { method: "DELETE" });
 }
 
+export function getContactStatement(id: number): Promise<ContactStatement> {
+  return request<ContactStatement>(`/api/cash/contacts/${id}/statement`);
+}
+
+// ----- Cuentas / métodos de pago -----
+
+export function getAccounts(includeArchived = false): Promise<Account[]> {
+  const qs = includeArchived ? "?include_archived=true" : "";
+  return request<Account[]>(`/api/cash/accounts${qs}`);
+}
+
+export interface AccountPayload {
+  name: string;
+  opening_balance?: number;
+  sort_order?: number;
+}
+
+export function createAccount(payload: AccountPayload): Promise<Account> {
+  return request<Account>(`/api/cash/accounts`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface AccountUpdatePayload {
+  name?: string;
+  opening_balance?: number;
+  sort_order?: number;
+  archived?: boolean;
+}
+
+export function updateAccount(
+  id: number,
+  payload: AccountUpdatePayload,
+): Promise<Account> {
+  return request<Account>(`/api/cash/accounts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAccount(id: number): Promise<void> {
+  return request<void>(`/api/cash/accounts/${id}`, { method: "DELETE" });
+}
+
+// ----- Gastos recurrentes -----
+
+export interface RecurringPayload {
+  concept: string;
+  amount: number;
+  category?: string | null;
+  account_id?: number | null;
+  day_of_month?: number | null;
+}
+
+export interface RecurringUpdatePayload {
+  concept?: string;
+  amount?: number;
+  category?: string | null;
+  account_id?: number | null;
+  clear_account?: boolean;
+  day_of_month?: number | null;
+  active?: boolean;
+}
+
+export function getRecurring(): Promise<RecurringExpense[]> {
+  return request<RecurringExpense[]>(`/api/cash/recurring`);
+}
+
+export function createRecurring(
+  payload: RecurringPayload,
+): Promise<RecurringExpense> {
+  return request<RecurringExpense>(`/api/cash/recurring`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateRecurring(
+  id: number,
+  payload: RecurringUpdatePayload,
+): Promise<RecurringExpense> {
+  return request<RecurringExpense>(`/api/cash/recurring/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteRecurring(id: number): Promise<void> {
+  return request<void>(`/api/cash/recurring/${id}`, { method: "DELETE" });
+}
+
+export function postRecurring(
+  id: number,
+  occurred_on: string,
+): Promise<CashTransaction> {
+  return request<CashTransaction>(`/api/cash/recurring/${id}/post`, {
+    method: "POST",
+    body: JSON.stringify({ occurred_on }),
+  });
+}
+
+// ----- Cuentas por cobrar / rentabilidad -----
+
+export function getReceivables(): Promise<ReceivablesSummary> {
+  return request<ReceivablesSummary>(`/api/cash/receivables`);
+}
+
+export function getProfitability(range: {
+  start?: string;
+  end?: string;
+} = {}): Promise<ProfitabilitySummary> {
+  return request<ProfitabilitySummary>(
+    `/api/cash/profitability${buildQuery(range)}`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Pedidos
 // ---------------------------------------------------------------------------
@@ -221,18 +374,27 @@ export interface OrderFilters {
   payment_status?: PaymentStatus;
 }
 
+export interface OrderCostItemInput {
+  concept: string;
+  amount: number;
+}
+
 export interface OrderCreatePayload {
   catalog_item_id: number;
   quantity: number;
+  value?: number | null;
   note?: string | null;
   contact_id?: number | null;
   person_label?: string | null;
   save_contact?: boolean;
   priority?: OrderPriority | null;
+  cost_items?: OrderCostItemInput[];
 }
 
 export interface OrderUpdatePayload {
   quantity?: number;
+  value?: number | null;
+  clear_value?: boolean;
   note?: string | null;
   priority?: OrderPriority | null;
   clear_priority?: boolean;
@@ -259,6 +421,16 @@ export function updateOrder(
   return request<Order>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
+  });
+}
+
+export function replaceOrderCosts(
+  id: number,
+  items: OrderCostItemInput[],
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/costs`, {
+    method: "PUT",
+    body: JSON.stringify({ items }),
   });
 }
 

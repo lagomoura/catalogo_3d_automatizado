@@ -5,16 +5,18 @@ import { CatalogGrid } from "../components/CatalogGrid";
 import { JobStatus } from "../components/JobStatus";
 import { SubmitForm } from "../components/SubmitForm";
 import { usePolling } from "../hooks/usePolling";
-import type { CatalogItem, CategoryNode, Job } from "../types";
+import type { CatalogItem, CategoryNode, Job, PendingQuote } from "../types";
 import { CajaPage } from "./caja/CajaPage";
+import { CalculadoraPage } from "./calculadora/CalculadoraPage";
 import { PedidosPage } from "./pedidos/PedidosPage";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
-type Tab = "catalogo" | "caja" | "pedidos";
+type Tab = "catalogo" | "caja" | "pedidos" | "calculadora";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("catalogo");
+  const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
   const [activeJobs, setActiveJobs] = useState<Job[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -53,6 +55,11 @@ export default function AdminPage() {
   const handleItemsRemoved = useCallback((ids: number[]) => {
     const removed = new Set(ids);
     setCatalog((prev) => prev.filter((it) => !removed.has(it.id)));
+  }, []);
+
+  const handleQuoteToOrder = useCallback((quote: PendingQuote) => {
+    setPendingQuote(quote);
+    setTab("pedidos");
   }, []);
 
   const handleSubmit = useCallback(async (url: string, n: number, generate3d: boolean) => {
@@ -127,6 +134,15 @@ export default function AdminPage() {
         >
           Pedidos
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "calculadora"}
+          className={`tab ${tab === "calculadora" ? "tab--active" : ""}`}
+          onClick={() => setTab("calculadora")}
+        >
+          Calculadora
+        </button>
       </nav>
 
       {tab === "catalogo" ? (
@@ -148,8 +164,13 @@ export default function AdminPage() {
         </>
       ) : tab === "caja" ? (
         <CajaPage />
+      ) : tab === "calculadora" ? (
+        <CalculadoraPage onCreateOrder={handleQuoteToOrder} />
       ) : (
-        <PedidosPage />
+        <PedidosPage
+          pendingQuote={pendingQuote}
+          onPendingQuoteConsumed={() => setPendingQuote(null)}
+        />
       )}
     </div>
   );

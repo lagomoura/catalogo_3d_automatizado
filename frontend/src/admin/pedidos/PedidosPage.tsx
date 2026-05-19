@@ -6,16 +6,34 @@ import {
   getCatalog,
   getContacts,
   getOrders,
+  replaceOrderCosts,
   setOrderPayment,
   setOrderPriority,
   startOrder,
+  updateOrder,
+  type OrderCostItemInput,
   type OrderCreatePayload,
+  type OrderUpdatePayload,
 } from "../../api/client";
-import type { CatalogItem, Contact, Order, OrderPriority } from "../../types";
+import type {
+  CatalogItem,
+  Contact,
+  Order,
+  OrderPriority,
+  PendingQuote,
+} from "../../types";
 import { OrderForm } from "./OrderForm";
 import { OrderQueue } from "./OrderQueue";
 
-export function PedidosPage() {
+interface PedidosPageProps {
+  pendingQuote?: PendingQuote | null;
+  onPendingQuoteConsumed?: () => void;
+}
+
+export function PedidosPage({
+  pendingQuote = null,
+  onPendingQuoteConsumed,
+}: PedidosPageProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -66,6 +84,23 @@ export function PedidosPage() {
     [refreshOrders],
   );
 
+  const handleUpdate = useCallback(
+    async (id: number, p: OrderUpdatePayload) => {
+      // Errores se propagan al modal; refrescamos al terminar.
+      await updateOrder(id, p);
+      await Promise.all([refreshOrders(), getContacts().then(setContacts)]);
+    },
+    [refreshOrders],
+  );
+
+  const handleSaveCosts = useCallback(
+    async (id: number, items: OrderCostItemInput[]) => {
+      await replaceOrderCosts(id, items);
+      await refreshOrders();
+    },
+    [refreshOrders],
+  );
+
   return (
     <div className="pedidos">
       {error && <p className="error-banner">{error}</p>}
@@ -74,11 +109,14 @@ export function PedidosPage() {
         catalog={catalog}
         contacts={contacts}
         onCreate={handleCreate}
+        pendingQuote={pendingQuote}
+        onPendingQuoteConsumed={onPendingQuoteConsumed}
       />
 
       <OrderQueue
         orders={orders}
         catalog={catalog}
+        contacts={contacts}
         filterProductId={filterProductId}
         onFilterChange={setFilterProductId}
         onStart={(id) => void run(() => startOrder(id))}
@@ -87,6 +125,8 @@ export function PedidosPage() {
         onPriority={(id, p: OrderPriority | null) =>
           void run(() => setOrderPriority(id, p))
         }
+        onUpdate={handleUpdate}
+        onSaveCosts={handleSaveCosts}
         onDelete={(id) => void run(() => deleteOrder(id))}
       />
     </div>

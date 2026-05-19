@@ -363,6 +363,56 @@ body {
   border-color: var(--error);
 }
 
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+/* ---- Order edit modal ---- */
+
+.order-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 12, 0.7);
+  padding: 1.5rem;
+  animation: lightbox-fade 0.15s ease-out;
+}
+
+.order-modal__panel {
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.order-modal__product {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.tbtn--edit {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.tbtn--edit:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
 .card {
   position: relative;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -2525,5 +2575,487 @@ body {
   .tbtn {
     flex: 1;
     text-align: center;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Calculadora de costos                                               */
+/* ------------------------------------------------------------------ */
+
+.calc {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.calc__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.calc__panel {
+  height: 100%;
+}
+
+.calc__full {
+  grid-column: 1 / -1;
+}
+
+.calc__result {
+  background: var(--card-bg);
+}
+
+.calc__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.calc__lines li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.calc__lines li span {
+  color: var(--muted);
+}
+
+.calc__lines-sub {
+  border-top: 1px dashed var(--border);
+  padding-top: 0.55rem;
+  font-weight: 600;
+}
+
+.calc__lines-total {
+  border-top: 2px solid var(--fg);
+  padding-top: 0.6rem;
+  font-size: 1.15rem;
+}
+
+.calc__lines-total strong {
+  color: var(--accent);
+}
+
+.calc__charge {
+  margin-top: 0.9rem;
+}
+
+.calc__charge label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.calc__charge-reset {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calc__charge input {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.calc__actions {
+  margin-top: 0.9rem;
+}
+
+.calc__history {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.1rem 1.3rem;
+  background: var(--card-bg);
+}
+
+.calc__history h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1.05rem;
+}
+
+.calc__history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calc__history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.calc__history-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 160px;
+}
+
+.calc__history-total {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.calc__history-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Banner de cotización cargada en el formulario de pedido */
+.quote-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.quote-banner__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+/* Editor de costos dentro del modal de edición de pedido */
+.cost-editor {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cost-editor__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cost-editor__head h4 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.cost-editor__row {
+  display: grid;
+  grid-template-columns: 1fr 130px auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cost-editor__row input {
+  width: 100%;
+}
+
+.cost-editor__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cost-editor__sum {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.cost-editor__mismatch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  background: var(--st-warn-soft);
+  color: var(--st-warn);
+  font-size: 0.85rem;
+}
+
+/* Panel de rentabilidad del pedido */
+.profit {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--st-entregado-soft);
+}
+
+.profit[data-tone="bad"] {
+  background: color-mix(in srgb, var(--debit) 12%, transparent);
+}
+
+.profit__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.profit__row--main {
+  border-top: 1px dashed var(--border);
+  padding-top: 0.4rem;
+  font-size: 1.05rem;
+  color: var(--fg);
+}
+
+.profit[data-tone="ok"] .profit__row--main strong {
+  color: var(--credit);
+}
+
+.profit[data-tone="bad"] .profit__row--main strong {
+  color: var(--debit);
+}
+
+.profit__pct {
+  font-style: normal;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.profit__action {
+  align-self: flex-start;
+}
+
+.ticket__profit {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.05rem 0.4rem;
+  border-radius: 6px;
+}
+
+.ticket__profit[data-tone="ok"] {
+  color: var(--credit);
+  background: color-mix(in srgb, var(--credit) 12%, transparent);
+}
+
+.ticket__profit[data-tone="bad"] {
+  color: var(--debit);
+  background: color-mix(in srgb, var(--debit) 12%, transparent);
+}
+
+/* --- Caja: subnavegación + ampliaciones de flujo de caja --------------- */
+
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.subtab {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.subtab:hover {
+  color: var(--fg);
+}
+
+.subtab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.preset-row {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.preset-chip {
+  appearance: none;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip:hover {
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+.preset-chip--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.delta {
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.delta--up {
+  color: var(--credit);
+}
+
+.delta--down {
+  color: var(--debit);
+}
+
+.acct-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.acct-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  min-width: 150px;
+}
+
+.acct-chip__name {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.acct-chip__bal {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.acct-chip__flow {
+  font-size: 0.72rem;
+}
+
+.acct-chip__flow .is-credit {
+  color: var(--credit);
+}
+
+.acct-chip__flow .is-debit {
+  color: var(--debit);
+}
+
+.chart-card--wide {
+  grid-column: 1 / -1;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.hint--warn {
+  color: var(--st-warn);
+  font-weight: 600;
+}
+
+.txn-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.2rem 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.txn-pager__btns {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.txn-row--off {
+  opacity: 0.5;
+}
+
+/* Grillas por tipo de tabla (la base .txn-row es de 7 columnas). */
+.txn-table--mov .txn-row {
+  grid-template-columns: 96px 84px 110px 120px 1.2fr 1fr 130px 140px;
+}
+
+.txn-table--recv .txn-row {
+  grid-template-columns: 70px 1.3fr 1fr 110px 100px 120px 150px;
+}
+
+.txn-table--prof .txn-row {
+  grid-template-columns: 1.6fr 80px 70px 130px 130px 130px 90px;
+}
+
+.txn-table--rec .txn-row {
+  grid-template-columns: 1.4fr 1fr 1fr 70px 130px 240px;
+}
+
+.txn-table--acct .txn-row {
+  grid-template-columns: 1.5fr 140px 140px 360px;
+}
+
+.txn-table--stmt .txn-row {
+  grid-template-columns: 100px 90px 1fr 1.6fr 140px;
+}
+
+@media (max-width: 720px) {
+  .txn-table--mov .txn-row,
+  .txn-table--recv .txn-row,
+  .txn-table--prof .txn-row,
+  .txn-table--rec .txn-row,
+  .txn-table--acct .txn-row,
+  .txn-table--stmt .txn-row {
+    grid-template-columns: 1fr 1fr;
   }
 }

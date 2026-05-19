@@ -1,21 +1,48 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { resolveStorageUrl, type OrderCreatePayload } from "../../api/client";
-import type { CatalogItem, Contact, OrderPriority } from "../../types";
+import type {
+  CatalogItem,
+  Contact,
+  OrderPriority,
+  PendingQuote,
+} from "../../types";
+import { formatARS } from "../../utils/format";
 import { ContactPicker, type PersonValue } from "../caja/ContactPicker";
 
 interface Props {
   catalog: CatalogItem[];
   contacts: Contact[];
   onCreate: (p: OrderCreatePayload) => Promise<void>;
+  pendingQuote?: PendingQuote | null;
+  onPendingQuoteConsumed?: () => void;
 }
 
 const PRIORITIES: (OrderPriority | null)[] = [null, 1, 2, 3];
 
-export function OrderForm({ catalog, contacts, onCreate }: Props) {
+export function OrderForm({
+  catalog,
+  contacts,
+  onCreate,
+  pendingQuote,
+  onPendingQuoteConsumed,
+}: Props) {
   const [catalogId, setCatalogId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [value, setValue] = useState("");
   const [note, setNote] = useState("");
   const [priority, setPriority] = useState<OrderPriority | null>(null);
+  const [quoteCosts, setQuoteCosts] = useState<
+    PendingQuote["costItems"] | null
+  >(null);
+
+  // Cuando llega una cotización de la calculadora, precarga el valor a cobrar
+  // y retiene los conceptos de costo para snapshotearlos al crear el pedido.
+  useEffect(() => {
+    if (!pendingQuote) return;
+    setValue(String(pendingQuote.value));
+    setQuantity(Math.max(1, Math.floor(pendingQuote.quantity || 1)));
+    setQuoteCosts(pendingQuote.costItems);
+  }, [pendingQuote]);
   const [person, setPerson] = useState<PersonValue>({
     contactId: null,
     personLabel: "",
@@ -32,9 +59,11 @@ export function OrderForm({ catalog, contacts, onCreate }: Props) {
   const reset = () => {
     setCatalogId(null);
     setQuantity(1);
+    setValue("");
     setNote("");
     setPriority(null);
     setPerson({ contactId: null, personLabel: "", saveContact: false });
+    setQuoteCosts(null);
     setError(null);
   };
 
@@ -44,20 +73,29 @@ export function OrderForm({ catalog, contacts, onCreate }: Props) {
       setError("Elegí un producto del catálogo (es obligatorio)");
       return;
     }
+    const trimmedValue = value.trim();
+    const valueNum = trimmedValue ? Number(trimmedValue) : null;
+    if (valueNum !== null && (!Number.isFinite(valueNum) || valueNum <= 0)) {
+      setError("El valor debe ser un número mayor a 0");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await onCreate({
         catalog_item_id: catalogId,
         quantity,
+        value: valueNum,
         note: note.trim() || null,
         contact_id: person.contactId,
         person_label:
           person.contactId === null ? person.personLabel.trim() || null : null,
         save_contact: person.saveContact,
         priority,
+        cost_items: quoteCosts ?? undefined,
       });
       reset();
+      onPendingQuoteConsumed?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear el pedido");
     } finally {
@@ -70,6 +108,29 @@ export function OrderForm({ catalog, contacts, onCreate }: Props) {
       <div className="caja-form__head">
         <h3>Nuevo pedido</h3>
       </div>
+
+      {quoteCosts && (
+        <div className="quote-banner">
+          <div className="quote-banner__main">
+            <strong>Cotización cargada</strong>
+            <span className="hint">
+              {quantity} u · total {formatARS(Number(value) || 0)} ·{" "}
+              {quoteCosts.length} conceptos de costo (por unidad) se guardarán
+              con el pedido
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn--sm btn--ghost"
+            onClick={() => {
+              setQuoteCosts(null);
+              onPendingQuoteConsumed?.();
+            }}
+          >
+            Descartar
+          </button>
+        </div>
+      )}
 
       <div className="field">
         <label>Producto (tocá una tarjeta)</label>
@@ -126,6 +187,20 @@ export function OrderForm({ catalog, contacts, onCreate }: Props) {
               +
             </button>
           </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="pedido-value">Valor a cobrar</label>
+          <input
+            id="pedido-value"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            placeholder="Opcional"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
         </div>
 
         <div className="field">
