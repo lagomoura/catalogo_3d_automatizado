@@ -46,6 +46,30 @@ export function createJob(url: string, n_images: number, generate_3d: boolean = 
   });
 }
 
+export async function createManualProduct(data: {
+  name: string;
+  source_url?: string | null;
+  category_id?: number | null;
+  images: File[];
+}): Promise<CatalogItem> {
+  const form = new FormData();
+  form.append("name", data.name);
+  if (data.source_url) form.append("source_url", data.source_url);
+  if (data.category_id != null) form.append("category_id", String(data.category_id));
+  for (const file of data.images) form.append("images", file);
+
+  // No seteamos Content-Type: el browser agrega el boundary del multipart.
+  const resp = await fetch(`${API_BASE}/api/catalog/manual`, {
+    method: "POST",
+    body: form,
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`${resp.status} ${resp.statusText}: ${text}`);
+  }
+  return (await resp.json()) as CatalogItem;
+}
+
 export function getJob(jobId: number): Promise<Job> {
   return request<Job>(`/api/jobs/${jobId}`);
 }

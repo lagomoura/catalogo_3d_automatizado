@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createJob, getCatalog, getCategories, getJob } from "../api/client";
 import { CatalogGrid } from "../components/CatalogGrid";
 import { JobStatus } from "../components/JobStatus";
+import { ManualProductForm } from "../components/ManualProductForm";
 import { SubmitForm } from "../components/SubmitForm";
 import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job, PendingQuote } from "../types";
@@ -13,9 +14,11 @@ import { PedidosPage } from "./pedidos/PedidosPage";
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
 type Tab = "catalogo" | "caja" | "pedidos" | "calculadora";
+type SubmitMode = "makerworld" | "manual";
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("catalogo");
+  const [submitMode, setSubmitMode] = useState<SubmitMode>("makerworld");
   const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
   const [activeJobs, setActiveJobs] = useState<Job[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -147,7 +150,35 @@ export default function AdminPage() {
 
       {tab === "catalogo" ? (
         <>
-          <SubmitForm onSubmit={handleSubmit} />
+          <div className="tabs" role="tablist" aria-label="Modo de carga">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={submitMode === "makerworld"}
+              className={`tab ${submitMode === "makerworld" ? "tab--active" : ""}`}
+              onClick={() => setSubmitMode("makerworld")}
+            >
+              Importar de MakerWorld
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={submitMode === "manual"}
+              className={`tab ${submitMode === "manual" ? "tab--active" : ""}`}
+              onClick={() => setSubmitMode("manual")}
+            >
+              Subir diseño propio
+            </button>
+          </div>
+
+          {submitMode === "makerworld" ? (
+            <SubmitForm onSubmit={handleSubmit} />
+          ) : (
+            <ManualProductForm
+              categories={categories}
+              onCreated={() => refreshCatalog()}
+            />
+          )}
 
           <JobStatus jobs={activeJobs} />
 
