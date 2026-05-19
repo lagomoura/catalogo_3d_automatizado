@@ -46,7 +46,6 @@ export function OrderForm({
   const [person, setPerson] = useState<PersonValue>({
     contactId: null,
     personLabel: "",
-    saveContact: false,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +61,7 @@ export function OrderForm({
     setValue("");
     setNote("");
     setPriority(null);
-    setPerson({ contactId: null, personLabel: "", saveContact: false });
+    setPerson({ contactId: null, personLabel: "" });
     setQuoteCosts(null);
     setError(null);
   };
@@ -90,7 +89,7 @@ export function OrderForm({
         contact_id: person.contactId,
         person_label:
           person.contactId === null ? person.personLabel.trim() || null : null,
-        save_contact: person.saveContact,
+        save_contact: true,
         priority,
         cost_items: quoteCosts ?? undefined,
       });

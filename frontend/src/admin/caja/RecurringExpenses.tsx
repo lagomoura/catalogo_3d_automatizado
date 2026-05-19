@@ -2,20 +2,26 @@ import { useCallback, useEffect, useState } from "react";
 import {
   createRecurring,
   deleteRecurring,
-  EXPENSE_CATEGORIES,
   getRecurring,
   postRecurring,
   updateRecurring,
 } from "../../api/client";
-import type { Account, RecurringExpense } from "../../types";
+import type { RecurringExpense, TxCategory } from "../../types";
 import { formatARS, todayISO } from "../../utils/format";
 
+const NEW_CAT = "__new__";
+
 interface Props {
-  accounts: Account[];
+  categories: TxCategory[];
+  onCreateCategory: (name: string) => Promise<TxCategory>;
   onPosted?: () => void;
 }
 
-export function RecurringExpenses({ accounts, onPosted }: Props) {
+export function RecurringExpenses({
+  categories,
+  onCreateCategory,
+  onPosted,
+}: Props) {
   const [items, setItems] = useState<RecurringExpense[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,9 +29,12 @@ export function RecurringExpenses({ accounts, onPosted }: Props) {
 
   const [concept, setConcept] = useState("");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("");
-  const [accountId, setAccountId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [day, setDay] = useState("");
+
+  const debitCategories = categories.filter(
+    (c) => c.kind === "debit" && !c.archived,
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -40,6 +49,23 @@ export function RecurringExpenses({ accounts, onPosted }: Props) {
     void refresh();
   }, [refresh]);
 
+  const handleCategorySelect = async (value: string) => {
+    if (value !== NEW_CAT) {
+      setCategoryId(value);
+      return;
+    }
+    const name = window.prompt("Nueva categoría de egreso");
+    if (!name || !name.trim()) return;
+    try {
+      const created = await onCreateCategory(name.trim());
+      setCategoryId(String(created.id));
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "No se pudo crear la categoría",
+      );
+    }
+  };
+
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(amount);
@@ -47,20 +73,23 @@ export function RecurringExpenses({ accounts, onPosted }: Props) {
       setError("Concepto y monto válido son obligatorios");
       return;
     }
+    if (!categoryId) {
+      setError("Elegí una categoría para el gasto fijo");
+      return;
+    }
     setBusy(true);
     try {
       await createRecurring({
         concept: concept.trim(),
         amount: amt,
-        category: category.trim() || null,
-        account_id: accountId ? Number(accountId) : null,
+        category_id: Number(categoryId),
         day_of_month: day ? Number(day) : null,
       });
       setConcept("");
       setAmount("");
-      setCategory("");
-      setAccountId("");
+      setCategoryId("");
       setDay("");
+      setError(null);
       await refresh();
     } catch (e2) {
       setError(e2 instanceof Error ? e2.message : "No se pudo guardar");
@@ -124,34 +153,19 @@ export function RecurringExpenses({ accounts, onPosted }: Props) {
             />
           </div>
           <div className="field">
-            <label htmlFor="rec-cat">Categoría</label>
-            <input
-              id="rec-cat"
-              list="rec-cat-options"
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              autoComplete="off"
-            />
-            <datalist id="rec-cat-options">
-              {EXPENSE_CATEGORIES.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </div>
-          <div className="field">
-            <label htmlFor="rec-acct">Cuenta</label>
+            <label htmlFor="rec-cat">Categoría *</label>
             <select
-              id="rec-acct"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
+              id="rec-cat"
+              value={categoryId}
+              onChange={(e) => void handleCategorySelect(e.target.value)}
             >
-              <option value="">— Sin cuenta —</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={String(a.id)}>
-                  {a.name}
+              <option value="">— Elegí una categoría —</option>
+              {debitCategories.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.name}
                 </option>
               ))}
+              <option value={NEW_CAT}>＋ Nueva categoría…</option>
             </select>
           </div>
           <div className="field">
@@ -193,7 +207,6 @@ export function RecurringExpenses({ accounts, onPosted }: Props) {
           <div className="txn-row txn-row--head" role="row">
             <span>Concepto</span>
             <span>Categoría</span>
-            <span>Cuenta</span>
             <span>Día</span>
             <span className="txn-amount-col">Monto</span>
             <span />
@@ -208,7 +221,6 @@ export function RecurringExpenses({ accounts, onPosted }: Props) {
               <span data-label="Categoría">
                 {r.category ? <span className="tag">{r.category}</span> : "—"}
               </span>
-              <span data-label="Cuenta">{r.account?.name ?? "—"}</span>
               <span data-label="Día">{r.day_of_month ?? "—"}</span>
               <span data-label="Monto" className="txn-amount-col txn-amount is-debit">
                 {formatARS(r.amount)}

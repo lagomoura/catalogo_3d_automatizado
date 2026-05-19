@@ -4,7 +4,6 @@ import type { Contact } from "../../types";
 export interface PersonValue {
   contactId: number | null;
   personLabel: string;
-  saveContact: boolean;
 }
 
 interface Props {
@@ -13,27 +12,30 @@ interface Props {
   onChange: (v: PersonValue) => void;
 }
 
+/**
+ * La persona SIEMPRE se persiste como contacto (el backend la crea si no
+ * existe), para poder armar el historial de compras por persona. Por eso ya
+ * no hay opción "guardar como contacto": escribir un nombre nuevo lo guarda.
+ */
 export function ContactPicker({ contacts, value, onChange }: Props) {
   const listId = useId();
 
   const matched = (text: string): Contact | undefined =>
-    contacts.find((c) => c.name.trim().toLowerCase() === text.trim().toLowerCase());
+    contacts.find(
+      (c) => c.name.trim().toLowerCase() === text.trim().toLowerCase(),
+    );
 
   const handleText = (text: string) => {
     const hit = matched(text);
-    onChange({
-      contactId: hit ? hit.id : null,
-      personLabel: text,
-      saveContact: hit ? false : value.saveContact,
-    });
+    onChange({ contactId: hit ? hit.id : null, personLabel: text });
   };
 
   const isKnown = value.contactId !== null;
-  const showSave = value.personLabel.trim().length > 0 && !isKnown;
+  const isNew = !isKnown && value.personLabel.trim().length > 0;
 
   return (
     <div className="field">
-      <label htmlFor={listId}>Persona pagante</label>
+      <label htmlFor={listId}>Persona</label>
       <input
         id={listId}
         list={`${listId}-options`}
@@ -48,20 +50,9 @@ export function ContactPicker({ contacts, value, onChange }: Props) {
           <option key={c.id} value={c.name} />
         ))}
       </datalist>
-      {isKnown && (
-        <span className="hint hint--ok">✓ Contacto guardado</span>
-      )}
-      {showSave && (
-        <label className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={value.saveContact}
-            onChange={(e) =>
-              onChange({ ...value, saveContact: e.target.checked })
-            }
-          />
-          Guardar como contacto
-        </label>
+      {isKnown && <span className="hint hint--ok">✓ Contacto guardado</span>}
+      {isNew && (
+        <span className="hint">Se guardará como contacto nuevo</span>
       )}
     </div>
   );

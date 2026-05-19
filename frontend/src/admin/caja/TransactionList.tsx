@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { cashExportUrl, type TransactionFilters } from "../../api/client";
-import type { Account, CashTransaction, TransactionKind } from "../../types";
+import type { CashTransaction, TransactionKind, TxCategory } from "../../types";
 import { formatARS, formatDate } from "../../utils/format";
 
 export interface ListFilters {
   start: string;
   end: string;
   kind: "" | TransactionKind;
-  account_id: string;
-  category: string;
+  category_id: string;
   q: string;
 }
 
@@ -17,7 +16,7 @@ interface Props {
   total: number;
   offset: number;
   limit: number;
-  accounts: Account[];
+  categories: TxCategory[];
   filters: ListFilters;
   onFiltersChange: (f: ListFilters) => void;
   onOffsetChange: (offset: number) => void;
@@ -30,18 +29,25 @@ function toApiFilters(f: ListFilters): TransactionFilters {
     start: f.start || undefined,
     end: f.end || undefined,
     kind: f.kind || undefined,
-    account_id: f.account_id ? Number(f.account_id) : undefined,
-    category: f.category || undefined,
+    category_id: f.category_id ? Number(f.category_id) : undefined,
     q: f.q || undefined,
   };
 }
+
+const EMPTY: ListFilters = {
+  start: "",
+  end: "",
+  kind: "",
+  category_id: "",
+  q: "",
+};
 
 export function TransactionList({
   transactions,
   total,
   offset,
   limit,
-  accounts,
+  categories,
   filters,
   onFiltersChange,
   onOffsetChange,
@@ -70,22 +76,11 @@ export function TransactionList({
     }
   };
 
-  const clearFilters = () =>
-    onFiltersChange({
-      start: "",
-      end: "",
-      kind: "",
-      account_id: "",
-      category: "",
-      q: "",
-    });
-
   const hasFilters =
     filters.start ||
     filters.end ||
     filters.kind ||
-    filters.account_id ||
-    filters.category ||
+    filters.category_id ||
     filters.q;
 
   const from = total === 0 ? 0 : offset + 1;
@@ -119,24 +114,30 @@ export function TransactionList({
             <option value="debit">Egresos</option>
           </select>
           <select
-            aria-label="Cuenta"
-            value={filters.account_id}
-            onChange={(e) => set({ account_id: e.target.value })}
-          >
-            <option value="">Toda cuenta</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={String(a.id)}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
             aria-label="Categoría"
-            placeholder="Categoría"
-            value={filters.category}
-            onChange={(e) => set({ category: e.target.value })}
-          />
+            value={filters.category_id}
+            onChange={(e) => set({ category_id: e.target.value })}
+          >
+            <option value="">Toda categoría</option>
+            <optgroup label="Ingresos">
+              {categories
+                .filter((c) => c.kind === "credit")
+                .map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="Egresos">
+              {categories
+                .filter((c) => c.kind === "debit")
+                .map((c) => (
+                  <option key={c.id} value={String(c.id)}>
+                    {c.name}
+                  </option>
+                ))}
+            </optgroup>
+          </select>
           <input
             type="search"
             placeholder="Buscar…"
@@ -144,7 +145,11 @@ export function TransactionList({
             onChange={(e) => set({ q: e.target.value })}
           />
           {hasFilters && (
-            <button type="button" className="btn btn--ghost" onClick={clearFilters}>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => onFiltersChange(EMPTY)}
+            >
               Limpiar
             </button>
           )}
@@ -165,7 +170,6 @@ export function TransactionList({
             <div className="txn-row txn-row--head" role="row">
               <span>Fecha</span>
               <span>Tipo</span>
-              <span>Cuenta</span>
               <span>Categoría</span>
               <span>Producto</span>
               <span>Persona</span>
@@ -184,7 +188,6 @@ export function TransactionList({
                     {tx.kind === "credit" ? "Ingreso" : "Egreso"}
                   </span>
                 </span>
-                <span data-label="Cuenta">{tx.account?.name ?? "—"}</span>
                 <span data-label="Categoría">
                   {tx.category ? (
                     <span className="tag">{tx.category}</span>

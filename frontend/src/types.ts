@@ -60,6 +60,16 @@ export interface CatalogItem {
 }
 
 export type TransactionKind = "credit" | "debit";
+export type TxCategoryKind = "credit" | "debit";
+
+export interface TxCategory {
+  id: number;
+  name: string;
+  kind: TxCategoryKind;
+  sort_order: number;
+  archived: boolean;
+  created_at: string;
+}
 
 export interface Contact {
   id: number;
@@ -89,6 +99,7 @@ export interface CashTransaction {
   person_label: string | null;
   account: { id: number; name: string } | null;
   category: string | null;
+  category_id: number | null;
   created_at: string;
 }
 
@@ -168,7 +179,7 @@ export interface RecurringExpense {
   concept: string;
   amount: number;
   category: string | null;
-  account: { id: number; name: string } | null;
+  category_id: number | null;
   day_of_month: number | null;
   active: boolean;
   created_at: string;

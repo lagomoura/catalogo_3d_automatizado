@@ -1,54 +1,54 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  type CashTransactionPayload,
-  type CashTransactionUpdatePayload,
+import type {
+  CashTransactionPayload,
+  CashTransactionUpdatePayload,
 } from "../../api/client";
 import type {
-  Account,
   CashTransaction,
   CatalogItem,
   Contact,
   TransactionKind,
+  TxCategory,
 } from "../../types";
 import { todayISO } from "../../utils/format";
 import { ContactPicker, type PersonValue } from "./ContactPicker";
 
-const FREE = "__free__";
-const NONE = "__none__";
+const NONE = "";
+const NEW_CAT = "__new__";
 
 interface Props {
   catalog: CatalogItem[];
   contacts: Contact[];
-  accounts: Account[];
+  categories: TxCategory[];
   editing: CashTransaction | null;
   onCreate: (p: CashTransactionPayload) => Promise<void>;
   onUpdate: (id: number, p: CashTransactionUpdatePayload) => Promise<void>;
   onCancelEdit: () => void;
+  onCreateCategory: (
+    name: string,
+    kind: TransactionKind,
+  ) => Promise<TxCategory>;
 }
 
 export function TransactionForm({
   catalog,
   contacts,
-  accounts,
+  categories,
   editing,
   onCreate,
   onUpdate,
   onCancelEdit,
+  onCreateCategory,
 }: Props) {
   const [kind, setKind] = useState<TransactionKind>("credit");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayISO());
   const [description, setDescription] = useState("");
-  const [productSel, setProductSel] = useState<string>(NONE);
-  const [productFree, setProductFree] = useState("");
-  const [accountId, setAccountId] = useState<string>("");
-  const [category, setCategory] = useState("");
+  const [productId, setProductId] = useState<string>(NONE);
+  const [categoryId, setCategoryId] = useState<string>(NONE);
   const [person, setPerson] = useState<PersonValue>({
     contactId: null,
     personLabel: "",
-    saveContact: false,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,22 +59,11 @@ export function TransactionForm({
     setAmount(String(editing.amount));
     setDate(editing.occurred_on.slice(0, 10));
     setDescription(editing.description ?? "");
-    setAccountId(editing.account ? String(editing.account.id) : "");
-    setCategory(editing.category ?? "");
-    if (editing.catalog_item) {
-      setProductSel(String(editing.catalog_item.id));
-      setProductFree("");
-    } else if (editing.product_label) {
-      setProductSel(FREE);
-      setProductFree(editing.product_label);
-    } else {
-      setProductSel(NONE);
-      setProductFree("");
-    }
+    setProductId(editing.catalog_item ? String(editing.catalog_item.id) : NONE);
+    setCategoryId(editing.category_id ? String(editing.category_id) : NONE);
     setPerson({
       contactId: editing.contact?.id ?? null,
       personLabel: editing.contact?.name ?? editing.person_label ?? "",
-      saveContact: false,
     });
   }, [editing]);
 
@@ -83,21 +72,49 @@ export function TransactionForm({
     setAmount("");
     setDate(todayISO());
     setDescription("");
-    setProductSel(NONE);
-    setProductFree("");
-    setAccountId("");
-    setCategory("");
-    setPerson({ contactId: null, personLabel: "", saveContact: false });
+    setProductId(NONE);
+    setCategoryId(NONE);
+    setPerson({ contactId: null, personLabel: "" });
     setError(null);
   };
-
-  const categoryOptions =
-    kind === "credit" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const sortedCatalog = useMemo(
     () => [...catalog].sort((a, b) => a.name.localeCompare(b.name)),
     [catalog],
   );
+  const kindCategories = useMemo(
+    () => categories.filter((c) => c.kind === kind && !c.archived),
+    [categories, kind],
+  );
+
+  // Si cambia el tipo, una categoría del tipo anterior deja de ser válida.
+  useEffect(() => {
+    if (categoryId === NONE || categoryId === NEW_CAT) return;
+    if (!kindCategories.some((c) => String(c.id) === categoryId)) {
+      setCategoryId(NONE);
+    }
+  }, [kindCategories, categoryId]);
+
+  const handleCategorySelect = async (value: string) => {
+    if (value !== NEW_CAT) {
+      setCategoryId(value);
+      return;
+    }
+    const name = window.prompt(
+      kind === "credit"
+        ? "Nueva categoría de ingreso"
+        : "Nueva categoría de egreso",
+    );
+    if (!name || !name.trim()) return;
+    try {
+      const created = await onCreateCategory(name.trim(), kind);
+      setCategoryId(String(created.id));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No se pudo crear la categoría",
+      );
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,11 +129,22 @@ export function TransactionForm({
     }
 
     const catalogId =
-      productSel !== FREE && productSel !== NONE ? Number(productSel) : null;
-    const freeLabel = productSel === FREE ? productFree.trim() || null : null;
+      kind === "credit" && productId !== NONE ? Number(productId) : null;
+    const catId =
+      categoryId !== NONE && categoryId !== NEW_CAT
+        ? Number(categoryId)
+        : null;
+
+    if (kind === "credit" && catalogId === null) {
+      setError("Elegí el producto vendido (cada ingreso es una venta)");
+      return;
+    }
+    if (kind === "debit" && catId === null) {
+      setError("Elegí una categoría para el egreso");
+      return;
+    }
+
     const personLabel = person.personLabel.trim();
-    const acctId = accountId ? Number(accountId) : null;
-    const cat = category.trim() || null;
 
     setBusy(true);
     setError(null);
@@ -127,16 +155,14 @@ export function TransactionForm({
           amount: amt,
           occurred_on: date,
           description: description.trim() || null,
-          product_label: freeLabel,
-          category: cat,
         };
         if (catalogId !== null) payload.catalog_item_id = catalogId;
         else payload.clear_catalog_item = true;
-        if (acctId !== null) payload.account_id = acctId;
-        else payload.clear_account = true;
+        if (catId !== null) payload.category_id = catId;
+        else payload.clear_category = true;
         if (person.contactId !== null) payload.contact_id = person.contactId;
+        else if (personLabel) payload.person_label = personLabel;
         else payload.clear_contact = true;
-        payload.person_label = person.contactId === null ? personLabel || null : null;
         await onUpdate(editing.id, payload);
       } else {
         const payload: CashTransactionPayload = {
@@ -144,13 +170,11 @@ export function TransactionForm({
           amount: amt,
           occurred_on: date,
           description: description.trim() || null,
-          product_label: freeLabel,
           catalog_item_id: catalogId,
+          category_id: catId,
           contact_id: person.contactId,
           person_label: person.contactId === null ? personLabel || null : null,
-          account_id: acctId,
-          category: cat,
-          save_contact: person.saveContact,
+          save_contact: true,
         };
         await onCreate(payload);
       }
@@ -172,14 +196,14 @@ export function TransactionForm({
             className={`kind-toggle__btn ${kind === "credit" ? "is-active is-credit" : ""}`}
             onClick={() => setKind("credit")}
           >
-            ↑ Ingreso (cobro)
+            ↑ Ingreso (venta)
           </button>
           <button
             type="button"
             className={`kind-toggle__btn ${kind === "debit" ? "is-active is-debit" : ""}`}
             onClick={() => setKind("debit")}
           >
-            ↓ Egreso (pago)
+            ↓ Egreso (gasto)
           </button>
         </div>
       </div>
@@ -208,65 +232,43 @@ export function TransactionForm({
           />
         </div>
 
-        <div className="field">
-          <label htmlFor="caja-product">Producto cobrado / pagado</label>
-          <select
-            id="caja-product"
-            value={productSel}
-            onChange={(e) => setProductSel(e.target.value)}
-          >
-            <option value={NONE}>— Sin producto —</option>
-            <option value={FREE}>✏️ Texto libre…</option>
-            <optgroup label="Del catálogo">
+        {kind === "credit" && (
+          <div className="field">
+            <label htmlFor="caja-product">Producto vendido *</label>
+            <select
+              id="caja-product"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            >
+              <option value={NONE}>— Elegí un producto —</option>
               {sortedCatalog.map((it) => (
                 <option key={it.id} value={String(it.id)}>
                   {it.name}
                 </option>
               ))}
-            </optgroup>
-          </select>
-          {productSel === FREE && (
-            <input
-              type="text"
-              placeholder="Nombre del producto…"
-              value={productFree}
-              onChange={(e) => setProductFree(e.target.value)}
-            />
-          )}
-        </div>
+            </select>
+          </div>
+        )}
 
         <div className="field">
-          <label htmlFor="caja-account">Cuenta / método</label>
+          <label htmlFor="caja-category">
+            {kind === "credit" ? "Categoría (opcional)" : "Categoría *"}
+          </label>
           <select
-            id="caja-account"
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
+            id="caja-category"
+            value={categoryId}
+            onChange={(e) => void handleCategorySelect(e.target.value)}
           >
-            <option value="">— Sin cuenta —</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={String(a.id)}>
-                {a.name}
+            <option value={NONE}>
+              {kind === "credit" ? "— Sin categoría —" : "— Elegí una categoría —"}
+            </option>
+            {kindCategories.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name}
               </option>
             ))}
+            <option value={NEW_CAT}>＋ Nueva categoría…</option>
           </select>
-        </div>
-
-        <div className="field">
-          <label htmlFor="caja-category">Categoría</label>
-          <input
-            id="caja-category"
-            list="caja-category-options"
-            type="text"
-            placeholder={kind === "credit" ? "Venta…" : "Filamento/Insumos…"}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            autoComplete="off"
-          />
-          <datalist id="caja-category-options">
-            {categoryOptions.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
         </div>
 
         <ContactPicker contacts={contacts} value={person} onChange={setPerson} />

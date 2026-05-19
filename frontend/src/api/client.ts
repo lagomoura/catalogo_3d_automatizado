@@ -16,6 +16,8 @@ import type {
   ReceivablesSummary,
   RecurringExpense,
   TransactionKind,
+  TxCategory,
+  TxCategoryKind,
 } from "../types";
 
 const API_BASE: string =
@@ -143,30 +145,12 @@ export function restyleCatalogImage(itemId: number, imageId: number): Promise<Ca
 // Control de caja
 // ---------------------------------------------------------------------------
 
-/** Categorías sugeridas (el backend acepta texto libre). */
-export const INCOME_CATEGORIES = ["Venta", "Seña/Anticipo", "Reintegro", "Otros"];
-export const EXPENSE_CATEGORIES = [
-  "Filamento/Insumos",
-  "Electricidad",
-  "Mantenimiento",
-  "Repuestos",
-  "Envío",
-  "Publicidad",
-  "Comisiones",
-  "Impuestos",
-  "Alquiler",
-  "Sueldos",
-  "Herramientas",
-  "Otros",
-];
-
 export interface TransactionFilters {
   start?: string;
   end?: string;
   kind?: TransactionKind;
   contact_id?: number;
-  account_id?: number;
-  category?: string;
+  category_id?: number;
   q?: string;
   limit?: number;
   offset?: number;
@@ -181,8 +165,7 @@ export interface CashTransactionPayload {
   catalog_item_id?: number | null;
   contact_id?: number | null;
   person_label?: string | null;
-  account_id?: number | null;
-  category?: string | null;
+  category_id?: number | null;
   save_contact?: boolean;
 }
 
@@ -197,9 +180,8 @@ export interface CashTransactionUpdatePayload {
   contact_id?: number | null;
   clear_contact?: boolean;
   person_label?: string | null;
-  account_id?: number | null;
-  clear_account?: boolean;
-  category?: string | null;
+  category_id?: number | null;
+  clear_category?: boolean;
 }
 
 function buildQuery(params: object): string {
@@ -275,45 +257,50 @@ export function getContactStatement(id: number): Promise<ContactStatement> {
   return request<ContactStatement>(`/api/cash/contacts/${id}/statement`);
 }
 
-// ----- Cuentas / métodos de pago -----
+// ----- Cuenta única (saldo / balances) -----
 
 export function getAccounts(includeArchived = false): Promise<Account[]> {
   const qs = includeArchived ? "?include_archived=true" : "";
   return request<Account[]>(`/api/cash/accounts${qs}`);
 }
 
-export interface AccountPayload {
-  name: string;
-  opening_balance?: number;
-  sort_order?: number;
+// ----- Categorías de movimiento (ingreso / egreso) -----
+
+export function getTxCategories(
+  kind?: TxCategoryKind,
+  includeArchived = false,
+): Promise<TxCategory[]> {
+  return request<TxCategory[]>(
+    `/api/cash/categories${buildQuery({
+      kind,
+      include_archived: includeArchived || undefined,
+    })}`,
+  );
 }
 
-export function createAccount(payload: AccountPayload): Promise<Account> {
-  return request<Account>(`/api/cash/accounts`, {
+export function createTxCategory(payload: {
+  name: string;
+  kind: TxCategoryKind;
+  sort_order?: number;
+}): Promise<TxCategory> {
+  return request<TxCategory>(`/api/cash/categories`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export interface AccountUpdatePayload {
-  name?: string;
-  opening_balance?: number;
-  sort_order?: number;
-  archived?: boolean;
-}
-
-export function updateAccount(
+export function updateTxCategory(
   id: number,
-  payload: AccountUpdatePayload,
-): Promise<Account> {
-  return request<Account>(`/api/cash/accounts/${id}`, {
+  payload: { name?: string; sort_order?: number; archived?: boolean },
+): Promise<TxCategory> {
+  return request<TxCategory>(`/api/cash/categories/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
 }
 
-export function deleteAccount(id: number): Promise<void> {
-  return request<void>(`/api/cash/accounts/${id}`, { method: "DELETE" });
+export function deleteTxCategory(id: number): Promise<void> {
+  return request<void>(`/api/cash/categories/${id}`, { method: "DELETE" });
 }
 
 // ----- Gastos recurrentes -----
@@ -321,17 +308,15 @@ export function deleteAccount(id: number): Promise<void> {
 export interface RecurringPayload {
   concept: string;
   amount: number;
-  category?: string | null;
-  account_id?: number | null;
+  category_id?: number | null;
   day_of_month?: number | null;
 }
 
 export interface RecurringUpdatePayload {
   concept?: string;
   amount?: number;
-  category?: string | null;
-  account_id?: number | null;
-  clear_account?: boolean;
+  category_id?: number | null;
+  clear_category?: boolean;
   day_of_month?: number | null;
   active?: boolean;
 }

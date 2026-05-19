@@ -44,7 +44,6 @@ export function OrderEditModal({
   const [person, setPerson] = useState<PersonValue>({
     contactId: order.contact?.id ?? null,
     personLabel: order.contact?.name ?? order.person_label ?? "",
-    saveContact: false,
   });
   const [costRows, setCostRows] = useState<CostRow[]>(
     order.cost_items.map((c) => ({

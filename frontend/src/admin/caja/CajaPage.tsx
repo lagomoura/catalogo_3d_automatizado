@@ -1,26 +1,29 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createCashTransaction,
+  createTxCategory,
   deleteCashTransaction,
-  getAccounts,
   getCashSummary,
   getCashTransactions,
   getCatalog,
   getContacts,
+  getTxCategories,
   updateCashTransaction,
   type CashTransactionPayload,
   type CashTransactionUpdatePayload,
 } from "../../api/client";
 import type {
-  Account,
   CashSummary,
   CashTransaction,
   CatalogItem,
   Contact,
+  TransactionKind,
+  TxCategory,
 } from "../../types";
-import { AccountManager } from "./AccountManager";
 import { CajaDashboard } from "./CajaDashboard";
+import { CategoryManager } from "./CategoryManager";
 import type { Range } from "./periods";
+import { PeopleManager } from "./PeopleManager";
 import { ProfitabilityPanel } from "./ProfitabilityPanel";
 import { ReceivablesPanel } from "./ReceivablesPanel";
 import { RecurringExpenses } from "./RecurringExpenses";
@@ -33,7 +36,8 @@ type SubTab =
   | "cobrar"
   | "rentabilidad"
   | "recurrentes"
-  | "cuentas";
+  | "categorias"
+  | "personas";
 
 const SUBTABS: { key: SubTab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
@@ -41,7 +45,8 @@ const SUBTABS: { key: SubTab; label: string }[] = [
   { key: "cobrar", label: "Por cobrar" },
   { key: "rentabilidad", label: "Rentabilidad" },
   { key: "recurrentes", label: "Gastos fijos" },
-  { key: "cuentas", label: "Cuentas" },
+  { key: "categorias", label: "Categorías" },
+  { key: "personas", label: "Personas" },
 ];
 
 const PAGE_SIZE = 50;
@@ -50,8 +55,7 @@ const EMPTY_FILTERS: ListFilters = {
   start: "",
   end: "",
   kind: "",
-  account_id: "",
-  category: "",
+  category_id: "",
   q: "",
 };
 
@@ -63,7 +67,7 @@ export function CajaPage() {
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<TxCategory[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [editing, setEditing] = useState<CashTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +84,7 @@ export function CajaPage() {
       start: filters.start || undefined,
       end: filters.end || undefined,
       kind: filters.kind || undefined,
-      account_id: filters.account_id ? Number(filters.account_id) : undefined,
-      category: filters.category || undefined,
+      category_id: filters.category_id ? Number(filters.category_id) : undefined,
       q: filters.q || undefined,
       limit: PAGE_SIZE,
       offset,
@@ -90,8 +93,8 @@ export function CajaPage() {
     setTotal(page.total);
   }, [filters, offset]);
 
-  const refreshAccounts = useCallback(async () => {
-    setAccounts(await getAccounts());
+  const refreshCategories = useCallback(async () => {
+    setCategories(await getTxCategories());
   }, []);
 
   useEffect(() => {
@@ -117,17 +120,17 @@ export function CajaPage() {
   useEffect(() => {
     getContacts().then(setContacts).catch(() => undefined);
     getCatalog().then(setCatalog).catch(() => undefined);
-    refreshAccounts().catch(() => undefined);
-  }, [refreshAccounts]);
+    refreshCategories().catch(() => undefined);
+  }, [refreshCategories]);
 
   const afterMutation = useCallback(async () => {
     await Promise.all([
       refreshSummary(),
       refreshList(),
-      refreshAccounts(),
+      refreshCategories(),
       getContacts().then(setContacts),
     ]);
-  }, [refreshSummary, refreshList, refreshAccounts]);
+  }, [refreshSummary, refreshList, refreshCategories]);
 
   const handleCreate = useCallback(
     async (p: CashTransactionPayload) => {
@@ -155,6 +158,15 @@ export function CajaPage() {
     [afterMutation, editing],
   );
 
+  const handleCreateCategory = useCallback(
+    async (name: string, kind: TransactionKind): Promise<TxCategory> => {
+      const created = await createTxCategory({ name, kind });
+      await refreshCategories();
+      return created;
+    },
+    [refreshCategories],
+  );
+
   return (
     <div className="caja">
       {error && <p className="error-banner">{error}</p>}
@@ -175,11 +187,7 @@ export function CajaPage() {
       </nav>
 
       {sub === "resumen" && (
-        <CajaDashboard
-          summary={summary}
-          range={range}
-          onRangeChange={setRange}
-        />
+        <CajaDashboard summary={summary} range={range} onRangeChange={setRange} />
       )}
 
       {sub === "movimientos" && (
@@ -187,18 +195,19 @@ export function CajaPage() {
           <TransactionForm
             catalog={catalog}
             contacts={contacts}
-            accounts={accounts}
+            categories={categories}
             editing={editing}
             onCreate={handleCreate}
             onUpdate={handleUpdate}
             onCancelEdit={() => setEditing(null)}
+            onCreateCategory={handleCreateCategory}
           />
           <TransactionList
             transactions={transactions}
             total={total}
             offset={offset}
             limit={PAGE_SIZE}
-            accounts={accounts}
+            categories={categories}
             filters={filters}
             onFiltersChange={setFilters}
             onOffsetChange={setOffset}
@@ -216,15 +225,26 @@ export function CajaPage() {
       {sub === "rentabilidad" && <ProfitabilityPanel />}
 
       {sub === "recurrentes" && (
-        <RecurringExpenses accounts={accounts} onPosted={afterMutation} />
+        <RecurringExpenses
+          categories={categories}
+          onCreateCategory={(name) => handleCreateCategory(name, "debit")}
+          onPosted={afterMutation}
+        />
       )}
 
-      {sub === "cuentas" && (
-        <AccountManager
-          accounts={accounts}
-          balances={summary?.accounts ?? []}
+      {sub === "categorias" && (
+        <CategoryManager
+          categories={categories}
+          onChanged={() => void refreshCategories()}
+        />
+      )}
+
+      {sub === "personas" && (
+        <PeopleManager
           contacts={contacts}
-          onAccountsChanged={afterMutation}
+          onChanged={() => {
+            getContacts().then(setContacts).catch(() => undefined);
+          }}
         />
       )}
     </div>
