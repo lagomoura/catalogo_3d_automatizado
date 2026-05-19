@@ -45,9 +45,10 @@ export function CajaDashboard({ summary, range, onRangeChange }: Props) {
   const daily =
     s?.daily.map((d) => ({ ...d, label: formatDate(d.day) })) ?? [];
   const topProducts = (s?.by_product ?? [])
-    .map((p) => ({ name: p.label, value: p.credit + p.debit }))
-    .filter((p) => p.value > 0)
-    .slice(0, 7);
+    .map((p) => ({ name: p.label, Volumen: p.credit + p.debit }))
+    .filter((p) => p.Volumen > 0)
+    .sort((a, b) => b.Volumen - a.Volumen)
+    .slice(0, 8);
   const expenseCats = (s?.by_category ?? [])
     .filter((c) => c.debit > 0)
     .map((c) => ({ name: c.category, value: c.debit }))
@@ -230,25 +231,42 @@ export function CajaDashboard({ summary, range, onRangeChange }: Props) {
           {topProducts.length === 0 ? (
             <p className="txn-empty">Sin datos en el período.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={topProducts}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  innerRadius={45}
-                  paddingAngle={2}
-                >
+            <ResponsiveContainer width="100%" height={Math.max(260, topProducts.length * 38)}>
+              <BarChart
+                data={topProducts}
+                layout="vertical"
+                margin={{ left: 8, right: 16 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(0,0,0,0.06)"
+                  horizontal={false}
+                />
+                <XAxis
+                  type="number"
+                  fontSize={11}
+                  tickFormatter={(v) => formatARS(Number(v))}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={140}
+                  fontSize={11}
+                  interval={0}
+                  tickFormatter={(v: string) =>
+                    v.length > 22 ? `${v.slice(0, 21)}…` : v
+                  }
+                />
+                <Tooltip
+                  formatter={(v) => formatARS(Number(v))}
+                  cursor={{ fill: "rgba(0,0,0,0.04)" }}
+                />
+                <Bar dataKey="Volumen" radius={[0, 4, 4, 0]} barSize={20}>
                   {topProducts.map((_, i) => (
                     <Cell key={i} fill={PIE[i % PIE.length]} />
                   ))}
-                </Pie>
-                <Tooltip formatter={(v) => formatARS(Number(v))} />
-                <Legend />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           )}
         </div>
