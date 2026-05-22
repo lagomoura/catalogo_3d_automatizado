@@ -23,6 +23,38 @@ export interface SavedQuote {
   config: QuoteConfig;
   piece: QuotePiece;
   breakdown: QuoteBreakdown;
+  /** Material e impresora seleccionados (Estoque + Impressoras integration). */
+  materialId?: number | null;
+  printerId?: number | null;
+}
+
+const SELECTION_KEY = "calc.selection.v1";
+
+export interface CalcSelection {
+  materialId: number | null;
+  printerId: number | null;
+}
+
+export function loadSelection(): CalcSelection {
+  try {
+    const raw = localStorage.getItem(SELECTION_KEY);
+    if (!raw) return { materialId: null, printerId: null };
+    const parsed = JSON.parse(raw) as Partial<CalcSelection>;
+    return {
+      materialId: parsed.materialId ?? null,
+      printerId: parsed.printerId ?? null,
+    };
+  } catch {
+    return { materialId: null, printerId: null };
+  }
+}
+
+export function saveSelection(sel: CalcSelection): void {
+  try {
+    localStorage.setItem(SELECTION_KEY, JSON.stringify(sel));
+  } catch {
+    /* no crítico */
+  }
 }
 
 export function loadConfig(): QuoteConfig {

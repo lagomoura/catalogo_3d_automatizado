@@ -15,6 +15,20 @@ export interface QuoteConfig {
   sparePartCost: number;
   /** Margen de error en % (ej: 5) */
   errorMarginPct: number;
+  /**
+   * Cuando se elige una impresora del backend con `cost_per_hour > 0`, este
+   * valor reemplaza el cálculo `electricity + machineWear` por un único
+   * `printerHourlyCostOverride * totalHours`. Si es null/0, se usa el modelo
+   * tradicional watts × kWh + desgaste.
+   */
+  printerHourlyCostOverride: number | null;
+  /**
+   * Comisión del marketplace donde se vende (Mercado Libre, Shopee, etc.),
+   * en porcentaje. El total final se infla a `total / (1 - fee/100)` para
+   * que después de descontar la comisión queden los números deseados.
+   * 0 = venta directa sin marketplace.
+   */
+  marketplaceFeePct: number;
 }
 
 export type ProfitMultiplier = 3 | 4 | 5;
@@ -39,7 +53,17 @@ export interface QuoteBreakdown {
   suppliesBase: number;
   /** Insumos extra con el +30% (se usa sólo para el total a cobrar). */
   supplies: number;
-  /** Total a cobrar = operativos × multiplicador + insumos(+30%). */
+  /** Subtotal antes de aplicar la comisión del marketplace. */
+  subtotal: number;
+  /**
+   * Monto absoluto que se suma para cubrir la comisión del marketplace
+   * (0 si `marketplaceFeePct === 0`).
+   */
+  marketplaceFee: number;
+  /**
+   * Total a cobrar = (operativos × multiplicador + insumos(+30%)) inflado
+   * para absorber la comisión del marketplace.
+   */
   total: number;
 }
 
@@ -50,7 +74,19 @@ export const DEFAULT_CONFIG: QuoteConfig = {
   machineLifeHours: 4320,
   sparePartCost: 150000,
   errorMarginPct: 5,
+  printerHourlyCostOverride: null,
+  marketplaceFeePct: 0,
 };
+
+/** Presets de comisión por marketplace. 0 = venta directa. */
+export const MARKETPLACE_PRESETS: { label: string; pct: number }[] = [
+  { label: "Venta directa", pct: 0 },
+  { label: "Mercado Libre Clásica (14%)", pct: 14 },
+  { label: "Mercado Libre Premium (17.5%)", pct: 17.5 },
+  { label: "Shopee (12%)", pct: 12 },
+  { label: "Tienda Nube (sin comisión)", pct: 0 },
+  { label: "Magalu (16%)", pct: 16 },
+];
 
 export const DEFAULT_PIECE: QuotePiece = {
   pieceName: "",
@@ -75,19 +111,39 @@ export function computeQuote(
     Math.max(0, piece.printHours) + Math.max(0, piece.printMinutes) / 60;
 
   const material = (Math.max(0, piece.grams) / 1000) * config.filamentPricePerKg;
-  const electricity =
-    (config.printerWatts / 1000) * totalHours * config.kwhPrice;
-  const machineWear =
-    config.machineLifeHours > 0
-      ? (config.sparePartCost / config.machineLifeHours) * totalHours
-      : 0;
+
+  // Cuando hay una impressora elegida con costo/hora declarado, ese valor
+  // reemplaza el cálculo detallado de luz + desgaste. Es el patrón que usa
+  // Lunaro: una vez que la impresora está caracterizada, no hace falta
+  // recalcular watts × kWh + amortización por separado.
+  let electricity: number;
+  let machineWear: number;
+  if (
+    config.printerHourlyCostOverride != null &&
+    config.printerHourlyCostOverride > 0
+  ) {
+    electricity = config.printerHourlyCostOverride * totalHours;
+    machineWear = 0;
+  } else {
+    electricity = (config.printerWatts / 1000) * totalHours * config.kwhPrice;
+    machineWear =
+      config.machineLifeHours > 0
+        ? (config.sparePartCost / config.machineLifeHours) * totalHours
+        : 0;
+  }
   const errorMargin =
     (material + electricity + machineWear) * (config.errorMarginPct / 100);
 
   const operativos = material + electricity + machineWear + errorMargin;
   const suppliesBase = Math.max(0, piece.extraSupplies);
   const supplies = suppliesBase * (1 + SUPPLIES_SURCHARGE);
-  const total = operativos * piece.profitMultiplier + supplies;
+  const subtotal = operativos * piece.profitMultiplier + supplies;
+
+  // Inflación por comisión de marketplace: para que después de que el canal
+  // se quede su %, te queden los `subtotal` deseados.
+  const feePct = Math.max(0, Math.min(99, config.marketplaceFeePct));
+  const total = feePct > 0 ? subtotal / (1 - feePct / 100) : subtotal;
+  const marketplaceFee = total - subtotal;
 
   return {
     material: round2(material),
@@ -97,6 +153,8 @@ export function computeQuote(
     operativos: round2(operativos),
     suppliesBase: round2(suppliesBase),
     supplies: round2(supplies),
+    subtotal: round2(subtotal),
+    marketplaceFee: round2(marketplaceFee),
     total: round2(total),
   };
 }

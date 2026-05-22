@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { resolveStorageUrl, type OrderCreatePayload } from "../../api/client";
+import {
+  createMaterialMovement,
+  resolveStorageUrl,
+  type OrderCreatePayload,
+} from "../../api/client";
 import type {
   CatalogItem,
   Contact,
+  Order,
   OrderPriority,
   PendingQuote,
 } from "../../types";
@@ -12,7 +17,7 @@ import { ContactPicker, type PersonValue } from "../caja/ContactPicker";
 interface Props {
   catalog: CatalogItem[];
   contacts: Contact[];
-  onCreate: (p: OrderCreatePayload) => Promise<void>;
+  onCreate: (p: OrderCreatePayload) => Promise<Order>;
   pendingQuote?: PendingQuote | null;
   onPendingQuoteConsumed?: () => void;
 }
@@ -31,6 +36,7 @@ export function OrderForm({
   const [value, setValue] = useState("");
   const [note, setNote] = useState("");
   const [priority, setPriority] = useState<OrderPriority | null>(null);
+  const [deadline, setDeadline] = useState("");
   const [quoteCosts, setQuoteCosts] = useState<
     PendingQuote["costItems"] | null
   >(null);
@@ -61,6 +67,7 @@ export function OrderForm({
     setValue("");
     setNote("");
     setPriority(null);
+    setDeadline("");
     setPerson({ contactId: null, personLabel: "" });
     setQuoteCosts(null);
     setError(null);
@@ -81,7 +88,7 @@ export function OrderForm({
     setBusy(true);
     setError(null);
     try {
-      await onCreate({
+      const created = await onCreate({
         catalog_item_id: catalogId,
         quantity,
         value: valueNum,
@@ -91,8 +98,36 @@ export function OrderForm({
           person.contactId === null ? person.personLabel.trim() || null : null,
         save_contact: true,
         priority,
+        deadline: deadline || null,
         cost_items: quoteCosts ?? undefined,
       });
+
+      // Si la cotización venía con un material vinculado y gramos por unidad,
+      // descontá del stock con un OUT trazado al pedido recién creado.
+      const consumeGrams =
+        (pendingQuote?.gramsPerUnit ?? 0) > 0
+          ? (pendingQuote!.gramsPerUnit as number) * quantity
+          : 0;
+      if (pendingQuote?.materialId && consumeGrams > 0) {
+        try {
+          await createMaterialMovement(pendingQuote.materialId, {
+            kind: "OUT",
+            grams: consumeGrams,
+            order_id: created.id,
+            note: `Consumo automático del pedido #${created.id}`,
+          });
+        } catch (mvErr) {
+          // No bloqueamos el flujo del pedido si el stock no alcanza — solo
+          // avisamos. La intervención manual queda al admin desde Estoque.
+          console.warn("No se pudo descontar stock:", mvErr);
+          setError(
+            mvErr instanceof Error
+              ? `Pedido creado, pero no se pudo descontar stock: ${mvErr.message}`
+              : "Pedido creado, pero falló el descuento de stock.",
+          );
+        }
+      }
+
       reset();
       onPendingQuoteConsumed?.();
     } catch (err) {
@@ -216,6 +251,16 @@ export function OrderForm({
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="pedido-deadline">Deadline de entrega</label>
+          <input
+            id="pedido-deadline"
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+          />
         </div>
 
         <ContactPicker contacts={contacts} value={person} onChange={setPerson} />
