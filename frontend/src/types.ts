@@ -391,6 +391,10 @@ export type PrinterUpdatePayload = Partial<
 
 export type MaterialKind = "PLA" | "PETG" | "ABS" | "TPU" | "RESIN" | "OTRO";
 export type MaterialMovementKind = "IN" | "OUT" | "ADJUST";
+// Unidad de medida del material. "g" = gramos (filamentos/resinas),
+// "un" = unidades (imanes, tornillos, packaging), "ml" = mililitros.
+// stock_g y cost_per_g se reinterpretan según esta unidad.
+export type MaterialUnit = "g" | "un" | "ml";
 
 export interface Material {
   id: number;
@@ -401,6 +405,7 @@ export interface Material {
   model: string | null;
   stock_g: number;
   cost_per_g: number;
+  unit: MaterialUnit;
   notes: string | null;
   archived: boolean;
   sort_order: number;
@@ -416,6 +421,7 @@ export interface MaterialCreatePayload {
   model?: string | null;
   stock_g?: number;
   cost_per_g?: number;
+  unit?: MaterialUnit;
   notes?: string | null;
   sort_order?: number;
 }

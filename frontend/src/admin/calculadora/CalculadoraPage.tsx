@@ -200,7 +200,7 @@ export function CalculadoraPage({ onCreateOrder }: Props) {
               >
                 <option value="">— Sin material vinculado —</option>
                 {materials
-                  .filter((m) => !m.archived)
+                  .filter((m) => !m.archived && (m.unit ?? "g") === "g")
                   .map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name} · {m.type}
@@ -211,8 +211,9 @@ export function CalculadoraPage({ onCreateOrder }: Props) {
               </select>
               {selectedMaterial ? (
                 <span className="hint">
-                  Costo/g: {formatARS(selectedMaterial.cost_per_g)} · al crear
-                  el pedido se descontarán {piece.grams * quantity} g del stock.
+                  Costo/kg: {formatARS(selectedMaterial.cost_per_g * 1000)} ·
+                  al crear el pedido se descontarán {piece.grams * quantity} g
+                  del stock.
                 </span>
               ) : (
                 <span className="hint">

@@ -38,6 +38,349 @@
   white-space: nowrap;
 }
 
+.estoque__cta-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.estoque__help {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.estoque__help:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(79, 134, 255, 0.08);
+}
+
+/* ===== Onboarding refinement (estilo Lunaro) ===== */
+
+.onboarding__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(79, 134, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.onboarding__copy strong {
+  color: var(--fg);
+}
+
+.onboarding__copy em {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ===== Material form — selector de categoría ===== */
+
+.mat-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 540px) {
+  .mat-choice {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mat-choice__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 1.25rem 1.1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  font: inherit;
+}
+
+.mat-choice__card:hover {
+  border-color: var(--accent);
+  background: rgba(79, 134, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.mat-choice__emoji {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.mat-choice__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.mat-choice__desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.mat-choice__badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.65rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(45, 164, 78, 0.16);
+  color: #2da44e;
+  font-weight: 600;
+}
+
+/* ===== Material form — step 2 ===== */
+
+.mat-form__back {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.6rem;
+  font: inherit;
+}
+
+.mat-form__back:hover {
+  color: var(--accent);
+}
+
+.mat-form__section {
+  margin-top: 1.1rem;
+}
+
+.mat-form__section:first-of-type {
+  margin-top: 0.4rem;
+}
+
+.mat-form__section--more {
+  margin-top: 0.6rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--border);
+}
+
+.mat-form__section-h {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.55rem;
+  font-weight: 600;
+}
+
+.mat-form__input,
+.mat-form__field input,
+.mat-form__field textarea {
+  width: 100%;
+  font-size: 0.95rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.mat-form__input:focus,
+.mat-form__field input:focus,
+.mat-form__field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 134, 255, 0.18);
+}
+
+.mat-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  flex: 1;
+}
+
+.mat-form__field textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.mat-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 540px) {
+  .mat-form__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mat-form__link {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  padding: 0;
+  margin-top: 0.35rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mat-form__link:hover {
+  text-decoration: underline;
+}
+
+.mat-form__toggle {
+  margin-top: 1rem;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  width: 100%;
+  font: inherit;
+  transition: all 0.15s ease;
+}
+
+.mat-form__toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(79, 134, 255, 0.05);
+}
+
+/* ===== Pills: tipo de filamento ===== */
+
+.mat-pills {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.55rem;
+}
+
+.mat-pills--compact {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 540px) {
+  .mat-pills,
+  .mat-pills--compact {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.mat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.6rem 0.7rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.mat-pill strong {
+  font-size: 0.95rem;
+}
+
+.mat-pill span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.mat-pill:hover {
+  border-color: var(--accent);
+}
+
+.mat-pill.is-active {
+  border-color: var(--accent);
+  background: rgba(79, 134, 255, 0.1);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.mat-pill.is-active strong {
+  color: var(--accent);
+}
+
+/* ===== Chips: colores sugeridos ===== */
+
+.mat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.mat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font: inherit;
+  font-size: 0.82rem;
+  transition: all 0.15s ease;
+}
+
+.mat-chip:hover {
+  border-color: var(--accent);
+}
+
+.mat-chip.is-active {
+  border-color: var(--accent);
+  background: rgba(79, 134, 255, 0.1);
+  color: var(--accent);
+}
+
+.mat-chip__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+
 .estoque__toolbar {
   display: flex;
   align-items: center;
@@ -134,6 +477,15 @@
 .estoque__num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.estoque__unit-hint {
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .estoque__actions {

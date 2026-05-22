@@ -30,18 +30,36 @@ const TYPES: ("ALL" | MaterialKind)[] = [
   "OTRO",
 ];
 
-const fmtMoney = (n: number | null | undefined) =>
-  n == null
-    ? "—"
-    : n.toLocaleString("es-AR", {
-        style: "currency",
-        currency: "ARS",
-        minimumFractionDigits: 4,
-        maximumFractionDigits: 4,
-      });
+const UNIT_DISPLAY: Record<
+  string,
+  { stockSuffix: string; costLabel: string; costMultiplier: number }
+> = {
+  g: { stockSuffix: "g", costLabel: "$ / kg", costMultiplier: 1000 },
+  un: { stockSuffix: "un", costLabel: "$ / un", costMultiplier: 1 },
+  ml: { stockSuffix: "ml", costLabel: "$ / L", costMultiplier: 1000 },
+};
 
-const fmtGrams = (n: number) =>
-  `${n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} g`;
+const getUnitDisplay = (unit: string | null | undefined) =>
+  UNIT_DISPLAY[unit ?? "g"] ?? UNIT_DISPLAY.g;
+
+const fmtMoneyAdapt = (
+  costPerStorageUnit: number | null | undefined,
+  unit: string | null | undefined,
+) => {
+  if (costPerStorageUnit == null) return "—";
+  const { costMultiplier } = getUnitDisplay(unit);
+  return (costPerStorageUnit * costMultiplier).toLocaleString("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+};
+
+const fmtStock = (n: number, unit: string | null | undefined) => {
+  const { stockSuffix } = getUnitDisplay(unit);
+  return `${n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${stockSuffix}`;
+};
 
 export function EstoquePage() {
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -139,17 +157,28 @@ export function EstoquePage() {
           <p className="estoque__eyebrow">Panel</p>
           <h2>Estoque</h2>
           <p className="estoque__subtitle">
-            Materiales de impresión, costo por gramo y control de lo que tenés
-            en mano.
+            Filamentos, resinas, insumos por unidad o líquidos — cada material
+            con su unidad y costo propio.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary estoque__cta"
-          onClick={handleAddClick}
-        >
-          + Adicionar material
-        </button>
+        <div className="estoque__cta-group">
+          <button
+            type="button"
+            className="estoque__help"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Cómo preencher el formulario"
+            title="Cómo preencher"
+          >
+            ?
+          </button>
+          <button
+            type="button"
+            className="btn-primary estoque__cta"
+            onClick={handleAddClick}
+          >
+            + Adicionar material
+          </button>
+        </div>
       </header>
 
       <div className="estoque__toolbar">
@@ -192,7 +221,7 @@ export function EstoquePage() {
           <span>Color</span>
           <span>Marca</span>
           <span className="estoque__num">Stock</span>
-          <span className="estoque__num">$ / g</span>
+          <span className="estoque__num">Costo</span>
           <span>Acciones</span>
         </div>
 
@@ -219,8 +248,17 @@ export function EstoquePage() {
               <span className="estoque__pill">{m.type}</span>
               <span>{m.color ?? "—"}</span>
               <span>{m.brand ?? "—"}</span>
-              <span className="estoque__num">{fmtGrams(m.stock_g)}</span>
-              <span className="estoque__num">{fmtMoney(m.cost_per_g)}</span>
+              <span className="estoque__num">{fmtStock(m.stock_g, m.unit)}</span>
+              <span
+                className="estoque__num"
+                title={getUnitDisplay(m.unit).costLabel}
+              >
+                {fmtMoneyAdapt(m.cost_per_g, m.unit)}
+                <small className="estoque__unit-hint">
+                  {" "}
+                  {getUnitDisplay(m.unit).costLabel}
+                </small>
+              </span>
               <span className="estoque__actions">
                 <button
                   type="button"
