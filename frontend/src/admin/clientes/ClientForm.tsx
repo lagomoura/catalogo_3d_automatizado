@@ -19,8 +19,6 @@ const DOC_KINDS: (ContactDocumentKind | null)[] = [
   null,
   "DNI",
   "CUIT",
-  "CPF",
-  "CNPJ",
   "OTRO",
 ];
 
@@ -106,9 +104,10 @@ export function ClientForm({
           {isEdit ? "Editar cliente" : "Nuevo cliente"}
         </Modal.Header>
         <Modal.Body>
-          <div className="form-grid">
+          <div className="form-grid client-form-grid">
+            <div className="client-form-grid__section">Datos de contacto</div>
             <label className="field field--full">
-              Nombre *
+              Nombre <span className="client-form-grid__req">*</span>
               <input
                 type="text"
                 value={form.name}
@@ -136,8 +135,10 @@ export function ClientForm({
                 placeholder="+54 11 5555-1234"
               />
             </label>
+
+            <div className="client-form-grid__section">Documento</div>
             <label className="field">
-              Tipo de documento
+              Tipo
               <select
                 value={form.document_kind ?? ""}
                 onChange={(e) =>
@@ -151,13 +152,13 @@ export function ClientForm({
               >
                 {DOC_KINDS.map((k) => (
                   <option key={k ?? "none"} value={k ?? ""}>
-                    {k ?? "Ninguno"}
+                    {k ?? "Sin especificar"}
                   </option>
                 ))}
               </select>
             </label>
             <label className="field">
-              N° documento
+              Número
               <input
                 type="text"
                 value={form.document_number}
@@ -168,27 +169,32 @@ export function ClientForm({
               />
             </label>
 
-            <div className="field--full">
-              <button
-                type="button"
-                className="btn-ghost btn--inline"
-                onClick={() => setShowAddress((s) => !s)}
+            <button
+              type="button"
+              className="client-form-grid__toggle"
+              onClick={() => setShowAddress((s) => !s)}
+              aria-expanded={showAddress}
+            >
+              <span>Dirección</span>
+              <span
+                className="client-form-grid__toggle-chev"
+                aria-hidden="true"
               >
-                {showAddress ? "▴ Ocultar dirección" : "▾ Dirección (opcional)"}
-              </button>
-            </div>
+                {showAddress ? "−" : "+"}
+              </span>
+            </button>
 
             {showAddress ? (
               <>
                 <label className="field field--full">
-                  Dirección
+                  Calle y número
                   <input
                     type="text"
                     value={form.address}
                     onChange={(e) =>
                       setForm({ ...form, address: e.target.value })
                     }
-                    placeholder="Calle, número, depto."
+                    placeholder="Av. Siempreviva 742, Depto 3B"
                   />
                 </label>
                 <label className="field">
@@ -209,7 +215,7 @@ export function ClientForm({
                     }
                   />
                 </label>
-                <label className="field">
+                <label className="field field--full">
                   Código postal
                   <input
                     type="text"
@@ -222,8 +228,8 @@ export function ClientForm({
               </>
             ) : null}
 
+            <div className="client-form-grid__section">Notas internas</div>
             <label className="field field--full">
-              Notas
               <textarea
                 rows={3}
                 value={form.notes}

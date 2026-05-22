@@ -15,8 +15,6 @@ const DOC_KINDS: (ContactDocumentKind | null)[] = [
   null,
   "DNI",
   "CUIT",
-  "CPF",
-  "CNPJ",
   "OTRO",
 ];
 

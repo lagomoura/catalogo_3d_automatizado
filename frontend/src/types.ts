@@ -71,7 +71,7 @@ export interface TxCategory {
   created_at: string;
 }
 
-export type ContactDocumentKind = "DNI" | "CUIT" | "CPF" | "CNPJ" | "OTRO";
+export type ContactDocumentKind = "DNI" | "CUIT" | "OTRO";
 
 export interface Contact {
   id: number;

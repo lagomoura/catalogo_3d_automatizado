@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  createClientLink,
   createContact,
   getContacts,
   updateContact,
@@ -21,7 +20,6 @@ export function ClientesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
-  const [linkBanner, setLinkBanner] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -72,23 +70,6 @@ export function ClientesPage() {
     setContacts((prev) => prev.map((c) => (c.id === id ? updated : c)));
   };
 
-  const handleGenerateLink = async () => {
-    try {
-      const link = await createClientLink({ ttl_days: 14 });
-      const url = `${window.location.origin}${link.public_path}`;
-      // Intentar copiar al portapapeles.
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch {
-        // El navegador puede rechazar clipboard en contextos no-secure.
-      }
-      setLinkBanner(url);
-      window.setTimeout(() => setLinkBanner(null), 12000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al generar link.");
-    }
-  };
-
   return (
     <div className="clientes">
       <header className="clientes__header">
@@ -102,13 +83,6 @@ export function ClientesPage() {
         <div className="clientes__head-actions">
           <button
             type="button"
-            className="btn-ghost"
-            onClick={handleGenerateLink}
-          >
-            Generar link de cadastro
-          </button>
-          <button
-            type="button"
             className="btn-primary"
             onClick={() => {
               setEditing(null);
@@ -119,21 +93,6 @@ export function ClientesPage() {
           </button>
         </div>
       </header>
-
-      {linkBanner ? (
-        <div className="clientes__banner">
-          ✔ Link generado y copiado al portapapeles —{" "}
-          <code>{linkBanner}</code>
-          <button
-            type="button"
-            className="btn--inline"
-            onClick={() => setLinkBanner(null)}
-            aria-label="Cerrar"
-          >
-            ✕
-          </button>
-        </div>
-      ) : null}
 
       <div className="clientes__toolbar">
         <input

@@ -153,3 +153,129 @@
   text-align: center;
   color: var(--muted);
 }
+
+/* ---------- Formulario de cliente ---------- */
+/* Refina el form-grid (definido en impressoras.css y reutilizado globalmente)
+   con tipografía, secciones y un toggle de dirección más harmonioso. */
+
+.client-form-grid {
+  gap: 0.6rem 0.9rem;
+}
+
+.client-form-grid .field {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.client-form-grid .field input,
+.client-form-grid .field select,
+.client-form-grid .field textarea {
+  font-size: 0.95rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.client-form-grid .field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 9px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.9rem;
+  cursor: pointer;
+}
+
+.client-form-grid .field input:focus,
+.client-form-grid .field select:focus,
+.client-form-grid .field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.client-form-grid__section {
+  grid-column: 1 / -1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.35rem 0 0.1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+/* La primera sección no necesita la línea superior — abre el formulario. */
+.client-form-grid > .client-form-grid__section:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.client-form-grid__req {
+  color: var(--accent);
+  font-weight: 700;
+  margin-left: 0.15rem;
+}
+
+.client-form-grid__toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 0.55rem 0.1rem 0.3rem;
+  margin-top: 0.25rem;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.client-form-grid__toggle:hover,
+.client-form-grid__toggle:focus-visible {
+  color: var(--fg);
+  outline: none;
+}
+
+.client-form-grid__toggle-chev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.client-form-grid__toggle:hover .client-form-grid__toggle-chev,
+.client-form-grid__toggle:focus-visible .client-form-grid__toggle-chev {
+  border-color: var(--accent);
+  color: var(--fg);
+}
