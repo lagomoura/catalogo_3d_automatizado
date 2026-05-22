@@ -1,0 +1,25 @@
+.qpub {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 1.5rem 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.qpub__panel {
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.qpub__panel h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.qpub__actions {
+  display: flex;
+  justify-content: flex-end;
+}
