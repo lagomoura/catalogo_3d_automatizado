@@ -7,8 +7,17 @@ backend/catalog.db
 backend/catalog.db-journal
 backend/storage/original/*
 backend/storage/styled/*
+backend/storage/models_3d/*
+backend/storage/quote_logos/*
 !backend/storage/original/.gitkeep
 !backend/storage/styled/.gitkeep
+!backend/storage/models_3d/.gitkeep
+!backend/storage/quote_logos/.gitkeep
 frontend/node_modules/
 frontend/dist/
 .DS_Store
+
+# Local working artifacts (no van al repo)
+.benchmarking/
+.agents/
+skills-lock.json
