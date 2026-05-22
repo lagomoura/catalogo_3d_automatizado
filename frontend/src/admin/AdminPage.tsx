@@ -9,11 +9,27 @@ import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job, PendingQuote } from "../types";
 import { CajaPage } from "./caja/CajaPage";
 import { CalculadoraPage } from "./calculadora/CalculadoraPage";
+import { ClientesPage } from "./clientes/ClientesPage";
+import { EstoquePage } from "./estoque/EstoquePage";
+import { ImpressorasPage } from "./impressoras/ImpressorasPage";
+import { OrcamentoPage } from "./orcamento/OrcamentoPage";
 import { PedidosPage } from "./pedidos/PedidosPage";
+import { ProduccionPage } from "./produccion/ProduccionPage";
+import { ReportesPage } from "./reportes/ReportesPage";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
-type Tab = "catalogo" | "caja" | "pedidos" | "calculadora";
+type Tab =
+  | "catalogo"
+  | "reportes"
+  | "caja"
+  | "pedidos"
+  | "calculadora"
+  | "impressoras"
+  | "estoque"
+  | "clientes"
+  | "produccion"
+  | "orcamento";
 type SubmitMode = "makerworld" | "manual";
 
 export default function AdminPage() {
@@ -122,6 +138,15 @@ export default function AdminPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "reportes"}
+          className={`tab ${tab === "reportes" ? "tab--active" : ""}`}
+          onClick={() => setTab("reportes")}
+        >
+          Reportes
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "caja"}
           className={`tab ${tab === "caja" ? "tab--active" : ""}`}
           onClick={() => setTab("caja")}
@@ -145,6 +170,51 @@ export default function AdminPage() {
           onClick={() => setTab("calculadora")}
         >
           Calculadora
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "impressoras"}
+          className={`tab ${tab === "impressoras" ? "tab--active" : ""}`}
+          onClick={() => setTab("impressoras")}
+        >
+          Impressoras
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "estoque"}
+          className={`tab ${tab === "estoque" ? "tab--active" : ""}`}
+          onClick={() => setTab("estoque")}
+        >
+          Estoque
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "clientes"}
+          className={`tab ${tab === "clientes" ? "tab--active" : ""}`}
+          onClick={() => setTab("clientes")}
+        >
+          Clientes
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "produccion"}
+          className={`tab ${tab === "produccion" ? "tab--active" : ""}`}
+          onClick={() => setTab("produccion")}
+        >
+          Producción
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "orcamento"}
+          className={`tab ${tab === "orcamento" ? "tab--active" : ""}`}
+          onClick={() => setTab("orcamento")}
+        >
+          Orçamento
         </button>
       </nav>
 
@@ -193,10 +263,22 @@ export default function AdminPage() {
             onItemsRemoved={handleItemsRemoved}
           />
         </>
+      ) : tab === "reportes" ? (
+        <ReportesPage />
       ) : tab === "caja" ? (
         <CajaPage />
       ) : tab === "calculadora" ? (
         <CalculadoraPage onCreateOrder={handleQuoteToOrder} />
+      ) : tab === "impressoras" ? (
+        <ImpressorasPage />
+      ) : tab === "estoque" ? (
+        <EstoquePage />
+      ) : tab === "clientes" ? (
+        <ClientesPage />
+      ) : tab === "produccion" ? (
+        <ProduccionPage />
+      ) : tab === "orcamento" ? (
+        <OrcamentoPage />
       ) : (
         <PedidosPage
           pendingQuote={pendingQuote}

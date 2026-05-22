@@ -71,11 +71,64 @@ export interface TxCategory {
   created_at: string;
 }
 
+export type ContactDocumentKind = "DNI" | "CUIT" | "CPF" | "CNPJ" | "OTRO";
+
 export interface Contact {
   id: number;
   name: string;
+  email: string | null;
+  phone: string | null;
+  document_kind: ContactDocumentKind | null;
+  document_number: string | null;
+  address: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
   notes: string | null;
   created_at: string;
+}
+
+export interface ContactCreatePayload {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  document_kind?: ContactDocumentKind | null;
+  document_number?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postal_code?: string | null;
+  notes?: string | null;
+}
+
+export type ContactUpdatePayload = Partial<ContactCreatePayload>;
+
+export interface ClientLink {
+  token: string;
+  public_path: string;
+  expires_at: string | null;
+  contact_id: number | null;
+  order_id: number | null;
+}
+
+export interface PublicClientInfo {
+  token: string;
+  expired: boolean;
+  consumed: boolean;
+  contact: Contact | null;
+  order_summary: string | null;
+}
+
+export interface PublicClientRegisterPayload {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  document_kind?: ContactDocumentKind | null;
+  document_number?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postal_code?: string | null;
 }
 
 export interface Account {
@@ -252,6 +305,15 @@ export interface PendingQuote {
   quantity: number;
   /** Conceptos de costo POR UNIDAD a snapshotear en el pedido. */
   costItems: { concept: string; amount: number }[];
+  /**
+   * Material consumido por unidad (Estoque integration). Si se completa,
+   * al crear el pedido se registra un OUT de `gramsPerUnit × quantity`
+   * gramos vinculado al `order_id` recién creado.
+   */
+  materialId?: number | null;
+  gramsPerUnit?: number | null;
+  /** Impresora seleccionada en la calculadora (informativo por ahora). */
+  printerId?: number | null;
 }
 
 export interface Order {
@@ -267,9 +329,265 @@ export interface Order {
   payment_status: PaymentStatus;
   priority: OrderPriority | null;
   cost_items: OrderCostItem[];
+  sale_date: string | null; // ISO date
+  deadline: string | null; // ISO date
+  is_draft: boolean;
   created_at: string;
   started_at: string | null;
   updated_at: string;
+}
+
+export interface OrderSummary {
+  em_aberto: number;
+  prazo_proximo: number;
+  atrasados: number;
+  em_producao: number;
+  entregues_no_mes: number;
+  valor_pendente: number;
+  prazo_window_days: number;
+}
+
+// ---------------------------------------------------------------------------
+// Printers (Impressoras)
+// ---------------------------------------------------------------------------
+
+export interface Printer {
+  id: number;
+  name: string;
+  brand: string | null;
+  model: string | null;
+  environment: string | null;
+  purchase_cost: number | null;
+  purchase_date: string | null; // ISO date (YYYY-MM-DD)
+  kwh_cost: number | null;
+  cost_per_hour: number;
+  notes: string | null;
+  archived: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PrinterCreatePayload {
+  name: string;
+  brand?: string | null;
+  model?: string | null;
+  environment?: string | null;
+  purchase_cost?: number | null;
+  purchase_date?: string | null;
+  kwh_cost?: number | null;
+  cost_per_hour?: number;
+  notes?: string | null;
+  sort_order?: number;
+}
+
+export type PrinterUpdatePayload = Partial<
+  PrinterCreatePayload & { archived: boolean }
+>;
+
+// ---------------------------------------------------------------------------
+// Materiais (Estoque)
+// ---------------------------------------------------------------------------
+
+export type MaterialKind = "PLA" | "PETG" | "ABS" | "TPU" | "RESIN" | "OTRO";
+export type MaterialMovementKind = "IN" | "OUT" | "ADJUST";
+
+export interface Material {
+  id: number;
+  name: string;
+  type: MaterialKind;
+  color: string | null;
+  brand: string | null;
+  model: string | null;
+  stock_g: number;
+  cost_per_g: number;
+  notes: string | null;
+  archived: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaterialCreatePayload {
+  name: string;
+  type?: MaterialKind;
+  color?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  stock_g?: number;
+  cost_per_g?: number;
+  notes?: string | null;
+  sort_order?: number;
+}
+
+export type MaterialUpdatePayload = Partial<
+  Omit<MaterialCreatePayload, "stock_g"> & { archived: boolean }
+>;
+
+export interface MaterialMovement {
+  id: number;
+  material_id: number;
+  kind: MaterialMovementKind;
+  grams: number;
+  order_id: number | null;
+  occurred_on: string; // ISO date
+  note: string | null;
+  created_at: string;
+}
+
+export interface MaterialMovementCreatePayload {
+  kind: MaterialMovementKind;
+  grams: number;
+  order_id?: number | null;
+  occurred_on?: string | null;
+  note?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Production runs
+// ---------------------------------------------------------------------------
+
+export type ProductionStatus =
+  | "PENDENTE"
+  | "EM_PRODUCAO"
+  | "PAUSADA"
+  | "CONCLUIDA"
+  | "CANCELADA";
+
+export interface OrderRefMini {
+  id: number;
+  catalog_item: { id: number; name: string } | null;
+}
+
+export interface PrinterRefMini {
+  id: number;
+  name: string;
+}
+
+export interface MaterialRefMini {
+  id: number;
+  name: string;
+}
+
+export interface ProductionRun {
+  id: number;
+  order: OrderRefMini | null;
+  printer: PrinterRefMini | null;
+  material: MaterialRefMini | null;
+  piece_name: string;
+  tag: string | null;
+  status: ProductionStatus;
+  estimated_minutes: number | null;
+  grams: number | null;
+  started_at: string | null;
+  paused_at: string | null;
+  ended_at: string | null;
+  total_paused_seconds: number;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductionRunCreatePayload {
+  order_id?: number | null;
+  printer_id?: number | null;
+  material_id?: number | null;
+  piece_name: string;
+  tag?: string | null;
+  estimated_minutes?: number | null;
+  grams?: number | null;
+  notes?: string | null;
+  sort_order?: number;
+}
+
+export interface ProductionRunUpdatePayload {
+  printer_id?: number | null;
+  clear_printer?: boolean;
+  material_id?: number | null;
+  clear_material?: boolean;
+  piece_name?: string;
+  tag?: string | null;
+  clear_tag?: boolean;
+  estimated_minutes?: number | null;
+  clear_estimated?: boolean;
+  grams?: number | null;
+  clear_grams?: boolean;
+  notes?: string | null;
+}
+
+export interface ProductionSummary {
+  total: number;
+  pendente: number;
+  em_producao: number;
+  pausada: number;
+  concluida: number;
+  cancelada: number;
+  horas_concluidas: number;
+  gramos_concluidas: number;
+}
+
+// ---------------------------------------------------------------------------
+// Quotes / Orçamentos
+// ---------------------------------------------------------------------------
+
+export interface QuoteItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface Quote {
+  id: number;
+  number: string;
+  share_token: string;
+  business_name: string;
+  business_slogan: string | null;
+  business_logo_path: string | null;
+  business_logo_url: string | null;
+  business_email: string | null;
+  business_phone: string | null;
+  client_name: string;
+  client_email: string | null;
+  client_phone: string | null;
+  service_description: string | null;
+  items: QuoteItem[];
+  total: number;
+  valid_until: string; // ISO date
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuoteCreatePayload {
+  business_name: string;
+  business_slogan?: string | null;
+  business_logo_path?: string | null;
+  business_email?: string | null;
+  business_phone?: string | null;
+  client_name: string;
+  client_email?: string | null;
+  client_phone?: string | null;
+  service_description?: string | null;
+  items: QuoteItem[];
+  valid_until?: string | null;
+  notes?: string | null;
+}
+
+export interface QuoteUpdatePayload {
+  business_name?: string;
+  business_slogan?: string | null;
+  business_logo_path?: string | null;
+  clear_logo?: boolean;
+  business_email?: string | null;
+  business_phone?: string | null;
+  client_name?: string;
+  client_email?: string | null;
+  client_phone?: string | null;
+  service_description?: string | null;
+  items?: QuoteItem[];
+  valid_until?: string | null;
+  notes?: string | null;
 }
 
 declare global {

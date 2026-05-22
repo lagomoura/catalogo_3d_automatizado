@@ -5,13 +5,34 @@ import type {
   CashTransactionPage,
   CatalogItem,
   CategoryNode,
+  ClientLink as ClientLinkRef,
   Contact,
+  ContactCreatePayload,
   ContactStatement,
+  ContactUpdatePayload,
   Job,
+  PublicClientInfo,
+  PublicClientRegisterPayload,
+  Material,
+  MaterialCreatePayload,
+  MaterialMovement,
+  MaterialMovementCreatePayload,
+  MaterialUpdatePayload,
   Order,
   OrderPriority,
   OrderStatus,
+  OrderSummary,
+  ProductionRun,
+  ProductionRunCreatePayload,
+  ProductionRunUpdatePayload,
+  ProductionSummary,
+  Quote,
+  QuoteCreatePayload,
+  QuoteUpdatePayload,
   PaymentStatus,
+  Printer,
+  PrinterCreatePayload,
+  PrinterUpdatePayload,
   ProfitabilitySummary,
   ReceivablesSummary,
   RecurringExpense,
@@ -239,18 +260,58 @@ export function getContacts(): Promise<Contact[]> {
   return request<Contact[]>(`/api/cash/contacts`);
 }
 
-export function createContact(payload: {
-  name: string;
-  notes?: string | null;
-}): Promise<Contact> {
+export function createContact(
+  payload: ContactCreatePayload,
+): Promise<Contact> {
   return request<Contact>(`/api/cash/contacts`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
+export function updateContact(
+  id: number,
+  payload: ContactUpdatePayload,
+): Promise<Contact> {
+  return request<Contact>(`/api/cash/contacts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function deleteContact(id: number): Promise<void> {
   return request<void>(`/api/cash/contacts/${id}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Public client links (auto-cadastro)
+// ---------------------------------------------------------------------------
+
+export function createClientLink(payload: {
+  contact_id?: number | null;
+  order_id?: number | null;
+  ttl_days?: number;
+}): Promise<ClientLinkRef> {
+  return request<ClientLinkRef>(`/api/public/clients/links`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPublicClientInfo(token: string): Promise<PublicClientInfo> {
+  return request<PublicClientInfo>(
+    `/api/public/clients/info?token=${encodeURIComponent(token)}`,
+  );
+}
+
+export function publicRegisterClient(
+  token: string,
+  payload: PublicClientRegisterPayload,
+): Promise<Contact> {
+  return request<Contact>(
+    `/api/public/clients/register?token=${encodeURIComponent(token)}`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
 }
 
 export function getContactStatement(id: number): Promise<ContactStatement> {
@@ -400,6 +461,9 @@ export interface OrderCreatePayload {
   save_contact?: boolean;
   priority?: OrderPriority | null;
   cost_items?: OrderCostItemInput[];
+  sale_date?: string | null;
+  deadline?: string | null;
+  is_draft?: boolean;
 }
 
 export interface OrderUpdatePayload {
@@ -412,6 +476,11 @@ export interface OrderUpdatePayload {
   contact_id?: number | null;
   clear_contact?: boolean;
   person_label?: string | null;
+  sale_date?: string | null;
+  clear_sale_date?: boolean;
+  deadline?: string | null;
+  clear_deadline?: boolean;
+  is_draft?: boolean;
 }
 
 export function getOrders(filters: OrderFilters = {}): Promise<Order[]> {
@@ -433,6 +502,14 @@ export function updateOrder(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export function getOrdersSummary(range: {
+  start?: string;
+  end?: string;
+  prazo_window_days?: number;
+} = {}): Promise<OrderSummary> {
+  return request<OrderSummary>(`/api/orders/summary${buildQuery(range)}`);
 }
 
 export function replaceOrderCosts(
@@ -488,4 +565,202 @@ export function resolveStorageUrl(relativeOrAbsolute: string): string {
   if (/^https?:\/\//i.test(relativeOrAbsolute)) return relativeOrAbsolute;
   if (relativeOrAbsolute.startsWith("/")) return `${STORAGE_BASE}${relativeOrAbsolute}`;
   return `${STORAGE_BASE}/${relativeOrAbsolute}`;
+}
+
+// ---------------------------------------------------------------------------
+// Printers
+// ---------------------------------------------------------------------------
+
+export function getPrinters(includeArchived = false): Promise<Printer[]> {
+  const qs = includeArchived ? "?include_archived=true" : "";
+  return request<Printer[]>(`/api/printers${qs}`);
+}
+
+export function createPrinter(payload: PrinterCreatePayload): Promise<Printer> {
+  return request<Printer>(`/api/printers`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePrinter(
+  id: number,
+  payload: PrinterUpdatePayload,
+): Promise<Printer> {
+  return request<Printer>(`/api/printers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function archivePrinter(id: number): Promise<void> {
+  return request<void>(`/api/printers/${id}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Materials (Estoque)
+// ---------------------------------------------------------------------------
+
+export function getMaterials(filters: {
+  type?: string;
+  include_archived?: boolean;
+} = {}): Promise<Material[]> {
+  return request<Material[]>(`/api/materials${buildQuery(filters)}`);
+}
+
+export function createMaterial(payload: MaterialCreatePayload): Promise<Material> {
+  return request<Material>(`/api/materials`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateMaterial(
+  id: number,
+  payload: MaterialUpdatePayload,
+): Promise<Material> {
+  return request<Material>(`/api/materials/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function archiveMaterial(id: number): Promise<void> {
+  return request<void>(`/api/materials/${id}`, { method: "DELETE" });
+}
+
+export function getMaterialMovements(
+  materialId: number,
+): Promise<MaterialMovement[]> {
+  return request<MaterialMovement[]>(`/api/materials/${materialId}/movements`);
+}
+
+export function createMaterialMovement(
+  materialId: number,
+  payload: MaterialMovementCreatePayload,
+): Promise<MaterialMovement> {
+  return request<MaterialMovement>(`/api/materials/${materialId}/movements`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Production runs
+// ---------------------------------------------------------------------------
+
+export function getProductionRuns(filters: {
+  status?: string;
+  printer_id?: number;
+  order_id?: number;
+} = {}): Promise<ProductionRun[]> {
+  return request<ProductionRun[]>(`/api/production${buildQuery(filters)}`);
+}
+
+export function getProductionSummary(range: {
+  start?: string;
+  end?: string;
+} = {}): Promise<ProductionSummary> {
+  return request<ProductionSummary>(`/api/production/summary${buildQuery(range)}`);
+}
+
+export function createProductionRun(
+  payload: ProductionRunCreatePayload,
+): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateProductionRun(
+  id: number,
+  payload: ProductionRunUpdatePayload,
+): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/start`, { method: "POST" });
+}
+
+export function pauseProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/pause`, { method: "POST" });
+}
+
+export function resumeProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/resume`, { method: "POST" });
+}
+
+export function finishProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/finish`, { method: "POST" });
+}
+
+export function cancelProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/cancel`, { method: "POST" });
+}
+
+export function deleteProductionRun(id: number): Promise<void> {
+  return request<void>(`/api/production/${id}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Quotes
+// ---------------------------------------------------------------------------
+
+export function getQuotes(limit = 50): Promise<Quote[]> {
+  return request<Quote[]>(`/api/quotes?limit=${limit}`);
+}
+
+export function getQuote(id: number): Promise<Quote> {
+  return request<Quote>(`/api/quotes/${id}`);
+}
+
+export function createQuote(payload: QuoteCreatePayload): Promise<Quote> {
+  return request<Quote>(`/api/quotes`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateQuote(
+  id: number,
+  payload: QuoteUpdatePayload,
+): Promise<Quote> {
+  return request<Quote>(`/api/quotes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteQuote(id: number): Promise<void> {
+  return request<void>(`/api/quotes/${id}`, { method: "DELETE" });
+}
+
+export function getPublicQuote(token: string): Promise<Quote> {
+  return request<Quote>(`/api/quotes/public/${encodeURIComponent(token)}`);
+}
+
+/** URL absoluta del PDF del quote (para `<a download>` o `window.open`). */
+export function quotePdfUrl(id: number): string {
+  return `${API_BASE}/api/quotes/${id}/pdf`;
+}
+
+export async function uploadQuoteLogo(
+  file: File,
+): Promise<{ path: string; url: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const resp = await fetch(`${API_BASE}/api/quotes/upload-logo`, {
+    method: "POST",
+    body: form,
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`${resp.status} ${resp.statusText}: ${text}`);
+  }
+  return (await resp.json()) as { path: string; url: string };
 }

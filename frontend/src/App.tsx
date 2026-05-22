@@ -5,6 +5,8 @@ import { AdminGate } from "./admin/AdminGate";
 const ShowcasePage = lazy(() => import("./showcase/ShowcasePage"));
 const ProductDetailPage = lazy(() => import("./showcase/ProductDetailPage"));
 const AdminPage = lazy(() => import("./admin/AdminPage"));
+const ClientRegisterPage = lazy(() => import("./public/ClientRegisterPage"));
+const QuotePublicPage = lazy(() => import("./public/QuotePublicPage"));
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
               </AdminGate>
             }
           />
+          <Route path="/c/:token" element={<ClientRegisterPage />} />
+          <Route path="/q/:token" element={<QuotePublicPage />} />
           <Route path="*" element={<ShowcasePage />} />
         </Routes>
       </Suspense>

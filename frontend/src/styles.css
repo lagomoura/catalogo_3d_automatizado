@@ -413,6 +413,78 @@ body {
   border-color: var(--fg);
 }
 
+/* ---- Generic Modal (components/Modal.tsx) ---- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 12, 0.7);
+  padding: 1.5rem;
+  animation: lightbox-fade 0.15s ease-out;
+}
+
+.modal-panel {
+  width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-panel--sm { max-width: 420px; }
+.modal-panel--md { max-width: 560px; }
+.modal-panel--lg { max-width: 800px; }
+
+.modal-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-panel__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.modal-panel__close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.modal-panel__close:hover {
+  color: var(--fg);
+}
+
+.modal-panel__body {
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-panel__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
 .card {
   position: relative;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -2469,6 +2541,35 @@ body {
   cursor: not-allowed;
 }
 
+/* Botones genéricos reutilizables por todos los módulos del admin. */
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) { opacity: 0.92; }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-ghost:hover { background: var(--bg); }
+
 .tbtn--go {
   background: #0d9268;
   border-color: #0d9268;
@@ -2599,8 +2700,29 @@ body {
   height: 100%;
 }
 
+.calc__panel--select {
+  grid-column: 1 / -1;
+}
+
 .calc__full {
   grid-column: 1 / -1;
+}
+
+.calc__fee-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.35rem;
+}
+
+.calc__fee-row input {
+  width: 90px;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
 }
 
 .calc__result {
