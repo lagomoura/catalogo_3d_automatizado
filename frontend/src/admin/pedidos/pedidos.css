@@ -1,0 +1,55 @@
+/* Pedidos board — KPIs + sub-tabs + búsqueda transversal. */
+
+.pedidos__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.85rem;
+  margin: 0 0 1.25rem;
+}
+
+.pedidos__board-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1.25rem 0 0.85rem;
+}
+
+.pedidos__search {
+  flex: 1;
+  min-width: 240px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+.pedidos__substabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pedidos__substab {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.pedidos__substab:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+.pedidos__substab--active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
