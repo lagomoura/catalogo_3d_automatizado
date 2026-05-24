@@ -56,6 +56,7 @@ export function ExtraCostModal({ order, busy, onClose, onSubmit }: Props) {
       grams: numOr0(grams),
       extraSupplies: numOr0(supplies),
       profitMultiplier: 4, // irrelevante: no se aplica margen al costo
+      materials: [],
     };
     const breakdown = computeQuote(loadConfig(), piece);
     const items = breakdownToCostItems(breakdown);

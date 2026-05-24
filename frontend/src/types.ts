@@ -306,9 +306,15 @@ export interface PendingQuote {
   /** Conceptos de costo POR UNIDAD a snapshotear en el pedido. */
   costItems: { concept: string; amount: number }[];
   /**
-   * Material consumido por unidad (Estoque integration). Si se completa,
-   * al crear el pedido se registra un OUT de `gramsPerUnit × quantity`
-   * gramos vinculado al `order_id` recién creado.
+   * Material(es) consumidos por unidad (Estoque integration). Si se completa,
+   * al crear el pedido se registra un OUT por cada material de
+   * `gramsPerUnit × quantity` gramos vinculado al `order_id` recién creado.
+   * Para piezas multicolor cada filamento se descuenta por separado.
+   */
+  materials?: { materialId: number; gramsPerUnit: number }[];
+  /**
+   * Atajo legacy de 1 sólo material — el formulario de pedido le da prioridad
+   * a `materials[]` si existe.
    */
   materialId?: number | null;
   gramsPerUnit?: number | null;

@@ -3,7 +3,13 @@
 // es un cambio de una línea acá.
 
 export interface QuoteConfig {
-  /** Precio del filamento por kg */
+  /**
+   * Precio del filamento por kg. Se usa como **fallback** cuando la pieza
+   * no tiene `materials[]` asignados desde el Estoque. Si hay materiales
+   * elegidos, el precio efectivo es el MÁXIMO `cost_per_g × 1000` entre
+   * todos ellos (regla de negocio para piezas multicolor: cobramos como
+   * si todo el filamento fuera el más caro de la pieza).
+   */
   filamentPricePerKg: number;
   /** Precio del kWh */
   kwhPrice: number;
@@ -33,23 +39,57 @@ export interface QuoteConfig {
 
 export type ProfitMultiplier = 3 | 4 | 5;
 
+/**
+ * Una línea de insumo del estoque asignada a la pieza. Puede ser cualquier
+ * material (filamento en gramos, imanes en unidades, pintura en ml). El
+ * campo `grams` se llama así por historia pero representa la **cantidad en
+ * la unidad nativa del material** (g, un o ml — el backend almacena el
+ * stock de forma genérica).
+ *
+ * - `materialId === null` → fila vacía, todavía no eligió material.
+ * - `grams === 0` → cuenta el material pero todavía no cargó cantidad.
+ *
+ * El stock se descuenta línea por línea al crear el pedido: cada material
+ * recibe su propio OUT con su qty × cantidad de unidades del pedido.
+ */
+export interface MaterialLine {
+  id: string;
+  materialId: number | null;
+  /** Cantidad en la unidad nativa del material (g / un / ml). */
+  grams: number;
+}
+
 export interface QuotePiece {
   pieceName: string;
   printHours: number;
   printMinutes: number;
+  /**
+   * Gramos totales — fallback histórico para cuando no hay `materials[]`.
+   * Cuando hay líneas con gramos, este campo se ignora (se calcula la suma).
+   */
   grams: number;
   extraSupplies: number;
   profitMultiplier: ProfitMultiplier;
+  /**
+   * Líneas de material asignadas. Vacío = comportamiento clásico
+   * (un único filamento + `piece.grams` + `config.filamentPricePerKg`).
+   */
+  materials: MaterialLine[];
 }
 
 export interface QuoteBreakdown {
+  /** Costo total del material (filamento + insumos del estoque). */
   material: number;
+  /** Porción del costo de material que es filamento (`g`). */
+  materialFilament: number;
+  /** Porción del costo de material que son insumos (`un`/`ml`). */
+  materialAccessories: number;
   electricity: number;
   machineWear: number;
   errorMargin: number;
   /** Gastos operativos total: material + luz + desgaste + margen error. */
   operativos: number;
-  /** Insumos extra SIN recargo (costo real, para rentabilidad). */
+  /** Insumos extra (campo $ libre) SIN recargo (costo real, rentabilidad). */
   suppliesBase: number;
   /** Insumos extra con el +30% (se usa sólo para el total a cobrar). */
   supplies: number;
@@ -65,6 +105,18 @@ export interface QuoteBreakdown {
    * para absorber la comisión del marketplace.
    */
   total: number;
+  /**
+   * Gramos de filamento efectivamente usados — Σ líneas `g`, o `piece.grams`
+   * si no hay líneas. Sirve para la UI y para descontar stock.
+   */
+  totalGrams: number;
+  /**
+   * Precio por kg efectivamente usado — `max(cost_per_g × 1000)` entre las
+   * líneas de filamento, o `config.filamentPricePerKg` si no hay líneas.
+   */
+  pricePerKgUsed: number;
+  /** Total de unidades de insumos no-filamento (de líneas un/ml). */
+  accessoriesQty: number;
 }
 
 export const DEFAULT_CONFIG: QuoteConfig = {
@@ -95,6 +147,7 @@ export const DEFAULT_PIECE: QuotePiece = {
   grams: 0,
   extraSupplies: 0,
   profitMultiplier: 4,
+  materials: [],
 };
 
 export const SUPPLIES_SURCHARGE = 0.3; // +30% sobre insumos extra
@@ -103,14 +156,127 @@ export function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/** Crea una `MaterialLine` vacía con id estable para usar como key en React. */
+export function makeMaterialLine(): MaterialLine {
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `ml-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return { id, materialId: null, grams: 0 };
+}
+
+/**
+ * Información mínima que la calculadora necesita por material para calcular
+ * el costo: el costo por unidad nativa del material y la unidad. Es lo que
+ * la UI le inyecta al resolver — un slim de `Material` del backend.
+ */
+export interface ResolvedMaterial {
+  /** Costo por unidad nativa del material (por g, por un, o por ml). */
+  costPer: number;
+  unit: "g" | "un" | "ml";
+}
+
+/**
+ * Desglose del costo total de materiales. Separa filamentos (regla
+ * multicolor: max precio/kg × Σg) de los insumos sueltos del estoque
+ * (imanes, pintura, etc. — simple qty × costo unitario por cada uno).
+ *
+ * `null` cuando no hay ninguna línea válida.
+ */
+export interface MaterialsTotals {
+  /** Σ gramos entre líneas con unidad "g". */
+  filamentG: number;
+  /** Máximo costo/kg entre los filamentos elegidos (regla multicolor). */
+  filamentMaxCostPerKg: number;
+  /** Costo del filamento: (filamentG/1000) × filamentMaxCostPerKg. */
+  filamentCost: number;
+  /** Suma de qty × costo unitario para todas las líneas con unidad != "g". */
+  accessoriesCost: number;
+  /** Total de unidades de insumos no-filamento (suma de qty de líneas un/ml). */
+  accessoriesQty: number;
+  /** filamentCost + accessoriesCost. */
+  totalCost: number;
+}
+
+export function materialsTotals(
+  lines: MaterialLine[],
+  resolve: (materialId: number) => ResolvedMaterial | null,
+): MaterialsTotals | null {
+  let filamentG = 0;
+  let maxFilamentCostPerG = 0;
+  let accessoriesCost = 0;
+  let accessoriesQty = 0;
+  let any = false;
+  for (const line of lines) {
+    if (line.materialId == null) continue;
+    const qty = Math.max(0, line.grams || 0);
+    if (qty <= 0) continue;
+    const mat = resolve(line.materialId);
+    if (!mat || !Number.isFinite(mat.costPer) || mat.costPer <= 0) continue;
+    any = true;
+    if (mat.unit === "g") {
+      filamentG += qty;
+      if (mat.costPer > maxFilamentCostPerG) maxFilamentCostPerG = mat.costPer;
+    } else {
+      accessoriesCost += qty * mat.costPer;
+      accessoriesQty += qty;
+    }
+  }
+  if (!any) return null;
+  const filamentCost = (filamentG / 1000) * (maxFilamentCostPerG * 1000);
+  return {
+    filamentG: round2(filamentG),
+    filamentMaxCostPerKg: round2(maxFilamentCostPerG * 1000),
+    filamentCost: round2(filamentCost),
+    accessoriesCost: round2(accessoriesCost),
+    accessoriesQty: round2(accessoriesQty),
+    totalCost: round2(filamentCost + accessoriesCost),
+  };
+}
+
 export function computeQuote(
   config: QuoteConfig,
   piece: QuotePiece,
+  /**
+   * Opcional: resuelve `{ costPer, unit }` por `materialId`. Si se pasa y la
+   * pieza tiene `materials[]`, el costo de material = filamentos (Σg × max
+   * $/kg) + insumos (Σ qty × costo unitario), y se ignoran `piece.grams` y
+   * `config.filamentPricePerKg` para la porción de filamento.
+   */
+  resolveMaterial?: (materialId: number) => ResolvedMaterial | null,
 ): QuoteBreakdown {
   const totalHours =
     Math.max(0, piece.printHours) + Math.max(0, piece.printMinutes) / 60;
 
-  const material = (Math.max(0, piece.grams) / 1000) * config.filamentPricePerKg;
+  // Resolución del costo de material:
+  //  - Con líneas válidas: filamento (Σg × max $/kg) + insumos (Σ qty × $u).
+  //  - Sin líneas: cae al modo histórico (piece.grams × filamentPricePerKg).
+  const totals = resolveMaterial
+    ? materialsTotals(piece.materials ?? [], resolveMaterial)
+    : null;
+
+  let material: number;
+  let materialFilament: number;
+  let materialAccessories: number;
+  let effectiveGrams: number;
+  let effectivePricePerKg: number;
+  let accessoriesQty: number;
+  if (totals) {
+    material = totals.totalCost;
+    materialFilament = totals.filamentCost;
+    materialAccessories = totals.accessoriesCost;
+    effectiveGrams = totals.filamentG;
+    effectivePricePerKg =
+      totals.filamentMaxCostPerKg || config.filamentPricePerKg;
+    accessoriesQty = totals.accessoriesQty;
+  } else {
+    effectiveGrams = Math.max(0, piece.grams);
+    effectivePricePerKg = config.filamentPricePerKg;
+    materialFilament = (effectiveGrams / 1000) * effectivePricePerKg;
+    materialAccessories = 0;
+    material = materialFilament;
+    accessoriesQty = 0;
+  }
 
   // Cuando hay una impressora elegida con costo/hora declarado, ese valor
   // reemplaza el cálculo detallado de luz + desgaste. Es el patrón que usa
@@ -147,6 +313,8 @@ export function computeQuote(
 
   return {
     material: round2(material),
+    materialFilament: round2(materialFilament),
+    materialAccessories: round2(materialAccessories),
     electricity: round2(electricity),
     machineWear: round2(machineWear),
     errorMargin: round2(errorMargin),
@@ -156,6 +324,9 @@ export function computeQuote(
     subtotal: round2(subtotal),
     marketplaceFee: round2(marketplaceFee),
     total: round2(total),
+    totalGrams: round2(effectiveGrams),
+    pricePerKgUsed: round2(effectivePricePerKg),
+    accessoriesQty: round2(accessoriesQty),
   };
 }
 

@@ -2689,6 +2689,67 @@ body {
   gap: 1.25rem;
 }
 
+/* Header tipo Lunaro: eyebrow + título grande + subtítulo descriptivo */
+.calc__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.calc__eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.calc__title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.calc__subtitle {
+  margin: 0;
+  color: var(--muted);
+  max-width: 70ch;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+/* Layout 2 columnas (Datos / Resultado + Guía). Una sola en mobile. */
+.calc__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.calc__left,
+.calc__right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.calc__right {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 980px) {
+  .calc__layout {
+    grid-template-columns: 1fr;
+  }
+  .calc__right {
+    position: static;
+  }
+}
+
+/* Compat retro: algunas vistas legacy referencian .calc__cols */
 .calc__cols {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -2706,6 +2767,232 @@ body {
 
 .calc__full {
   grid-column: 1 / -1;
+}
+
+/* ---------- Lista multi-filamento ---------- */
+.calc__mat-list {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calc__mat-empty {
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+
+.calc__mat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 110px minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.calc__mat-row select,
+.calc__mat-row input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+
+/* qty + unit suffix (g / un / ml) */
+.calc__mat-qty {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.calc__mat-qty input {
+  padding-right: 2rem;
+}
+.calc__mat-unit {
+  position: absolute;
+  right: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Otros insumos sueltos — escape hatch */
+.calc__extras {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--border);
+}
+
+.calc__mat-row-info {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 720px) {
+  .calc__mat-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "sel sel"
+      "grams remove"
+      "info info";
+    gap: 0.4rem;
+  }
+  .calc__mat-row > select {
+    grid-area: sel;
+  }
+  .calc__mat-row > input {
+    grid-area: grams;
+  }
+  .calc__mat-row > .calc__mat-row-info {
+    grid-area: info;
+  }
+  .calc__mat-row > button {
+    grid-area: remove;
+  }
+}
+
+.calc__mat-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.35rem;
+}
+
+.calc__mat-totals {
+  font-size: 0.9rem;
+}
+
+.calc__mat-totals strong {
+  color: var(--accent);
+}
+
+/* ---------- Empty states (selectores y resultado) ---------- */
+.calc__empty {
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calc__empty--inline {
+  padding: 0.6rem 0.8rem;
+  background: transparent;
+}
+
+.calc__empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.calc__result-empty {
+  padding: 1.2rem 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.calc__result-empty strong {
+  font-size: 1.02rem;
+}
+
+/* ---------- Panel educativo ---------- */
+.calc__guide {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  background: color-mix(in srgb, var(--accent) 5%, var(--card-bg));
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.calc__guide h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.calc__guide ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.calc__guide li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-left: 0.7rem;
+  border-left: 3px solid var(--accent);
+}
+
+.calc__guide li strong {
+  font-size: 0.88rem;
+}
+
+.calc__guide li span {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ---------- Parámetros avanzados (details/summary) ---------- */
+.calc__advanced {
+  padding: 0;
+}
+
+.calc__advanced > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  border-bottom: 1px solid transparent;
+}
+
+.calc__advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.calc__advanced > summary::after {
+  content: "▾";
+  color: var(--muted);
+  transition: transform 0.18s ease;
+}
+
+.calc__advanced[open] > summary {
+  border-bottom-color: var(--border);
+}
+
+.calc__advanced[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.calc__advanced > summary > h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.calc__advanced > .caja-form__grid {
+  padding: 1rem 1.3rem 1.2rem;
 }
 
 .calc__fee-row {

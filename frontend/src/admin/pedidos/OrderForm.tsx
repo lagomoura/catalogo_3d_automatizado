@@ -102,28 +102,50 @@ export function OrderForm({
         cost_items: quoteCosts ?? undefined,
       });
 
-      // Si la cotización venía con un material vinculado y gramos por unidad,
-      // descontá del stock con un OUT trazado al pedido recién creado.
-      const consumeGrams =
-        (pendingQuote?.gramsPerUnit ?? 0) > 0
-          ? (pendingQuote!.gramsPerUnit as number) * quantity
-          : 0;
-      if (pendingQuote?.materialId && consumeGrams > 0) {
-        try {
-          await createMaterialMovement(pendingQuote.materialId, {
-            kind: "OUT",
-            grams: consumeGrams,
-            order_id: created.id,
-            note: `Consumo automático del pedido #${created.id}`,
-          });
-        } catch (mvErr) {
-          // No bloqueamos el flujo del pedido si el stock no alcanza — solo
-          // avisamos. La intervención manual queda al admin desde Estoque.
-          console.warn("No se pudo descontar stock:", mvErr);
+      // Si la cotización venía con material(es) vinculado(s), descontá del
+      // stock con un OUT por material trazado al pedido recién creado. Las
+      // cotizaciones modernas usan `materials[]` (multi-color); las viejas
+      // mandan `materialId` + `gramsPerUnit` y caemos a una sola línea.
+      const consumeLines: { materialId: number; grams: number }[] = [];
+      if (pendingQuote?.materials && pendingQuote.materials.length > 0) {
+        for (const m of pendingQuote.materials) {
+          const grams = (m.gramsPerUnit || 0) * quantity;
+          if (m.materialId && grams > 0) {
+            consumeLines.push({ materialId: m.materialId, grams });
+          }
+        }
+      } else if (
+        pendingQuote?.materialId &&
+        (pendingQuote.gramsPerUnit ?? 0) > 0
+      ) {
+        consumeLines.push({
+          materialId: pendingQuote.materialId,
+          grams: (pendingQuote.gramsPerUnit as number) * quantity,
+        });
+      }
+
+      if (consumeLines.length > 0) {
+        const failures: string[] = [];
+        for (const line of consumeLines) {
+          try {
+            await createMaterialMovement(line.materialId, {
+              kind: "OUT",
+              grams: line.grams,
+              order_id: created.id,
+              note: `Consumo automático del pedido #${created.id}`,
+            });
+          } catch (mvErr) {
+            // No bloqueamos el flujo del pedido si el stock no alcanza — solo
+            // avisamos. La intervención manual queda al admin desde Estoque.
+            console.warn("No se pudo descontar stock:", mvErr);
+            failures.push(
+              mvErr instanceof Error ? mvErr.message : "error desconocido",
+            );
+          }
+        }
+        if (failures.length > 0) {
           setError(
-            mvErr instanceof Error
-              ? `Pedido creado, pero no se pudo descontar stock: ${mvErr.message}`
-              : "Pedido creado, pero falló el descuento de stock.",
+            `Pedido creado, pero no se pudo descontar stock de ${failures.length} material(es): ${failures.join("; ")}`,
           );
         }
       }

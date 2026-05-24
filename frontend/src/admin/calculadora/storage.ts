@@ -4,6 +4,7 @@
 
 import {
   DEFAULT_CONFIG,
+  type MaterialLine,
   type QuoteBreakdown,
   type QuoteConfig,
   type QuotePiece,
@@ -23,7 +24,11 @@ export interface SavedQuote {
   config: QuoteConfig;
   piece: QuotePiece;
   breakdown: QuoteBreakdown;
-  /** Material e impresora seleccionados (Estoque + Impressoras integration). */
+  /**
+   * Material principal (legacy / atajo). Las cotizaciones nuevas guardan la
+   * lista completa en `piece.materials`. Se mantiene este campo para que las
+   * cotizaciones viejas sigan abriendo bien.
+   */
   materialId?: number | null;
   printerId?: number | null;
 }
@@ -31,21 +36,45 @@ export interface SavedQuote {
 const SELECTION_KEY = "calc.selection.v1";
 
 export interface CalcSelection {
-  materialId: number | null;
+  /**
+   * Líneas de material del último estado. La calculadora arranca con esto;
+   * si la pieza tenía sólo 1 material en versiones viejas, se hidrata como
+   * una única línea sin gramos (el usuario la completa).
+   */
+  materialLines: MaterialLine[];
   printerId: number | null;
 }
 
 export function loadSelection(): CalcSelection {
   try {
     const raw = localStorage.getItem(SELECTION_KEY);
-    if (!raw) return { materialId: null, printerId: null };
-    const parsed = JSON.parse(raw) as Partial<CalcSelection>;
-    return {
-      materialId: parsed.materialId ?? null,
-      printerId: parsed.printerId ?? null,
+    if (!raw) return { materialLines: [], printerId: null };
+    const parsed = JSON.parse(raw) as Partial<CalcSelection> & {
+      // formato viejo: { materialId, printerId }
+      materialId?: number | null;
     };
+    if (Array.isArray(parsed.materialLines)) {
+      return {
+        materialLines: parsed.materialLines.filter(
+          (l): l is MaterialLine =>
+            !!l && typeof l.id === "string" && "materialId" in l,
+        ),
+        printerId: parsed.printerId ?? null,
+      };
+    }
+    // Migración del formato viejo: un único materialId se hidrata como una
+    // línea sin gramos. El usuario completa los gramos en la UI.
+    if (parsed.materialId != null) {
+      return {
+        materialLines: [
+          { id: `legacy-${parsed.materialId}`, materialId: parsed.materialId, grams: 0 },
+        ],
+        printerId: parsed.printerId ?? null,
+      };
+    }
+    return { materialLines: [], printerId: parsed.printerId ?? null };
   } catch {
-    return { materialId: null, printerId: null };
+    return { materialLines: [], printerId: null };
   }
 }
 
@@ -83,13 +112,15 @@ export function loadQuotes(): SavedQuote[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as SavedQuote[];
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .slice(0, MAX_QUOTES)
-      .map((q) => ({
-        ...q,
-        quantity: q.quantity && q.quantity > 0 ? q.quantity : 1,
-        chargeOverride: q.chargeOverride ?? null,
-      }));
+    return parsed.slice(0, MAX_QUOTES).map((q) => ({
+      ...q,
+      quantity: q.quantity && q.quantity > 0 ? q.quantity : 1,
+      chargeOverride: q.chargeOverride ?? null,
+      piece: {
+        ...q.piece,
+        materials: Array.isArray(q.piece?.materials) ? q.piece.materials : [],
+      },
+    }));
   } catch {
     return [];
   }

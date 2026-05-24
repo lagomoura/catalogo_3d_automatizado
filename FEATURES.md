@@ -151,15 +151,24 @@
 
 ### 4.1 Calculadora de costos
 
-- **Qué hace**: cálculo de precio de impresión con:
-  - Selección de **Material** del Estoque (auto-completa `cost_per_g`).
+- **Qué hace**: cálculo de precio de impresión con UX estilo Lunaro (header con título + subtítulo descriptivo, layout 2 columnas Datos / Resultado + panel educativo lateral). Incluye:
+  - **Cualquier material del estoque por pieza** (multicolor + insumos): lista de `[material · qty · ✕]` + `+ Agregar material`, donde el material puede ser filamento (g), accesorio (un, ej.: imanes) o líquido (ml). Costos:
+    - Filamentos: `max(precio/kg) × Σ gramos` (regla multicolor — cobramos como si todo el filamento fuera el más caro de la pieza).
+    - Insumos / líquidos: `Σ (qty × costo unitario)` directo.
+    - El campo "Otros insumos sueltos ($)" sigue disponible para cosas no rastreadas (pegamento, alcohol) — se suma con +30%.
+    Cada material se descuenta del stock con su propio movement OUT trazado al pedido.
   - Selección de **Impressora** del inventario (auto-completa `cost_per_hour`, reemplaza el cálculo watts × kWh + desgaste).
   - **Taxa de marketplace** (presets: Mercado Libre 14% / 17.5%, Shopee 12%, Magalu 16%, custom).
-  - Margen ×3/×4/×5 + insumos extra +30%.
+  - Margen ×3 Mayorista / ×4 Minorista / ×5 Llaveros + insumos extra +30%.
+  - **Empty states accionables**: si no hay filamentos en estoque, CTA "Registrar filamento"; si no hay impresoras, CTA "Cadastrar impresora" o seguir con cálculo manual (watts × kWh).
+  - **Estado vacío del Resultado**: hint "¿Listo para ver el costo y precio sugerido?" antes de cargar datos.
+  - **Panel educativo "¿Qué calcula esta calculadora?"** (Material / Energía + depreciación / Margen / Taxa de marketplaces).
+  - **Parámetros avanzados** plegables (`<details>`): precio filamento fallback, kWh, watts, vida útil, repuesto, % margen de error.
   - Override manual del total a cobrar.
-  - Historia de últimas 5 cotizaciones (localStorage).
-  - Bridge "Crear pedido con esta cotización" → al guardar el pedido, **descuenta automáticamente del stock** con un movement OUT trazado al `order_id`.
-- **Frontend admin**: tab **Calculadora** (`admin/calculadora/CalculadoraPage.tsx`) + `calc.ts` (función pura) + `storage.ts` (persistencia local).
+  - Historia de últimas 5 cotizaciones (localStorage). Quotes viejas (1 sólo material) siguen abriendo via migración transparente.
+  - Bridge "Crear pedido con esta cotización" → al guardar el pedido, **descuenta automáticamente del stock** un OUT por filamento, todos trazados al `order_id` recién creado.
+- **Frontend admin**: tab **Calculadora** (`admin/calculadora/CalculadoraPage.tsx`) + `calc.ts` (función pura — `MaterialLine`, `materialsTotals()`, `computeQuote()` con `resolveCostPerG` opcional) + `storage.ts` (persistencia local con `materialLines[]`).
+- **Notas**: el cálculo es pure function; multicolor se modela arriba del cálculo "1 precio × 1 gramaje" inyectando `(Σ g, max $/kg)` antes de llamar a `computeQuote`. Mantiene back-compat con cotizaciones viejas (`materialId` único → primera línea legacy).
 
 ### 4.2 Reportes (Dashboard de KPIs)
 

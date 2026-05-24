@@ -268,7 +268,10 @@ export default function AdminPage() {
       ) : tab === "caja" ? (
         <CajaPage />
       ) : tab === "calculadora" ? (
-        <CalculadoraPage onCreateOrder={handleQuoteToOrder} />
+        <CalculadoraPage
+          onCreateOrder={handleQuoteToOrder}
+          onNavigate={(t) => setTab(t as Tab)}
+        />
       ) : tab === "impressoras" ? (
         <ImpressorasPage />
       ) : tab === "estoque" ? (
