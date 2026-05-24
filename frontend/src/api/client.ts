@@ -47,10 +47,28 @@ const API_BASE: string =
 
 export const STORAGE_BASE = API_BASE;
 
+const ADMIN_AUTH_STORAGE_KEY = "admin_basic_auth";
+
+/**
+ * Devuelve los headers de auth admin si `AdminGate` ya validó la password.
+ * El backend descarta el header en rutas públicas (catalog GET, /storage, etc.),
+ * así que sumarlo siempre es safe y simplifica el call site.
+ */
+function adminAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = window.sessionStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
+  return token ? { Authorization: `Basic ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...adminAuthHeaders(),
+    ...((init?.headers as Record<string, string> | undefined) ?? {}),
+  };
   const resp = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers,
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
@@ -85,6 +103,7 @@ export async function createManualProduct(data: {
   const resp = await fetch(`${API_BASE}/api/catalog/manual`, {
     method: "POST",
     body: form,
+    headers: adminAuthHeaders(),
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
@@ -757,6 +776,7 @@ export async function uploadQuoteLogo(
   const resp = await fetch(`${API_BASE}/api/quotes/upload-logo`, {
     method: "POST",
     body: form,
+    headers: adminAuthHeaders(),
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
