@@ -117,20 +117,39 @@ export function CalculadoraPage({ onCreateOrder, onNavigate }: Props) {
   const removeLine = (id: string) =>
     patchLines(materialLines.filter((l) => l.id !== id));
 
-  // Cuando cambia la impresora, autocompletar `printerHourlyCostOverride` si la
-  // impresora tiene cost_per_hour. Si se quita, vuelve al modo watts × kWh.
+  // Cuando cambia la impresora, inyectamos sus parámetros en el config:
+  //  - Si tiene los 3 inputs cargados (power_watts + life_hours +
+  //    spare_parts_cost), reemplazamos los globales y dejamos que la
+  //    calculadora desglose electricity + machineWear con los nuevos valores
+  //    (modo "impresora caracterizada con desglose").
+  //  - Si sólo tiene cost_per_hour (legacy), usamos el override clásico que
+  //    colapsa el desglose en un solo número.
+  //  - Si no se elige impresora, limpiamos el override.
   const handleSelectPrinter = (id: number | null) => {
     setPrinterId(id);
     saveSelection({ materialLines, printerId: id });
-    if (id != null) {
-      const p = printers.find((pp) => pp.id === id);
-      if (p) {
-        patchConfig({
-          printerHourlyCostOverride: p.cost_per_hour > 0 ? p.cost_per_hour : null,
-        });
-      }
-    } else {
+    if (id == null) {
       patchConfig({ printerHourlyCostOverride: null });
+      return;
+    }
+    const p = printers.find((pp) => pp.id === id);
+    if (!p) return;
+    const hasInputs =
+      (p.power_watts ?? 0) > 0 &&
+      (p.life_hours ?? 0) > 0 &&
+      (p.spare_parts_cost ?? 0) > 0;
+    if (hasInputs) {
+      patchConfig({
+        printerWatts: p.power_watts as number,
+        machineLifeHours: p.life_hours as number,
+        sparePartCost: p.spare_parts_cost as number,
+        printerHourlyCostOverride: null,
+      });
+    } else {
+      patchConfig({
+        printerHourlyCostOverride:
+          p.cost_per_hour > 0 ? p.cost_per_hour : null,
+      });
     }
   };
 

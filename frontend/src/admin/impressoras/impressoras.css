@@ -226,3 +226,113 @@
   color: var(--error);
   border-color: var(--error);
 }
+
+/* ---- Costo por hora (cálculo automático) ---- */
+
+.printer-cost-block {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft, rgba(0, 0, 0, 0.02));
+}
+
+.printer-cost-block__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.printer-cost-block__head h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+
+.printer-cost-block__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.printer-cost-block .btn-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.78rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.printer-cost-block .btn-link:hover {
+  opacity: 0.85;
+}
+
+.printer-cost-block__kwh {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.printer-cost-block__pending {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.printer-cost-breakdown {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.printer-cost-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.printer-cost-breakdown dt {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.printer-cost-breakdown dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--fg);
+  text-align: right;
+}
+
+.printer-cost-breakdown .muted {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: normal;
+  margin-left: 0.25rem;
+}
+
+.printer-cost-breakdown__total {
+  border-top: 1px dashed var(--border);
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.printer-cost-breakdown__total dt,
+.printer-cost-breakdown__total dd {
+  font-size: 0.95rem;
+  color: var(--fg);
+}

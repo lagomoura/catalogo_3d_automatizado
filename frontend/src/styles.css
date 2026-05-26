@@ -442,6 +442,17 @@ body {
 .modal-panel--md { max-width: 560px; }
 .modal-panel--lg { max-width: 800px; }
 
+/* Cuando el panel envuelve un <form> (vez de los slots sueltos), el form
+   debe heredar el layout flex column para que body scrollable + footer
+   pegado al borde inferior sigan funcionando. Sin esto, al crecer el
+   contenido del body el footer "se sale" del panel sobre el backdrop. */
+.modal-panel > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .modal-panel__head {
   display: flex;
   align-items: center;

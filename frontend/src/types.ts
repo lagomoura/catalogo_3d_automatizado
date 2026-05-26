@@ -366,6 +366,12 @@ export interface Printer {
   purchase_cost: number | null;
   purchase_date: string | null; // ISO date (YYYY-MM-DD)
   kwh_cost: number | null;
+  /** Consumo en watts — input del cálculo automático. */
+  power_watts: number | null;
+  /** Vida útil estimada en horas — input del cálculo automático. */
+  life_hours: number | null;
+  /** Costo de repuestos / recambio completo — input del cálculo automático. */
+  spare_parts_cost: number | null;
   cost_per_hour: number;
   notes: string | null;
   archived: boolean;
@@ -382,6 +388,9 @@ export interface PrinterCreatePayload {
   purchase_cost?: number | null;
   purchase_date?: string | null;
   kwh_cost?: number | null;
+  power_watts?: number | null;
+  life_hours?: number | null;
+  spare_parts_cost?: number | null;
   cost_per_hour?: number;
   notes?: string | null;
   sort_order?: number;

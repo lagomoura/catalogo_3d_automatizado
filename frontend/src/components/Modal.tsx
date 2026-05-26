@@ -7,6 +7,8 @@ interface ModalProps {
   size?: "sm" | "md" | "lg";
   /** If false, clicking the backdrop does NOT close. Default true. */
   closeOnBackdrop?: boolean;
+  /** If false, pressing Escape does NOT close. Default true. */
+  closeOnEscape?: boolean;
   children: ReactNode;
   /** Optional class on the panel for feature-specific tweaks. */
   panelClassName?: string;
@@ -24,6 +26,7 @@ export function Modal({
   onClose,
   size = "md",
   closeOnBackdrop = true,
+  closeOnEscape = true,
   children,
   panelClassName = "",
   labelledBy,
@@ -31,7 +34,7 @@ export function Modal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (closeOnEscape && e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
@@ -40,7 +43,7 @@ export function Modal({
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, onClose]);
+  }, [open, onClose, closeOnEscape]);
 
   if (!open) return null;
 

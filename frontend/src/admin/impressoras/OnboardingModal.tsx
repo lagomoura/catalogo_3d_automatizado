@@ -59,9 +59,10 @@ export function OnboardingModal({ open, onClose, onAdvance }: Props) {
                 <span className="onboarding__dot" /> COSTO POR HORA
               </header>
               <p>
-                Es lo que alimenta la calculadora. Podés cargarlo a ojo al
-                inicio y refinarlo después con kWh, depreciación y
-                mantenimiento.
+                Te lo calculamos solo si cargás <strong>consumo (W)</strong>,
+                <strong> vida útil (h)</strong> y{" "}
+                <strong>costo de repuestos</strong>. Si ya sabés tu costo/hora,
+                podés tocar "Ingresar manualmente" y escribirlo directo.
               </p>
             </section>
           </div>
