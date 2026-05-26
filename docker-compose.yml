@@ -1,5 +1,6 @@
-# Postgres local para desarrollo. El backend se sigue corriendo con uvicorn
-# fuera de Docker; este compose solo levanta la base de datos.
+# Ambiente de DESARROLLO dockerizado (Postgres + Backend FastAPI).
+# Producción corre en Railway con su propio Dockerfile y Postgres gestionado.
+# El frontend (Vite) sigue corriendo local fuera de Docker.
 services:
   db:
     image: postgres:16-alpine
@@ -9,7 +10,7 @@ services:
       POSTGRES_PASSWORD: catalog
       POSTGRES_DB: catalog
     ports:
-      - "5432:5432"
+      - "5432:5432"   # Expuesto al host para inspección con psql/DBeaver
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,5 +19,30 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: catalog_backend
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      # La BD del compose se resuelve por nombre de servicio (db:5432).
+      # Estas vars ganan sobre las del env_file, así garantizamos
+      # que dev siempre apunte al Postgres del compose.
+      DATABASE_URL: postgresql+psycopg://catalog:catalog@db:5432/catalog
+      STORAGE_DIR: /data/storage
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app                       # hot-reload del código
+      - catalog_storage:/data/storage        # paridad con prod (Railway monta volumen aquí)
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
 volumes:
   pgdata:
+  catalog_storage:
