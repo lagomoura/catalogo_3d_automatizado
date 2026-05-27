@@ -2,17 +2,29 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   advanceOrder,
   appendOrderCost,
+  cancelProductionRun,
   createOrder,
+  createProductionRun,
   deleteOrder,
+  deleteProductionRun,
+  finishProductionRun,
   getCatalog,
   getContacts,
   getOrders,
   getOrdersSummary,
+  getPrinters,
+  getProductionRuns,
+  getProductionSummary,
+  pauseProductionRun,
+  reopenProductionRun,
   replaceOrderCosts,
+  resumeProductionRun,
   setOrderPayment,
   setOrderPriority,
   startOrder,
+  startProductionRun,
   updateOrder,
+  updateProductionRun,
   type OrderCostItemInput,
   type OrderCreatePayload,
   type OrderUpdatePayload,
@@ -25,10 +37,17 @@ import type {
   OrderPriority,
   OrderSummary,
   PendingQuote,
+  Printer,
+  ProductionRun,
+  ProductionRunCreatePayload,
+  ProductionRunUpdatePayload,
+  ProductionSummary,
 } from "../../types";
 import { OnboardingModal } from "./OnboardingModal";
 import { OrderForm } from "./OrderForm";
 import { OrderQueue } from "./OrderQueue";
+import { ProductionRunForm } from "./ProductionRunForm";
+import { useProductionTicker } from "./useProductionTicker";
 import "./pedidos.css";
 
 interface PedidosPageProps {
@@ -46,20 +65,12 @@ type StatusTab =
 
 const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: "todos", label: "Todos" },
-  { key: "pendentes", label: "Pendientes" },
+  { key: "pendentes", label: "En cola" },
   { key: "proximos_prazo", label: "Próximos al plazo" },
   { key: "atrasados", label: "Atrasados" },
-  { key: "en_produccion", label: "En producción" },
-  { key: "finalizados", label: "Finalizados" },
+  { key: "en_produccion", label: "En curso" },
+  { key: "finalizados", label: "Entregados" },
 ];
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const inDaysISO = (days: number) =>
@@ -79,15 +90,32 @@ export function PedidosPage({
   const [error, setError] = useState<string | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
 
+  const [runs, setRuns] = useState<ProductionRun[]>([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [productionSummary, setProductionSummary] =
+    useState<ProductionSummary | null>(null);
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [runFormOrderId, setRunFormOrderId] = useState<number | null>(null);
+  const [runFormEditing, setRunFormEditing] = useState<ProductionRun | null>(
+    null,
+  );
+  const { now } = useProductionTicker();
+
   const refreshOrders = useCallback(async () => {
-    const [list, sum] = await Promise.all([
+    const [list, sum, runsList, prodSum] = await Promise.all([
       getOrders({
         catalog_item_id: filterProductId ?? undefined,
       }),
       getOrdersSummary().catch(() => null),
+      getProductionRuns().catch(() => [] as ProductionRun[]),
+      getProductionSummary().catch(() => null),
     ]);
     setOrders(list);
     if (sum) setSummary(sum);
+    setRuns(runsList);
+    if (prodSum) setProductionSummary(prodSum);
   }, [filterProductId]);
 
   useEffect(() => {
@@ -99,7 +127,57 @@ export function PedidosPage({
   useEffect(() => {
     getContacts().then(setContacts).catch(() => undefined);
     getCatalog().then(setCatalog).catch(() => undefined);
+    getPrinters().then(setPrinters).catch(() => undefined);
   }, []);
+
+  // Pull silencioso cada 30s para reflejar cambios de runs (start/pause/finish
+  // disparados en otra pestaña o por otro usuario).
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refreshOrders();
+    }, 30000);
+    return () => window.clearInterval(id);
+  }, [refreshOrders]);
+
+  // Auto-expand pedidos en EJECUTANDO al cargar, para que sus runs queden visibles.
+  useEffect(() => {
+    const inCurso = orders
+      .filter((o) => o.order_status === "EJECUTANDO")
+      .map((o) => o.id);
+    if (inCurso.length === 0) return;
+    setExpandedOrderIds((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const id of inCurso) {
+        if (!next.has(id)) {
+          next.add(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [orders]);
+
+  const runsByOrder = useMemo(() => {
+    const m = new Map<number, ProductionRun[]>();
+    for (const r of runs) {
+      const oid = r.order?.id;
+      if (oid == null) continue;
+      const arr = m.get(oid) ?? [];
+      arr.push(r);
+      m.set(oid, arr);
+    }
+    for (const arr of m.values()) {
+      arr.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+    }
+    return m;
+  }, [runs]);
+
+  const runsCountByOrder = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const [oid, arr] of runsByOrder) m.set(oid, arr.length);
+    return m;
+  }, [runsByOrder]);
 
   const run = useCallback(
     async (action: () => Promise<unknown>) => {
@@ -119,7 +197,6 @@ export function PedidosPage({
 
   const handleCreate = useCallback(
     async (p: OrderCreatePayload) => {
-      // Errores se propagan al formulario; igual refrescamos al terminar.
       const order = await createOrder(p);
       await Promise.all([refreshOrders(), getContacts().then(setContacts)]);
       return order;
@@ -129,7 +206,6 @@ export function PedidosPage({
 
   const handleUpdate = useCallback(
     async (id: number, p: OrderUpdatePayload) => {
-      // Errores se propagan al modal; refrescamos al terminar.
       await updateOrder(id, p);
       await Promise.all([refreshOrders(), getContacts().then(setContacts)]);
     },
@@ -154,6 +230,88 @@ export function PedidosPage({
     },
     [refreshOrders],
   );
+
+  const runAction = useCallback(
+    async (fn: () => Promise<unknown>) => {
+      setError(null);
+      try {
+        await fn();
+        await refreshOrders();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error en la acción");
+      }
+    },
+    [refreshOrders],
+  );
+
+  const handleToggleExpand = useCallback((orderId: number) => {
+    setExpandedOrderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  }, []);
+
+  const handleRunStart = useCallback(
+    (id: number) => void runAction(() => startProductionRun(id)),
+    [runAction],
+  );
+  const handleRunPause = useCallback(
+    (id: number) => void runAction(() => pauseProductionRun(id)),
+    [runAction],
+  );
+  const handleRunResume = useCallback(
+    (id: number) => void runAction(() => resumeProductionRun(id)),
+    [runAction],
+  );
+  const handleRunFinish = useCallback(
+    (id: number) => void runAction(() => finishProductionRun(id)),
+    [runAction],
+  );
+  const handleRunCancel = useCallback(
+    (id: number) => void runAction(() => cancelProductionRun(id)),
+    [runAction],
+  );
+  const handleRunReopen = useCallback(
+    (id: number) => void runAction(() => reopenProductionRun(id)),
+    [runAction],
+  );
+  const handleRunDelete = useCallback(
+    (id: number) => {
+      if (!window.confirm("¿Eliminar esta producción del historial?")) return;
+      void runAction(() => deleteProductionRun(id));
+    },
+    [runAction],
+  );
+  const handleRunEdit = useCallback((r: ProductionRun) => {
+    setRunFormOrderId(null);
+    setRunFormEditing(r);
+  }, []);
+  const handleRunCreateOpen = useCallback((orderId: number) => {
+    setRunFormEditing(null);
+    setRunFormOrderId(orderId);
+  }, []);
+  const handleRunCreateSubmit = useCallback(
+    async (payload: ProductionRunCreatePayload) => {
+      const enriched: ProductionRunCreatePayload =
+        runFormOrderId != null ? { ...payload, order_id: runFormOrderId } : payload;
+      await createProductionRun(enriched);
+      await refreshOrders();
+    },
+    [refreshOrders, runFormOrderId],
+  );
+  const handleRunUpdateSubmit = useCallback(
+    async (id: number, payload: ProductionRunUpdatePayload) => {
+      await updateProductionRun(id, payload);
+      await refreshOrders();
+    },
+    [refreshOrders],
+  );
+  const handleRunFormClose = useCallback(() => {
+    setRunFormOrderId(null);
+    setRunFormEditing(null);
+  }, []);
 
   const filteredOrders = useMemo(() => {
     const today = todayISO();
@@ -209,18 +367,18 @@ export function PedidosPage({
       <header className="pedidos__header">
         <div>
           <p className="pedidos__eyebrow">Operación</p>
-          <h2>Pedidos</h2>
+          <h2>Pedidos & Producción</h2>
           <p className="pedidos__subtitle">
-            Cada venta como una orden: cliente, producto, cantidad,
-            estado y plazo. El nodo central que conecta clientes,
-            producción, cobro y stock.
+            Cada venta como una orden: cliente, producto, cantidad, plazo.
+            Expandí un pedido para ver y manejar sus piezas en producción
+            en vivo.
           </p>
         </div>
         <button
           type="button"
           className="help-btn"
           onClick={() => setOnboardingOpen(true)}
-          aria-label="Qué es Pedidos y cómo se conecta"
+          aria-label="Qué es Pedidos & Producción y cómo se conecta"
           title="¿Qué es esto?"
         >
           ?
@@ -236,7 +394,7 @@ export function PedidosPage({
 
       <section className="pedidos__kpi-grid">
         <KpiCard
-          label="En abierto"
+          label="En cola"
           value={summary?.em_aberto ?? "—"}
           tone="blue"
         />
@@ -251,19 +409,14 @@ export function PedidosPage({
           tone="red"
         />
         <KpiCard
-          label="En producción"
-          value={summary?.em_producao ?? "—"}
+          label="Imprimiendo ahora"
+          value={productionSummary?.em_producao ?? "—"}
           tone="purple"
         />
         <KpiCard
-          label="Entregados (período)"
-          value={summary?.entregues_no_mes ?? "—"}
+          label="Terminadas hoy"
+          value={productionSummary?.concluidas_hoy ?? "—"}
           tone="green"
-        />
-        <KpiCard
-          label="Valor pendiente"
-          value={summary ? fmtMoney(summary.valor_pendente) : "—"}
-          tone="neutral"
         />
       </section>
 
@@ -317,6 +470,29 @@ export function PedidosPage({
         onSaveCosts={handleSaveCosts}
         onAppendCost={handleAppendCost}
         onDelete={(id) => void run(() => deleteOrder(id))}
+        runsCountByOrder={runsCountByOrder}
+        runsByOrder={runsByOrder}
+        expandedOrderIds={expandedOrderIds}
+        onToggleExpand={handleToggleExpand}
+        now={now}
+        onRunStart={handleRunStart}
+        onRunPause={handleRunPause}
+        onRunResume={handleRunResume}
+        onRunFinish={handleRunFinish}
+        onRunCancel={handleRunCancel}
+        onRunReopen={handleRunReopen}
+        onRunDelete={handleRunDelete}
+        onRunEdit={handleRunEdit}
+        onRunCreate={handleRunCreateOpen}
+      />
+
+      <ProductionRunForm
+        open={runFormOrderId != null || runFormEditing != null}
+        run={runFormEditing}
+        printers={printers}
+        onClose={handleRunFormClose}
+        onCreate={handleRunCreateSubmit}
+        onUpdate={handleRunUpdateSubmit}
       />
     </div>
   );

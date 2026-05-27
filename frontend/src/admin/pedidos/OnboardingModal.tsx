@@ -9,7 +9,7 @@ export function OnboardingModal({ open, onClose }: Props) {
   return (
     <Modal open={open} onClose={onClose} size="md" labelledBy="pedidos-onb-title">
       <Modal.Header onClose={onClose} id="pedidos-onb-title">
-        Qué es Pedidos
+        Qué es Pedidos & Producción
       </Modal.Header>
       <Modal.Body>
         <div className="onboarding">
@@ -23,12 +23,11 @@ export function OnboardingModal({ open, onClose }: Props) {
             </svg>
           </div>
           <div className="onboarding__copy">
-            <h4>El corazón del flujo comercial</h4>
+            <h4>El corazón del flujo comercial — con su taller adentro</h4>
             <p>
               Cada venta vive acá como un pedido: a quién, qué, cuánto,
-              cuándo, en qué estado. Los pedidos atraviesan los demás
-              módulos — son la unidad que conecta cliente, producción,
-              cobro y stock.
+              cuándo, en qué estado. Y dentro de cada pedido están sus
+              piezas en producción, con el reloj corriendo en vivo.
             </p>
 
             <section className="onboarding__section">
@@ -45,9 +44,9 @@ export function OnboardingModal({ open, onClose }: Props) {
                 congelados al momento de crear.
               </p>
               <p>
-                <strong>Producción</strong>: cuando arrancás un pedido,
-                pasa al tablero de Producción. Cada corrida real se
-                vincula al pedido.
+                <strong>Impresoras</strong>: cada corrida elige una
+                máquina. Las horas concluidas se suman para estimar la
+                vida útil restante de cada impresora.
               </p>
               <p>
                 <strong>Inventario</strong>: al crearse el pedido se
@@ -63,7 +62,28 @@ export function OnboardingModal({ open, onClose }: Props) {
 
             <section className="onboarding__section">
               <header>
-                <span className="onboarding__dot" /> ESTADOS Y PRIORIDAD
+                <span className="onboarding__dot" /> PRODUCCIÓN DENTRO DEL PEDIDO
+              </header>
+              <p>
+                Expandí un pedido en curso para ver sus corridas reales:
+                qué pieza, en qué impresora, cuántos minutos restantes.
+                Iniciá, pausá, finalizá o cancelá cada corrida sin salir
+                del pedido. El sistema descuenta los tiempos pausados
+                para que las horas reales por máquina sean fieles a lo
+                trabajado, no al reloj de pared.
+              </p>
+              <p>
+                Las corridas pasan por <em>Pendiente → Imprimiendo →
+                Pausada → Terminada / Cancelada</em>. Esto es ortogonal
+                al estado contractual del pedido: avanzar una corrida no
+                avanza el pedido — eso lo decidís vos cuando marcás
+                "Listo" o "Entregar".
+              </p>
+            </section>
+
+            <section className="onboarding__section">
+              <header>
+                <span className="onboarding__dot" /> ESTADOS DEL PEDIDO Y PRIORIDAD
               </header>
               <p>
                 Un pedido recorre: <em>Creado → Ejecutando → Ejecutado →

@@ -112,6 +112,9 @@ export function OrderForm({
         deadline: deadline || null,
         cost_items: quoteCosts ?? undefined,
         quote_id: pendingQuote?.source_quote_id ?? null,
+        // Propaga el tiempo por pieza a las ProductionRun que el backend genera.
+        estimated_minutes_per_unit:
+          pendingQuote?.estimatedMinutesPerUnit ?? null,
       });
 
       // Si la cotización venía con material(es) vinculado(s), descontá del

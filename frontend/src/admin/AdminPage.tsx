@@ -14,7 +14,6 @@ import { EstoquePage } from "./estoque/EstoquePage";
 import { ImpressorasPage } from "./impressoras/ImpressorasPage";
 import { OrcamentoPage } from "./orcamento/OrcamentoPage";
 import { PedidosPage } from "./pedidos/PedidosPage";
-import { ProduccionPage } from "./produccion/ProduccionPage";
 import { ReportesPage } from "./reportes/ReportesPage";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
@@ -28,7 +27,6 @@ type Tab =
   | "impressoras"
   | "estoque"
   | "clientes"
-  | "produccion"
   | "orcamento";
 type SubmitMode = "makerworld" | "manual";
 
@@ -167,7 +165,7 @@ export default function AdminPage() {
           className={`tab ${tab === "pedidos" ? "tab--active" : ""}`}
           onClick={() => setTab("pedidos")}
         >
-          Pedidos
+          Pedidos & Producción
         </button>
         <button
           type="button"
@@ -204,15 +202,6 @@ export default function AdminPage() {
           onClick={() => setTab("clientes")}
         >
           Clientes
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "produccion"}
-          className={`tab ${tab === "produccion" ? "tab--active" : ""}`}
-          onClick={() => setTab("produccion")}
-        >
-          Producción
         </button>
         <button
           type="button"
@@ -286,8 +275,6 @@ export default function AdminPage() {
         <EstoquePage />
       ) : tab === "clientes" ? (
         <ClientesPage />
-      ) : tab === "produccion" ? (
-        <ProduccionPage />
       ) : tab === "orcamento" ? (
         <OrcamentoPage
           onQuoteToOrder={handleQuoteToOrder}

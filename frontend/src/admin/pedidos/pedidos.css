@@ -82,3 +82,289 @@
   color: white;
   border-color: var(--accent);
 }
+
+/* ---- Sub-lista de producciones dentro de un OrderCard expandido ---- */
+
+.ticket__runs {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  animation: ticket-runs-rise 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@keyframes ticket-runs-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ticket__runs-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.ticket__runs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ticket__run-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto auto auto;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 0.82rem;
+}
+
+.ticket__run-row--cancelada,
+.ticket__run-row--concluida {
+  opacity: 0.7;
+}
+
+.ticket__run-row__name {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.ticket__run-row__printer {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.ticket__run-row__actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ticket__runs-add {
+  align-self: flex-start;
+  font-size: 0.78rem;
+}
+
+.chip--prod[aria-expanded="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Status badges de run (migrados desde produccion.css con rename). */
+.run-pill {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.run-status {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  display: inline-block;
+  text-align: center;
+}
+
+.run-status--pendente {
+  background: rgba(107, 107, 107, 0.12);
+  color: var(--muted);
+}
+
+.run-status--em_produccion {
+  background: rgba(244, 166, 90, 0.16);
+  color: #c87a30;
+}
+
+.run-status--pausada {
+  background: rgba(94, 177, 255, 0.14);
+  color: #2670c8;
+}
+
+.run-status--concluida {
+  background: rgba(84, 197, 138, 0.14);
+  color: #1b7e4a;
+}
+
+.run-status--cancelada {
+  background: rgba(245, 106, 106, 0.12);
+  color: #a83a3a;
+}
+
+.run-remaining {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ticket__run-row--em_produccion .run-remaining {
+  color: var(--accent);
+}
+
+/* ---- Form: Registrar / Editar producción ---- */
+/* Toma la base global de .form-grid (impressoras.css) y la refina con
+   secciones agrupadas, sufijos de unidad y entrada escalonada. */
+
+.production-form {
+  --row-gap: 0.95rem;
+  --section-gap: 1.15rem;
+}
+
+.production-form__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+.production-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: production-form-rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.production-form__section:nth-child(1) { animation-delay: 0.02s; }
+.production-form__section:nth-child(2) { animation-delay: 0.07s; }
+.production-form__section:nth-child(3) { animation-delay: 0.12s; }
+.production-form__section:nth-child(4) { animation-delay: 0.17s; }
+
+@keyframes production-form-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.production-form__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.production-form__eyebrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--border) 90%, transparent),
+    transparent 65%
+  );
+}
+
+.production-form .form-grid {
+  row-gap: var(--row-gap);
+  column-gap: 0.9rem;
+}
+
+.production-form .field {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.production-form .field--hero input {
+  font-size: 1.05rem;
+  font-weight: 500;
+  height: 46px;
+  letter-spacing: -0.005em;
+}
+
+.production-form .field__required {
+  color: var(--accent);
+  margin-left: 0.15rem;
+  font-weight: 700;
+}
+
+.production-form .field__affix {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.production-form .field__affix input {
+  width: 100%;
+  padding-right: 2.6rem;
+}
+
+.production-form .field__affix-unit {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.production-form__hint {
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+  margin: 0.1rem 0 0;
+}
+
+.production-form .form-error {
+  margin: 0.4rem 0 0;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .production-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .production-form__eyebrow::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .production-form__section {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .ticket__runs {
+    animation: none;
+  }
+}

@@ -486,6 +486,8 @@ export interface OrderCreatePayload {
   deadline?: string | null;
   is_draft?: boolean;
   quote_id?: number | null;
+  /** Minutos por pieza para propagar a las ProductionRun que el backend genera. */
+  estimated_minutes_per_unit?: number | null;
 }
 
 export interface OrderUpdatePayload {
@@ -723,6 +725,10 @@ export function finishProductionRun(id: number): Promise<ProductionRun> {
 
 export function cancelProductionRun(id: number): Promise<ProductionRun> {
   return request<ProductionRun>(`/api/production/${id}/cancel`, { method: "POST" });
+}
+
+export function reopenProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/reopen`, { method: "POST" });
 }
 
 export function deleteProductionRun(id: number): Promise<void> {

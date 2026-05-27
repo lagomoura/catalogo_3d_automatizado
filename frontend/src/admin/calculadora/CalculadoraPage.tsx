@@ -243,6 +243,8 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
   const handleCreateOrder = () => {
     handleSaveQuote();
     const quoteMaterials = buildQuoteMaterials();
+    const minutesPerUnit =
+      Math.max(0, piece.printHours) * 60 + Math.max(0, piece.printMinutes);
     onCreateOrder({
       value: charge,
       quantity,
@@ -252,6 +254,7 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
       materialId: quoteMaterials[0]?.materialId ?? null,
       gramsPerUnit: quoteMaterials[0]?.gramsPerUnit ?? null,
       printerId,
+      estimatedMinutesPerUnit: minutesPerUnit > 0 ? minutesPerUnit : null,
     });
   };
 
@@ -1029,15 +1032,20 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                   <button
                     type="button"
                     className="btn btn--sm btn--ghost"
-                    onClick={() =>
+                    onClick={() => {
+                      const minutesPerUnit =
+                        Math.max(0, q.piece.printHours) * 60 +
+                        Math.max(0, q.piece.printMinutes);
                       onCreateOrder({
                         value:
                           q.chargeOverride ??
                           round2(q.breakdown.total * q.quantity),
                         quantity: q.quantity,
                         costItems: breakdownToCostItems(q.breakdown),
-                      })
-                    }
+                        estimatedMinutesPerUnit:
+                          minutesPerUnit > 0 ? minutesPerUnit : null,
+                      });
+                    }}
                   >
                     Pedido →
                   </button>

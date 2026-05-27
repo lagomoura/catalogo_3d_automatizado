@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type {
-  OrderCostItemInput,
-  OrderUpdatePayload,
+import {
+  getProductionRuns,
+  type OrderCostItemInput,
+  type OrderUpdatePayload,
 } from "../../api/client";
 import type { Contact, Order, OrderPriority } from "../../types";
 import { formatARS } from "../../utils/format";
@@ -55,8 +56,38 @@ export function OrderEditModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extraOpen, setExtraOpen] = useState(false);
+  // Conteo de producciones vinculadas al pedido (para validar bajada de qty).
+  const [runsCount, setRunsCount] = useState<{
+    total: number;
+    started: number;
+  } | null>(null);
 
   const paid = order.payment_status === "PAGADO";
+
+  useEffect(() => {
+    let cancelled = false;
+    void getProductionRuns({ order_id: order.id })
+      .then((runs) => {
+        if (cancelled) return;
+        const started = runs.filter((r) => r.status !== "PENDENTE").length;
+        setRunsCount({ total: runs.length, started });
+      })
+      .catch(() => {
+        // No bloqueamos el modal si Producción no responde: el backend igual
+        // protege con 409 al guardar si la cantidad baja indebidamente.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id]);
+
+  const qtyBelowStarted =
+    runsCount != null && quantity < runsCount.started;
+  const qtyDropsPendentes =
+    runsCount != null &&
+    !qtyBelowStarted &&
+    quantity < runsCount.total &&
+    quantity < order.quantity;
 
   // Los conceptos per-unidad escalan con la cantidad; los fijos cuentan una vez.
   const prof = useMemo(() => {
@@ -106,6 +137,21 @@ export function OrderEditModal({
     if (valueNum === null && paid) {
       setError("Revertí el cobro antes de quitar el valor del pedido");
       return;
+    }
+    if (qtyBelowStarted) {
+      setError(
+        `Hay ${runsCount?.started} producciones ya iniciadas. ` +
+          "Cancelalas desde el tablero de Producción antes de bajar la cantidad.",
+      );
+      return;
+    }
+    if (qtyDropsPendentes) {
+      const toRemove = (runsCount?.total ?? 0) - quantity;
+      const ok = window.confirm(
+        `Se eliminarán ${toRemove} producción(es) pendiente(s) vinculada(s) ` +
+          "a este pedido. ¿Continuar?",
+      );
+      if (!ok) return;
     }
 
     const payload: OrderUpdatePayload = {
@@ -210,6 +256,21 @@ export function OrderEditModal({
                 +
               </button>
             </div>
+            {runsCount != null && runsCount.total > 0 ? (
+              <span
+                className="hint"
+                data-tone={qtyBelowStarted ? "bad" : undefined}
+              >
+                {runsCount.started > 0
+                  ? `${runsCount.total} producción(es) vinculada(s) · ${runsCount.started} ya iniciada(s)`
+                  : `${runsCount.total} producción(es) pendiente(s) vinculada(s)`}
+                {qtyBelowStarted
+                  ? ` — no podés bajar a ${quantity}`
+                  : qtyDropsPendentes
+                    ? ` — guardar eliminará ${runsCount.total - quantity}`
+                    : null}
+              </span>
+            ) : null}
           </div>
 
           <div className="field">
@@ -387,7 +448,11 @@ export function OrderEditModal({
           >
             Cancelar
           </button>
-          <button type="submit" className="btn btn--primary" disabled={busy}>
+          <button
+            type="submit"
+            className="btn btn--primary"
+            disabled={busy || qtyBelowStarted}
+          >
             {busy ? "Guardando…" : "Guardar cambios"}
           </button>
         </div>

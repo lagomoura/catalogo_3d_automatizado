@@ -320,6 +320,11 @@ export interface PendingQuote {
   gramsPerUnit?: number | null;
   /** Impresora seleccionada en la calculadora (informativo por ahora). */
   printerId?: number | null;
+  /**
+   * Minutos de impresión por unidad. Si se completa, el pedido lo manda al
+   * backend para precargar cada ProductionRun generada.
+   */
+  estimatedMinutesPerUnit?: number | null;
   // Nuevos (Orçamento → Pedido). Si están presentes, el OrderForm los persiste.
   source_quote_id?: number;
   client_contact_id?: number;
@@ -557,6 +562,8 @@ export interface ProductionSummary {
   cancelada: number;
   horas_concluidas: number;
   gramos_concluidas: number;
+  /** Runs CONCLUIDA con ended_at en el día actual — productividad del día. */
+  concluidas_hoy: number;
 }
 
 // ---------------------------------------------------------------------------
