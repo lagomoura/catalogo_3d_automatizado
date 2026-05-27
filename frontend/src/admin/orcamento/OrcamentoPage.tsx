@@ -15,6 +15,7 @@ import type {
   BusinessProfile,
   BusinessProfileWritePayload,
   Contact,
+  PendingQuote,
   Quote,
   QuoteCreatePayload,
   QuoteItem,
@@ -65,7 +66,13 @@ const fromQuote = (q: Quote): QuoteDraft => ({
   created_at: q.created_at,
 });
 
-export function OrcamentoPage() {
+interface OrcamentoPageProps {
+  onQuoteToOrder?: (quote: PendingQuote) => void;
+}
+
+export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
+  // Reserved for Task C4: wired prop will be consumed by "Crear pedido" button.
+  void onQuoteToOrder;
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [draft, setDraft] = useState<QuoteDraft>(() => emptyDraft());

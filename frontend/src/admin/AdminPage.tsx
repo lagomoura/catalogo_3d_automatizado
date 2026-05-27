@@ -178,7 +178,7 @@ export default function AdminPage() {
           className={`tab ${tab === "impressoras" ? "tab--active" : ""}`}
           onClick={() => setTab("impressoras")}
         >
-          Impressoras
+          Impresoras
         </button>
         <button
           type="button"
@@ -187,7 +187,7 @@ export default function AdminPage() {
           className={`tab ${tab === "estoque" ? "tab--active" : ""}`}
           onClick={() => setTab("estoque")}
         >
-          Estoque
+          Inventario
         </button>
         <button
           type="button"
@@ -214,7 +214,7 @@ export default function AdminPage() {
           className={`tab ${tab === "orcamento" ? "tab--active" : ""}`}
           onClick={() => setTab("orcamento")}
         >
-          Orçamento
+          Presupuestos
         </button>
       </nav>
 
@@ -281,7 +281,7 @@ export default function AdminPage() {
       ) : tab === "produccion" ? (
         <ProduccionPage />
       ) : tab === "orcamento" ? (
-        <OrcamentoPage />
+        <OrcamentoPage onQuoteToOrder={handleQuoteToOrder} />
       ) : (
         <PedidosPage
           pendingQuote={pendingQuote}
