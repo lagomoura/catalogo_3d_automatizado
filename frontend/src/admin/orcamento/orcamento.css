@@ -328,3 +328,23 @@
   font-size: 0.78rem;
   color: #6b7280;
 }
+
+.orc__profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.orc__profile-msg {
+  font-size: 0.85em;
+  color: #2c7a3d;
+}
+.orc__profile-hint {
+  font-size: 0.85em;
+  color: var(--text-muted, #888);
+}
+.btn-ghost--sm {
+  padding: 4px 12px;
+  font-size: 0.85em;
+}

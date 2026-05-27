@@ -2,18 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createQuote,
   deleteQuote,
+  getBusinessProfile,
   getQuotes,
+  putBusinessProfile,
   quotePdfUrl,
   resolveStorageUrl,
   updateQuote,
   uploadQuoteLogo,
 } from "../../api/client";
 import type {
+  BusinessProfile,
+  BusinessProfileWritePayload,
   Quote,
   QuoteCreatePayload,
   QuoteItem,
   QuoteUpdatePayload,
 } from "../../types";
+import { OnboardingModal } from "./OnboardingModal";
 import { QuotePreview, type QuoteDraft } from "./QuotePreview";
 import "./orcamento.css";
 
@@ -62,17 +67,35 @@ export function OrcamentoPage() {
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [profile, setProfile] = useState<BusinessProfile | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
   useEffect(() => {
     void getQuotes().then(setQuotes).catch(() => {});
+    void getBusinessProfile().then(setProfile).catch(() => {});
   }, []);
 
   const startNew = () => {
     setEditing(null);
-    setDraft(emptyDraft());
-    setLogoPath(null);
+    const base = emptyDraft();
+    if (profile) {
+      base.business_name = profile.business_name ?? "";
+      base.business_slogan = profile.business_slogan;
+      base.business_logo_url = profile.business_logo_url;
+      base.business_email = profile.business_email;
+      base.business_phone = profile.business_phone;
+    }
+    setDraft(base);
+    setLogoPath(profile?.business_logo_path ?? null);
     setError(null);
   };
+
+  useEffect(() => {
+    if (!editing) startNew();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
 
   const startEdit = (q: Quote) => {
     setEditing(q);
@@ -170,9 +193,34 @@ export function OrcamentoPage() {
     }
   };
 
+  const handleSaveAsDefault = async () => {
+    setSavingProfile(true);
+    setProfileMsg(null);
+    try {
+      const payload: BusinessProfileWritePayload = {
+        business_name: draft.business_name || null,
+        business_slogan: draft.business_slogan,
+        business_logo_path: logoPath,
+        clear_logo: logoPath === null,
+        business_email: draft.business_email,
+        business_phone: draft.business_phone,
+      };
+      const saved = await putBusinessProfile(payload);
+      setProfile(saved);
+      setProfileMsg("Guardado. Se usará como default en los próximos.");
+    } catch (err) {
+      setProfileMsg(
+        err instanceof Error ? err.message : "Error al guardar el perfil",
+      );
+    } finally {
+      setSavingProfile(false);
+      window.setTimeout(() => setProfileMsg(null), 4000);
+    }
+  };
+
   const handleDownloadPdf = () => {
     if (!editing) {
-      setError("Guardá el orçamento antes de descargar el PDF.");
+      setError("Guardá el presupuesto antes de descargar el PDF.");
       return;
     }
     window.open(quotePdfUrl(editing.id), "_blank", "noopener");
@@ -180,7 +228,7 @@ export function OrcamentoPage() {
 
   const handleCopyLink = async () => {
     if (!editing) {
-      setError("Guardá el orçamento antes de generar el link.");
+      setError("Guardá el presupuesto antes de generar el link.");
       return;
     }
     const url = `${window.location.origin}/q/${editing.share_token}`;
@@ -193,7 +241,7 @@ export function OrcamentoPage() {
 
   const handleDelete = async () => {
     if (!editing) return;
-    if (!confirm(`¿Eliminar orçamento ${editing.number}?`)) return;
+    if (!confirm(`¿Eliminar presupuesto ${editing.number}?`)) return;
     await deleteQuote(editing.id);
     setQuotes((prev) => prev.filter((q) => q.id !== editing.id));
     startNew();
@@ -209,13 +257,22 @@ export function OrcamentoPage() {
       <header className="orc__header">
         <div>
           <p className="orc__eyebrow">Comercial</p>
-          <h2>Gerador de Orçamento</h2>
+          <h2>Generador de Presupuestos</h2>
           <p className="orc__subtitle">
-            Personalizá el branding, sumá items y exportá un PDF con número de
-            presupuesto y validez 30 días.
+            Personalizá el branding, sumá items y exportá un PDF con
+            número de presupuesto y validez 30 días.
           </p>
         </div>
         <div className="orc__head-actions">
+          <button
+            type="button"
+            className="help-btn"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Qué son los Presupuestos y cómo se conectan"
+            title="¿Qué es esto?"
+          >
+            ?
+          </button>
           <button type="button" className="btn-ghost" onClick={startNew}>
             + Nuevo
           </button>
@@ -255,6 +312,11 @@ export function OrcamentoPage() {
         </div>
       </header>
 
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
+
       {quotes.length > 0 ? (
         <div className="orc__history">
           <span className="orc__history-label">Recientes:</span>
@@ -278,6 +340,25 @@ export function OrcamentoPage() {
       <div className="orc__cols">
         <section className="orc__form">
           <h3>Tu empresa</h3>
+          <div className="orc__profile-row">
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              onClick={handleSaveAsDefault}
+              disabled={savingProfile || !draft.business_name.trim()}
+              title="Guarda estos datos como default para los próximos presupuestos"
+            >
+              {savingProfile ? "Guardando…" : "Guardar como datos por defecto"}
+            </button>
+            {profileMsg ? (
+              <span className="orc__profile-msg">{profileMsg}</span>
+            ) : null}
+            {!profile && !profileMsg ? (
+              <span className="orc__profile-hint">
+                Llená tu marca una vez y la reusás en cada presupuesto.
+              </span>
+            ) : null}
+          </div>
           <div className="form-grid">
             <label className="field field--full">
               Nombre de la empresa *
