@@ -64,6 +64,7 @@ export default function QuotePublicPage() {
             client_name: quote.client_name,
             client_email: quote.client_email,
             client_phone: quote.client_phone,
+            client_contact_id: quote.client_contact_id,
             service_description: quote.service_description,
             items: quote.items,
             valid_until: quote.valid_until,

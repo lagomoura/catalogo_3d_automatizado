@@ -13,6 +13,7 @@ interface Props {
     client_name: string;
     client_email: string | null;
     client_phone: string | null;
+    client_contact_id: number | null;
     service_description: string | null;
     items: QuoteItem[];
     valid_until: string;
