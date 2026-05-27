@@ -3,6 +3,7 @@ import {
   createQuote,
   deleteQuote,
   getBusinessProfile,
+  getContacts,
   getQuotes,
   putBusinessProfile,
   quotePdfUrl,
@@ -13,11 +14,13 @@ import {
 import type {
   BusinessProfile,
   BusinessProfileWritePayload,
+  Contact,
   Quote,
   QuoteCreatePayload,
   QuoteItem,
   QuoteUpdatePayload,
 } from "../../types";
+import { ContactPicker, type PersonValue } from "../caja/ContactPicker";
 import { OnboardingModal } from "./OnboardingModal";
 import { QuotePreview, type QuoteDraft } from "./QuotePreview";
 import "./orcamento.css";
@@ -73,10 +76,12 @@ export function OrcamentoPage() {
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   useEffect(() => {
     void getQuotes().then(setQuotes).catch(() => {});
     void getBusinessProfile().then(setProfile).catch(() => {});
+    void getContacts().then(setContacts).catch(() => {});
   }, []);
 
   const startNew = () => {
@@ -157,6 +162,7 @@ export function OrcamentoPage() {
           client_name: draft.client_name,
           client_email: draft.client_email,
           client_phone: draft.client_phone,
+          client_contact_id: draft.client_contact_id,
           service_description: draft.service_description,
           items: draft.items,
           valid_until: draft.valid_until,
@@ -178,6 +184,7 @@ export function OrcamentoPage() {
           client_name: draft.client_name,
           client_email: draft.client_email,
           client_phone: draft.client_phone,
+          client_contact_id: draft.client_contact_id,
           service_description: draft.service_description,
           items: draft.items,
           valid_until: draft.valid_until,
@@ -253,6 +260,23 @@ export function OrcamentoPage() {
     () => draft.items.reduce((s, it) => s + it.quantity * it.unit_price, 0),
     [draft.items],
   );
+
+  const personValue: PersonValue = {
+    contactId: draft.client_contact_id ?? null,
+    personLabel: draft.client_name || "",
+  };
+
+  const handlePersonChange = (val: PersonValue) => {
+    const contact = val.contactId
+      ? contacts.find((c) => c.id === val.contactId)
+      : null;
+    patch({
+      client_contact_id: val.contactId,
+      client_name: contact?.name ?? val.personLabel ?? draft.client_name,
+      client_email: contact?.email ?? draft.client_email,
+      client_phone: contact?.phone ?? draft.client_phone,
+    });
+  };
 
   return (
     <div className="orc">
@@ -434,6 +458,16 @@ export function OrcamentoPage() {
           </div>
 
           <h3>Cliente</h3>
+          <div className="orc__contact-picker-row">
+            <label className="field field--full">
+              Elegir cliente existente
+              <ContactPicker
+                contacts={contacts}
+                value={personValue}
+                onChange={handlePersonChange}
+              />
+            </label>
+          </div>
           <div className="form-grid">
             <label className="field field--full">
               Nombre *

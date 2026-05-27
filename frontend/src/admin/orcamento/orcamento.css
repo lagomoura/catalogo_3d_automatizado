@@ -348,3 +348,7 @@
   padding: 4px 12px;
   font-size: 0.85em;
 }
+
+.orc__contact-picker-row {
+  margin-bottom: 12px;
+}
