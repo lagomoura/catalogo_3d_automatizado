@@ -577,7 +577,7 @@ export function MaterialForm({
               ? "Guardando…"
               : isEdit
                 ? "Guardar"
-                : "Cadastrar material"}
+                : "Registrar material"}
           </button>
         </Modal.Footer>
       </form>

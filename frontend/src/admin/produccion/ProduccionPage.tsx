@@ -23,6 +23,7 @@ import type {
   ProductionStatus,
   ProductionSummary,
 } from "../../types";
+import { OnboardingModal } from "./OnboardingModal";
 import { ProductionRunForm } from "./ProductionRunForm";
 import "./produccion.css";
 
@@ -35,7 +36,7 @@ type SubTab =
   | "canceladas";
 
 const SUBTABS: { key: SubTab; label: string; statuses: ProductionStatus[] }[] = [
-  { key: "geral", label: "Geral", statuses: [] }, // [] = mostrar todos
+  { key: "geral", label: "General", statuses: [] }, // [] = mostrar todos
   { key: "pendentes", label: "Pendientes", statuses: ["PENDENTE"] },
   {
     key: "em_produccion",
@@ -66,6 +67,7 @@ export function ProduccionPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ProductionRun | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -136,21 +138,37 @@ export function ProduccionPage() {
           <p className="produccion__eyebrow">Panel</p>
           <h2>Producción</h2>
           <p className="produccion__subtitle">
-            Registrá y acompañá impresiones: status, tempos y costos en el mismo
-            flujo.
+            Registrá y acompañá impresiones: estado, tiempos y costos en
+            el mismo flujo.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          + Registrar producción
-        </button>
+        <div className="produccion__head-actions">
+          <button
+            type="button"
+            className="help-btn"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Qué es Producción y cómo se conecta"
+            title="¿Qué es esto?"
+          >
+            ?
+          </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            + Registrar producción
+          </button>
+        </div>
       </header>
+
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
 
       <section className="produccion__kpi-grid">
         <KpiCard label="Total" value={summary?.total ?? "—"} tone="neutral" />
@@ -195,7 +213,7 @@ export function ProduccionPage() {
           <span>Pieza</span>
           <span>Pedido</span>
           <span>Tag</span>
-          <span>Impressora</span>
+          <span>Impresora</span>
           <span>Status</span>
           <span>Tiempo restante</span>
           <span>Acciones</span>

@@ -249,7 +249,7 @@ export function ClientForm({
               ? "Guardando…"
               : isEdit
                 ? "Guardar"
-                : "Cadastrar cliente"}
+                : "Registrar cliente"}
           </button>
         </Modal.Footer>
       </form>

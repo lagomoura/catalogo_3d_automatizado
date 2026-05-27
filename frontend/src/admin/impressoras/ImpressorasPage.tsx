@@ -44,7 +44,7 @@ export function ImpressorasPage() {
       setPrinters(list);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar impressoras");
+      setError(err instanceof Error ? err.message : "Error al cargar impresoras");
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export function ImpressorasPage() {
   };
 
   const handleArchive = async (id: number) => {
-    if (!confirm("¿Archivar esta impressora? Podés desarchivarla más tarde.")) {
+    if (!confirm("¿Archivar esta impresora? Podés desarchivarla más tarde.")) {
       return;
     }
     await archivePrinter(id);
@@ -113,19 +113,31 @@ export function ImpressorasPage() {
       <header className="impressoras__header">
         <div>
           <p className="impressoras__eyebrow">Equipos</p>
-          <h2>Impressoras</h2>
+          <h2>Impresoras</h2>
           <p className="impressoras__subtitle">
-            Cadastrá modelo, ambiente, valor y fecha de compra para acompañar
-            costos y depreciación. Estos datos alimentan la calculadora.
+            Registrá modelo, ambiente, valor y fecha de compra para
+            acompañar costos y depreciación. Estos datos alimentan la
+            calculadora.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary impressoras__cta"
-          onClick={handleAddClick}
-        >
-          + Adicionar impressora
-        </button>
+        <div className="impressoras__cta-group">
+          <button
+            type="button"
+            className="impressoras__help"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Qué es Impresoras y cómo se conecta"
+            title="¿Qué es esto?"
+          >
+            ?
+          </button>
+          <button
+            type="button"
+            className="btn-primary impressoras__cta"
+            onClick={handleAddClick}
+          >
+            + Agregar impresora
+          </button>
+        </div>
       </header>
 
       <div className="impressoras__toolbar">
@@ -164,7 +176,7 @@ export function ImpressorasPage() {
         ) : filtered.length === 0 ? (
           <div className="impressoras__empty">
             {printers.length === 0
-              ? "No hay impressoras todavía. Tocá “+ Adicionar impressora”."
+              ? "No hay impresoras todavía. Tocá “+ Agregar impresora”."
               : "Ninguna coincide con la búsqueda."}
           </div>
         ) : (

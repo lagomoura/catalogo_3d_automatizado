@@ -153,7 +153,7 @@ export function PrinterForm({
     >
       <form onSubmit={handleSubmit}>
         <Modal.Header id="printer-form-title">
-          {isEdit ? "Editar impressora" : "Nova impressora"}
+          {isEdit ? "Editar impresora" : "Nueva impresora"}
         </Modal.Header>
         <Modal.Body>
           <div className="form-grid">
@@ -370,7 +370,7 @@ export function PrinterForm({
             Cancelar
           </button>
           <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? "Guardando…" : isEdit ? "Guardar" : "Cadastrar impressora"}
+            {submitting ? "Guardando…" : isEdit ? "Guardar" : "Registrar impresora"}
           </button>
         </Modal.Footer>
       </form>

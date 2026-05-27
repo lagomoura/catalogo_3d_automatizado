@@ -19,6 +19,12 @@
   font-size: 1.4rem;
 }
 
+.produccion__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .produccion__eyebrow {
   margin: 0 0 0.25rem;
   font-size: 0.72rem;

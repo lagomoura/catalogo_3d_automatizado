@@ -26,6 +26,7 @@ import {
   saveSelection,
   type SavedQuote,
 } from "./storage";
+import { OnboardingModal } from "./OnboardingModal";
 
 interface Props {
   onCreateOrder: (quote: PendingQuote) => void;
@@ -56,6 +57,7 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
   const [chargeOverride, setChargeOverride] = useState("");
   const [quotes, setQuotes] = useState<SavedQuote[]>(() => loadQuotes());
   const [savedFlash, setSavedFlash] = useState(false);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   // Integración con Estoque + Impressoras.
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -277,15 +279,32 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
     <div className="calc">
       {/* ---- Header tipo Lunaro ---- */}
       <header className="calc__header">
-        <span className="calc__eyebrow">FERRAMENTAS</span>
-        <h2 className="calc__title">Calculadora de costos</h2>
-        <p className="calc__subtitle">
-          Estimá costo de material, máquina y margen — con sugerencia de
-          precio y taxas de marketplaces. Cargá cualquier material del estoque
-          (filamentos, imanes, pintura) y se descuenta automático al fabricar
-          el pedido.
-        </p>
+        <div className="calc__header-row">
+          <div>
+            <span className="calc__eyebrow">HERRAMIENTAS</span>
+            <h2 className="calc__title">Calculadora de costos</h2>
+            <p className="calc__subtitle">
+              Estimá costo de material, máquina y margen — con sugerencia
+              de precio y comisión de marketplaces. Cargá cualquier
+              material del inventario (filamentos, imanes, pintura) y se
+              descuenta automático al fabricar el pedido.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="help-btn"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Qué es la Calculadora y cómo se conecta"
+            title="¿Qué es esto?"
+          >
+            ?
+          </button>
+        </div>
       </header>
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
 
       <div className="calc__layout">
         {/* ===================== COLUMNA IZQUIERDA: DATOS ===================== */}

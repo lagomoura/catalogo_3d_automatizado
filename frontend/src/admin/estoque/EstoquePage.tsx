@@ -155,7 +155,7 @@ export function EstoquePage() {
       <header className="estoque__header">
         <div>
           <p className="estoque__eyebrow">Panel</p>
-          <h2>Estoque</h2>
+          <h2>Inventario</h2>
           <p className="estoque__subtitle">
             Filamentos, resinas, insumos por unidad o líquidos — cada material
             con su unidad y costo propio.
@@ -166,8 +166,8 @@ export function EstoquePage() {
             type="button"
             className="estoque__help"
             onClick={() => setOnboardingOpen(true)}
-            aria-label="Cómo preencher el formulario"
-            title="Cómo preencher"
+            aria-label="Qué es Inventario y cómo se conecta"
+            title="¿Qué es esto?"
           >
             ?
           </button>
@@ -176,7 +176,7 @@ export function EstoquePage() {
             className="btn-primary estoque__cta"
             onClick={handleAddClick}
           >
-            + Adicionar material
+            + Agregar material
           </button>
         </div>
       </header>
@@ -230,7 +230,7 @@ export function EstoquePage() {
         ) : filtered.length === 0 ? (
           <div className="estoque__empty">
             {materials.length === 0
-              ? "No hay materiales cargados todavía. Tocá “+ Adicionar material”."
+              ? "No hay materiales cargados todavía. Tocá “+ Agregar material”."
               : "Ninguno coincide con los filtros."}
           </div>
         ) : (

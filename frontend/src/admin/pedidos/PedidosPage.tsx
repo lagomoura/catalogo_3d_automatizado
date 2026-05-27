@@ -26,6 +26,7 @@ import type {
   OrderSummary,
   PendingQuote,
 } from "../../types";
+import { OnboardingModal } from "./OnboardingModal";
 import { OrderForm } from "./OrderForm";
 import { OrderQueue } from "./OrderQueue";
 import "./pedidos.css";
@@ -46,7 +47,7 @@ type StatusTab =
 const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: "todos", label: "Todos" },
   { key: "pendentes", label: "Pendientes" },
-  { key: "proximos_prazo", label: "Próximos del prazo" },
+  { key: "proximos_prazo", label: "Próximos al plazo" },
   { key: "atrasados", label: "Atrasados" },
   { key: "en_produccion", label: "En producción" },
   { key: "finalizados", label: "Finalizados" },
@@ -76,6 +77,7 @@ export function PedidosPage({
   const [query, setQuery] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("todos");
   const [error, setError] = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const refreshOrders = useCallback(async () => {
     const [list, sum] = await Promise.all([
@@ -204,6 +206,32 @@ export function PedidosPage({
 
   return (
     <div className="pedidos">
+      <header className="pedidos__header">
+        <div>
+          <p className="pedidos__eyebrow">Operación</p>
+          <h2>Pedidos</h2>
+          <p className="pedidos__subtitle">
+            Cada venta como una orden: cliente, producto, cantidad,
+            estado y plazo. El nodo central que conecta clientes,
+            producción, cobro y stock.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="help-btn"
+          onClick={() => setOnboardingOpen(true)}
+          aria-label="Qué es Pedidos y cómo se conecta"
+          title="¿Qué es esto?"
+        >
+          ?
+        </button>
+      </header>
+
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
+
       {error && <p className="error-banner">{error}</p>}
 
       <section className="pedidos__kpi-grid">

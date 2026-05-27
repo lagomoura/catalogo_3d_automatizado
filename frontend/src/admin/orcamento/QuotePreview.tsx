@@ -51,7 +51,7 @@ export function QuotePreview({ draft }: Props) {
     ? resolveStorageUrl(draft.business_logo_url)
     : null;
   return (
-    <div className="quote-preview" aria-label="Vista previa del orçamento">
+    <div className="quote-preview" aria-label="Vista previa del presupuesto">
       <header className="quote-preview__head">
         <div className="quote-preview__brand">
           {logoSrc ? (
@@ -74,7 +74,7 @@ export function QuotePreview({ draft }: Props) {
           </div>
         </div>
         <div className="quote-preview__meta">
-          <span className="quote-preview__badge">ORÇAMENTO</span>
+          <span className="quote-preview__badge">PRESUPUESTO</span>
           <div className="quote-preview__meta-row">
             <strong>{draft.number || "ORC-—"}</strong>
           </div>

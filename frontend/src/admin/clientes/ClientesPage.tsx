@@ -10,6 +10,7 @@ import type {
   ContactUpdatePayload,
 } from "../../types";
 import { ClientForm } from "./ClientForm";
+import { OnboardingModal } from "./OnboardingModal";
 import "./clientes.css";
 
 export function ClientesPage() {
@@ -20,6 +21,7 @@ export function ClientesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -77,10 +79,19 @@ export function ClientesPage() {
           <p className="clientes__eyebrow">Panel</p>
           <h2>Clientes</h2>
           <p className="clientes__subtitle">
-            Cadastrá clientes y su historial de pedidos por persona.
+            Registrá clientes y su historial de pedidos por persona.
           </p>
         </div>
         <div className="clientes__head-actions">
+          <button
+            type="button"
+            className="clientes__help"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Qué es Clientes y cómo se conecta"
+            title="¿Qué es esto?"
+          >
+            ?
+          </button>
           <button
             type="button"
             className="btn-primary"
@@ -161,6 +172,10 @@ export function ClientesPage() {
         )}
       </div>
 
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
       <ClientForm
         open={formOpen}
         contact={editing}

@@ -1,5 +1,34 @@
 /* Pedidos board — KPIs + sub-tabs + búsqueda transversal. */
 
+.pedidos__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.pedidos__header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+}
+
+.pedidos__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pedidos__subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 60ch;
+}
+
 .pedidos__kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

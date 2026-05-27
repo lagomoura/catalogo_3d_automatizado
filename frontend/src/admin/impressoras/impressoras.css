@@ -38,6 +38,34 @@
   white-space: nowrap;
 }
 
+.impressoras__cta-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.impressoras__help {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.impressoras__help:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(79, 134, 255, 0.08);
+}
+
 .impressoras__toolbar {
   display: flex;
   align-items: center;

@@ -136,7 +136,7 @@ export function ProductionRunForm({
               />
             </label>
             <label className="field">
-              Impressora
+              Impresora
               <select
                 value={form.printer_id ?? ""}
                 onChange={(e) =>

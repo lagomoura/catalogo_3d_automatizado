@@ -27,6 +27,7 @@ import { PeopleManager } from "./PeopleManager";
 import { ProfitabilityPanel } from "./ProfitabilityPanel";
 import { ReceivablesPanel } from "./ReceivablesPanel";
 import { RecurringExpenses } from "./RecurringExpenses";
+import { OnboardingModal } from "./OnboardingModal";
 import { TransactionForm } from "./TransactionForm";
 import { TransactionList, type ListFilters } from "./TransactionList";
 
@@ -61,6 +62,7 @@ const EMPTY_FILTERS: ListFilters = {
 
 export function CajaPage() {
   const [sub, setSub] = useState<SubTab>("resumen");
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const [summary, setSummary] = useState<CashSummary | null>(null);
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
@@ -169,6 +171,31 @@ export function CajaPage() {
 
   return (
     <div className="caja">
+      <header className="caja__header">
+        <div>
+          <p className="caja__eyebrow">Finanzas</p>
+          <h2>Caja</h2>
+          <p className="caja__subtitle">
+            Todo el dinero que entra y sale: ventas, compras, gastos
+            fijos, retiros. Resumen visual y movimientos con filtros.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="help-btn"
+          onClick={() => setOnboardingOpen(true)}
+          aria-label="Qué es Caja y cómo se conecta"
+          title="¿Qué es esto?"
+        >
+          ?
+        </button>
+      </header>
+
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
+
       {error && <p className="error-banner">{error}</p>}
 
       <nav className="subtabs" role="tablist">

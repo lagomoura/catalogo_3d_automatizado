@@ -10,6 +10,7 @@ import {
   getReceivables,
 } from "../../api/client";
 import { KpiCard } from "../../components/KpiCard";
+import { OnboardingModal } from "./OnboardingModal";
 import type {
   CashSummary,
   Material,
@@ -52,6 +53,7 @@ const fmtAvgMin = (minutes: number): string => {
  */
 export function ReportesPage() {
   const [range, setRange] = useState<Range>(() => presetRange("mes"));
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [profit, setProfit] = useState<ProfitabilitySummary | null>(null);
   const [cash, setCash] = useState<CashSummary | null>(null);
   const [receivables, setReceivables] = useState<ReceivablesSummary | null>(
@@ -140,9 +142,23 @@ export function ReportesPage() {
           </p>
         </div>
         <div className="reportes__filters">
+          <button
+            type="button"
+            className="help-btn"
+            onClick={() => setOnboardingOpen(true)}
+            aria-label="Qué son los Reportes y cómo se conectan"
+            title="¿Qué es esto?"
+          >
+            ?
+          </button>
           <RangePicker range={range} onChange={setRange} />
         </div>
       </header>
+
+      <OnboardingModal
+        open={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+      />
 
       {error ? <div className="reportes__error">{error}</div> : null}
 
