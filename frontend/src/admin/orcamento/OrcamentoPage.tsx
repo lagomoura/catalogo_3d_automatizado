@@ -16,6 +16,7 @@ import type {
   BusinessProfileWritePayload,
   Contact,
   PendingQuote,
+  PendingQuoteDraft,
   Quote,
   QuoteCreatePayload,
   QuoteItem,
@@ -68,9 +69,15 @@ const fromQuote = (q: Quote): QuoteDraft => ({
 
 interface OrcamentoPageProps {
   onQuoteToOrder?: (quote: PendingQuote) => void;
+  pendingQuoteDraft?: PendingQuoteDraft | null;
+  onPendingQuoteDraftConsumed?: () => void;
 }
 
-export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
+export function OrcamentoPage({
+  onQuoteToOrder,
+  pendingQuoteDraft,
+  onPendingQuoteDraftConsumed,
+}: OrcamentoPageProps) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [draft, setDraft] = useState<QuoteDraft>(() => emptyDraft());
@@ -108,6 +115,25 @@ export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
     if (!editing) startNew();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
+
+  useEffect(() => {
+    if (!pendingQuoteDraft) return;
+    // Arrancar un nuevo quote (limpia editing + draft defaults).
+    startNew();
+    // Aplicar lo que vino de la calc.
+    const contact = pendingQuoteDraft.client_contact_id
+      ? contacts.find((c) => c.id === pendingQuoteDraft.client_contact_id)
+      : null;
+    patch({
+      items: pendingQuoteDraft.items,
+      client_contact_id: pendingQuoteDraft.client_contact_id ?? null,
+      client_name: contact?.name ?? draft.client_name,
+      client_email: contact?.email ?? draft.client_email,
+      client_phone: contact?.phone ?? draft.client_phone,
+    });
+    onPendingQuoteDraftConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingQuoteDraft, contacts]);
 
   const startEdit = (q: Quote) => {
     setEditing(q);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getMaterials, getPrinters } from "../../api/client";
-import type { Material, PendingQuote, Printer } from "../../types";
+import type { Material, PendingQuote, PendingQuoteDraft, Printer } from "../../types";
 import { formatARS } from "../../utils/format";
 import {
   breakdownToCostItems,
@@ -31,6 +31,7 @@ interface Props {
   onCreateOrder: (quote: PendingQuote) => void;
   /** Cambia a otra pestaña del admin shell (para los CTAs de empty-state). */
   onNavigate?: (tab: string) => void;
+  onCreateQuoteDraft?: (draft: PendingQuoteDraft) => void;
 }
 
 const MULTIPLIERS: { value: ProfitMultiplier; label: string; sub: string }[] = [
@@ -44,7 +45,7 @@ function numField(v: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
-export function CalculadoraPage({ onCreateOrder, onNavigate }: Props) {
+export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft }: Props) {
   const [config, setConfig] = useState<QuoteConfig>(() => loadConfig());
   const [piece, setPiece] = useState<QuotePiece>(() => ({
     ...DEFAULT_PIECE,
@@ -249,6 +250,14 @@ export function CalculadoraPage({ onCreateOrder, onNavigate }: Props) {
       materialId: quoteMaterials[0]?.materialId ?? null,
       gramsPerUnit: quoteMaterials[0]?.gramsPerUnit ?? null,
       printerId,
+    });
+  };
+
+  const handleCreateQuoteDraft = () => {
+    if (!onCreateQuoteDraft || charge <= 0) return;
+    const description = piece.pieceName?.trim() || "Cotización 3D";
+    onCreateQuoteDraft({
+      items: [{ description, quantity: 1, unit_price: charge }],
     });
   };
 
@@ -894,6 +903,15 @@ export function CalculadoraPage({ onCreateOrder, onNavigate }: Props) {
                     onClick={handleSaveQuote}
                   >
                     {savedFlash ? "✓ Guardada" : "Guardar cotización"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    onClick={handleCreateQuoteDraft}
+                    disabled={charge <= 0}
+                    title="Mandar este total al Generador de Presupuestos"
+                  >
+                    Crear presupuesto →
                   </button>
                   <button
                     type="button"

@@ -326,6 +326,12 @@ export interface PendingQuote {
   service_description?: string | null;
 }
 
+/** Snapshot que la Calculadora le pasa al Orcamento para precargar 1 item. */
+export interface PendingQuoteDraft {
+  items: Array<{ description: string; quantity: number; unit_price: number }>;
+  client_contact_id?: number;
+}
+
 export interface Order {
   id: number;
   catalog_item: { id: number; name: string } | null;

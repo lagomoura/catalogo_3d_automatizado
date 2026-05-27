@@ -6,7 +6,7 @@ import { JobStatus } from "../components/JobStatus";
 import { ManualProductForm } from "../components/ManualProductForm";
 import { SubmitForm } from "../components/SubmitForm";
 import { usePolling } from "../hooks/usePolling";
-import type { CatalogItem, CategoryNode, Job, PendingQuote } from "../types";
+import type { CatalogItem, CategoryNode, Job, PendingQuote, PendingQuoteDraft } from "../types";
 import { CajaPage } from "./caja/CajaPage";
 import { CalculadoraPage } from "./calculadora/CalculadoraPage";
 import { ClientesPage } from "./clientes/ClientesPage";
@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("catalogo");
   const [submitMode, setSubmitMode] = useState<SubmitMode>("makerworld");
   const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
+  const [pendingQuoteDraft, setPendingQuoteDraft] = useState<PendingQuoteDraft | null>(null);
   const [activeJobs, setActiveJobs] = useState<Job[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -79,6 +80,11 @@ export default function AdminPage() {
   const handleQuoteToOrder = useCallback((quote: PendingQuote) => {
     setPendingQuote(quote);
     setTab("pedidos");
+  }, []);
+
+  const handleCalcToQuote = useCallback((draft: PendingQuoteDraft) => {
+    setPendingQuoteDraft(draft);
+    setTab("orcamento");
   }, []);
 
   const handleSubmit = useCallback(async (url: string, n: number, generate3d: boolean) => {
@@ -272,6 +278,7 @@ export default function AdminPage() {
         <CalculadoraPage
           onCreateOrder={handleQuoteToOrder}
           onNavigate={(t) => setTab(t as Tab)}
+          onCreateQuoteDraft={handleCalcToQuote}
         />
       ) : tab === "impressoras" ? (
         <ImpressorasPage />
@@ -282,7 +289,11 @@ export default function AdminPage() {
       ) : tab === "produccion" ? (
         <ProduccionPage />
       ) : tab === "orcamento" ? (
-        <OrcamentoPage onQuoteToOrder={handleQuoteToOrder} />
+        <OrcamentoPage
+          onQuoteToOrder={handleQuoteToOrder}
+          pendingQuoteDraft={pendingQuoteDraft}
+          onPendingQuoteDraftConsumed={() => setPendingQuoteDraft(null)}
+        />
       ) : (
         <PedidosPage
           pendingQuote={pendingQuote}
