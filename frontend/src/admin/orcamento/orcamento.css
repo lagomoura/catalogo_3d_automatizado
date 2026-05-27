@@ -352,3 +352,15 @@
 .orc__contact-picker-row {
   margin-bottom: 12px;
 }
+
+.orc__linked-order {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-radius: 6px;
+  font-size: 0.9em;
+}

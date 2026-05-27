@@ -48,7 +48,18 @@ export function OrderForm({
     setValue(String(pendingQuote.value));
     setQuantity(Math.max(1, Math.floor(pendingQuote.quantity || 1)));
     setQuoteCosts(pendingQuote.costItems);
-  }, [pendingQuote]);
+    // Orçamento → Pedido también precarga cliente y nota:
+    if (pendingQuote.client_contact_id) {
+      const c = contacts.find((x) => x.id === pendingQuote.client_contact_id);
+      setPerson({
+        contactId: pendingQuote.client_contact_id,
+        personLabel: c?.name ?? "",
+      });
+    }
+    if (pendingQuote.service_description) {
+      setNote(pendingQuote.service_description);
+    }
+  }, [pendingQuote, contacts]);
   const [person, setPerson] = useState<PersonValue>({
     contactId: null,
     personLabel: "",
@@ -100,6 +111,7 @@ export function OrderForm({
         priority,
         deadline: deadline || null,
         cost_items: quoteCosts ?? undefined,
+        quote_id: pendingQuote?.source_quote_id ?? null,
       });
 
       // Si la cotización venía con material(es) vinculado(s), descontá del

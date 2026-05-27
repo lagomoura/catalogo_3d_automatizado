@@ -156,6 +156,7 @@ export default function AdminPage() {
         <button
           type="button"
           role="tab"
+          data-tab="pedidos"
           aria-selected={tab === "pedidos"}
           className={`tab ${tab === "pedidos" ? "tab--active" : ""}`}
           onClick={() => setTab("pedidos")}

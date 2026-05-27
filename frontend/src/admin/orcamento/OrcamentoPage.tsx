@@ -71,8 +71,6 @@ interface OrcamentoPageProps {
 }
 
 export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
-  // Reserved for Task C4: wired prop will be consumed by "Crear pedido" button.
-  void onQuoteToOrder;
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [editing, setEditing] = useState<Quote | null>(null);
   const [draft, setDraft] = useState<QuoteDraft>(() => emptyDraft());
@@ -263,6 +261,29 @@ export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
     startNew();
   };
 
+  const handleToOrder = () => {
+    if (!editing) {
+      setError("Guardá el presupuesto antes de convertir a pedido.");
+      return;
+    }
+    if (!onQuoteToOrder) return;
+    const total = editing.items.reduce(
+      (s, it) => s + it.quantity * it.unit_price, 0,
+    );
+    const pendingQuote: PendingQuote = {
+      value: total,
+      quantity: 1,
+      costItems: editing.items.map((it) => ({
+        concept: it.description,
+        amount: it.quantity * it.unit_price,
+      })),
+      source_quote_id: editing.id,
+      client_contact_id: editing.client_contact_id ?? undefined,
+      service_description: editing.service_description,
+    };
+    onQuoteToOrder(pendingQuote);
+  };
+
   const total = useMemo(
     () => draft.items.reduce((s, it) => s + it.quantity * it.unit_price, 0),
     [draft.items],
@@ -327,6 +348,19 @@ export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
               </button>
               <button
                 type="button"
+                className="btn-primary"
+                onClick={handleToOrder}
+                disabled={!editing || editing.linked_order_id != null}
+                title={
+                  editing?.linked_order_id != null
+                    ? "Este presupuesto ya tiene un pedido vinculado"
+                    : "Crear un pedido pre-cargado con los datos de este presupuesto"
+                }
+              >
+                Crear pedido
+              </button>
+              <button
+                type="button"
                 className="tbtn tbtn--danger"
                 onClick={handleDelete}
               >
@@ -369,6 +403,22 @@ export function OrcamentoPage({ onQuoteToOrder }: OrcamentoPageProps) {
       ) : null}
 
       {error ? <p className="error-banner">{error}</p> : null}
+
+      {editing?.linked_order_id != null ? (
+        <div className="orc__linked-order">
+          <span>✓ Pedido vinculado: #{editing.linked_order_id}</span>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm"
+            onClick={() => {
+              const el = document.querySelector('[data-tab="pedidos"]');
+              if (el instanceof HTMLElement) el.click();
+            }}
+          >
+            Ver pedido →
+          </button>
+        </div>
+      ) : null}
 
       <div className="orc__cols">
         <section className="orc__form">
