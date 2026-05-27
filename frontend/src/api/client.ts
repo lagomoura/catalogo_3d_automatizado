@@ -485,6 +485,7 @@ export interface OrderCreatePayload {
   sale_date?: string | null;
   deadline?: string | null;
   is_draft?: boolean;
+  quote_id?: number | null;
 }
 
 export interface OrderUpdatePayload {

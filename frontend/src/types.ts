@@ -320,6 +320,10 @@ export interface PendingQuote {
   gramsPerUnit?: number | null;
   /** Impresora seleccionada en la calculadora (informativo por ahora). */
   printerId?: number | null;
+  // Nuevos (Orçamento → Pedido). Si están presentes, el OrderForm los persiste.
+  source_quote_id?: number;
+  client_contact_id?: number;
+  service_description?: string | null;
 }
 
 export interface Order {
@@ -341,6 +345,7 @@ export interface Order {
   created_at: string;
   started_at: string | null;
   updated_at: string;
+  quote_id: number | null;
 }
 
 export interface OrderSummary {
@@ -579,6 +584,7 @@ export interface Quote {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  linked_order_id: number | null;
 }
 
 export interface QuoteCreatePayload {
