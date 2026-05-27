@@ -1,5 +1,7 @@
 import type {
   Account,
+  BusinessProfile,
+  BusinessProfileWritePayload,
   CashSummary,
   CashTransaction,
   CashTransactionPage,
@@ -783,4 +785,22 @@ export async function uploadQuoteLogo(
     throw new Error(`${resp.status} ${resp.statusText}: ${text}`);
   }
   return (await resp.json()) as { path: string; url: string };
+}
+
+// ---------------------------------------------------------------------------
+// Business profile
+// ---------------------------------------------------------------------------
+
+export function getBusinessProfile(): Promise<BusinessProfile | null> {
+  return request<BusinessProfile | null>(`/api/business-profile`);
+}
+
+export function putBusinessProfile(
+  payload: BusinessProfileWritePayload,
+): Promise<BusinessProfile> {
+  return request<BusinessProfile>(`/api/business-profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 }

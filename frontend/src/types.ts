@@ -611,6 +611,25 @@ export interface QuoteUpdatePayload {
   notes?: string | null;
 }
 
+export interface BusinessProfile {
+  business_name: string | null;
+  business_slogan: string | null;
+  business_logo_path: string | null;
+  business_logo_url: string | null;
+  business_email: string | null;
+  business_phone: string | null;
+  updated_at: string | null;
+}
+
+export interface BusinessProfileWritePayload {
+  business_name?: string | null;
+  business_slogan?: string | null;
+  business_logo_path?: string | null;
+  clear_logo?: boolean;
+  business_email?: string | null;
+  business_phone?: string | null;
+}
+
 declare global {
   namespace JSX {
     interface IntrinsicElements {
