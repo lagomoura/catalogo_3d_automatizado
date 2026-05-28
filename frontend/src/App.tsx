@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AdminGate } from "./admin/AdminGate";
+import { AssistantProvider } from "./assistant/AssistantProvider";
 
 const ShowcasePage = lazy(() => import("./showcase/ShowcasePage"));
 const ProductDetailPage = lazy(() => import("./showcase/ProductDetailPage"));
@@ -19,7 +20,9 @@ export default function App() {
             path="/admin"
             element={
               <AdminGate>
-                <AdminPage />
+                <AssistantProvider>
+                  <AdminPage />
+                </AssistantProvider>
               </AdminGate>
             }
           />
