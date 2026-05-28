@@ -12,11 +12,12 @@ import {
 
 const CONFIG_KEY = "calc.config.v1";
 const QUOTES_KEY = "calc.quotes.v1";
-const MAX_QUOTES = 5;
+export const MAX_QUOTES = 20;
 
 export interface SavedQuote {
   id: string;
   createdAt: string;
+  updatedAt?: string;
   /** Unidades cotizadas. Las cotizaciones viejas sin este campo asumen 1. */
   quantity: number;
   /** Total a cobrar pisado a mano. null = usar el calculado. */
@@ -126,7 +127,7 @@ export function loadQuotes(): SavedQuote[] {
   }
 }
 
-/** Agrega una cotización al frente y conserva sólo las últimas 5. */
+/** Agrega una cotización al frente y conserva sólo las últimas N. */
 export function pushQuote(
   quote: Omit<SavedQuote, "id" | "createdAt">,
 ): SavedQuote[] {
@@ -139,6 +140,34 @@ export function pushQuote(
     createdAt: new Date().toISOString(),
   };
   const next = [entry, ...loadQuotes()].slice(0, MAX_QUOTES);
+  try {
+    localStorage.setItem(QUOTES_KEY, JSON.stringify(next));
+  } catch {
+    /* no crítico */
+  }
+  return next;
+}
+
+/**
+ * Actualiza una cotización existente in place preservando `id` y `createdAt`.
+ * La mueve al frente para mantener orden por recencia. Si el id no existe,
+ * la lista vuelve sin cambios (idempotente).
+ */
+export function updateQuote(
+  id: string,
+  partial: Omit<SavedQuote, "id" | "createdAt" | "updatedAt">,
+): SavedQuote[] {
+  const all = loadQuotes();
+  const idx = all.findIndex((q) => q.id === id);
+  if (idx === -1) return all;
+  const merged: SavedQuote = {
+    ...partial,
+    id,
+    createdAt: all[idx].createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+  const rest = all.filter((q) => q.id !== id);
+  const next = [merged, ...rest];
   try {
     localStorage.setItem(QUOTES_KEY, JSON.stringify(next));
   } catch {

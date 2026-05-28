@@ -6,6 +6,7 @@ import {
   breakdownToCostItems,
   computeProfitability,
   computeQuote,
+  DEFAULT_CONFIG,
   DEFAULT_PIECE,
   makeMaterialLine,
   MARKETPLACE_PRESETS,
@@ -24,9 +25,13 @@ import {
   pushQuote,
   saveConfig,
   saveSelection,
+  updateQuote,
   type SavedQuote,
 } from "./storage";
 import { OnboardingModal } from "./OnboardingModal";
+import { EditingBanner } from "./EditingBanner";
+import { HistoryModal } from "./HistoryModal";
+import { useToast } from "../../components/Toast";
 
 interface Props {
   onCreateOrder: (quote: PendingQuote) => void;
@@ -46,6 +51,22 @@ function numField(v: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+/**
+ * Subset comparable del estado del form que define "qué hay sin guardar".
+ * Se serializa con JSON.stringify para detectar dirty state.
+ */
+interface QuoteSnapshot {
+  config: QuoteConfig;
+  piece: QuotePiece;
+  quantity: number;
+  chargeOverride: number | null;
+  printerId: number | null;
+}
+
+function snapshotsEqual(a: QuoteSnapshot, b: QuoteSnapshot): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft }: Props) {
   const [config, setConfig] = useState<QuoteConfig>(() => loadConfig());
   const [piece, setPiece] = useState<QuotePiece>(() => ({
@@ -58,6 +79,17 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
   const [quotes, setQuotes] = useState<SavedQuote[]>(() => loadQuotes());
   const [savedFlash, setSavedFlash] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+
+  /** Si != null, el form está "abierto" sobre una cotización del historial. */
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  /**
+   * Snapshot del estado al cargar/guardar. Mientras coincida con el form
+   * actual, isDirty=false. En modo "nuevo" arranca como null.
+   */
+  const [originalSnapshot, setOriginalSnapshot] = useState<QuoteSnapshot | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  const toast = useToast();
 
   // Integración con Estoque + Impressoras.
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -206,24 +238,101 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
       }));
   };
 
-  const handleSaveQuote = () => {
-    setQuotes(
-      pushQuote({
-        config,
-        piece,
-        breakdown,
-        quantity,
-        chargeOverride: isOverridden ? charge : null,
-        // legacy: primer material como atajo
-        materialId: validLines[0]?.materialId ?? null,
-        printerId,
-      }),
-    );
+  // ---- Snapshot / dirty state -----------------------------------------------
+  const currentSnapshot: QuoteSnapshot = useMemo(
+    () => ({
+      config,
+      piece,
+      quantity,
+      chargeOverride: isOverridden ? charge : null,
+      printerId,
+    }),
+    [config, piece, quantity, isOverridden, charge, printerId],
+  );
+
+  const isEditing = editingQuoteId !== null;
+  const isDirty = useMemo(() => {
+    if (!originalSnapshot) return false;
+    return !snapshotsEqual(originalSnapshot, currentSnapshot);
+  }, [originalSnapshot, currentSnapshot]);
+
+  /**
+   * Guarda la cotización. Si `mode="copy"` o no hay una abierta en edición,
+   * crea una nueva entrada. Si está editando, hace UPDATE in place.
+   */
+  const handleSaveQuote = (mode: "auto" | "copy" = "auto") => {
+    const payload = {
+      config,
+      piece,
+      breakdown,
+      quantity,
+      chargeOverride: isOverridden ? charge : null,
+      // legacy: primer material como atajo
+      materialId: validLines[0]?.materialId ?? null,
+      printerId,
+    };
+
+    const isUpdate = mode === "auto" && editingQuoteId !== null;
+    const previousQuotes = quotes;
+    const name = piece.pieceName?.trim() || "Cotización";
+
+    if (isUpdate) {
+      const next = updateQuote(editingQuoteId!, payload);
+      setQuotes(next);
+      toast.push({
+        kind: "ok",
+        message: `✓ "${name}" actualizada`,
+        action: {
+          label: "Deshacer",
+          onClick: () => {
+            try {
+              localStorage.setItem(
+                "calc.quotes.v1",
+                JSON.stringify(previousQuotes),
+              );
+            } catch {
+              /* no crítico */
+            }
+            setQuotes(previousQuotes);
+            const original = previousQuotes.find((q) => q.id === editingQuoteId);
+            if (original) {
+              applyQuoteToForm(original);
+              setOriginalSnapshot({
+                config: original.config,
+                piece: { ...original.piece, materials: original.piece.materials ?? [] },
+                quantity: original.quantity,
+                chargeOverride: original.chargeOverride,
+                printerId: original.printerId ?? null,
+              });
+            }
+          },
+        },
+      });
+    } else {
+      const next = pushQuote(payload);
+      setQuotes(next);
+      const newId = next[0]?.id ?? null;
+      setEditingQuoteId(newId);
+      toast.push({
+        kind: "ok",
+        message: `✓ "${name}" guardada`,
+        action: {
+          label: "Deshacer",
+          onClick: () => {
+            if (!newId) return;
+            setQuotes(deleteQuote(newId));
+            setEditingQuoteId(null);
+            setOriginalSnapshot(null);
+          },
+        },
+      });
+    }
+    setOriginalSnapshot({ ...currentSnapshot });
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 1800);
   };
 
-  const handleLoadQuote = (q: SavedQuote) => {
+  const applyQuoteToForm = (q: SavedQuote) => {
     setConfig(q.config);
     saveConfig(q.config);
     const restoredPiece: QuotePiece = {
@@ -239,6 +348,116 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
       printerId: q.printerId ?? null,
     });
   };
+
+  const handleLoadQuote = (q: SavedQuote) => {
+    if (isDirty) {
+      const ok = window.confirm(
+        "Tenés cambios sin guardar en la cotización actual. ¿Descartarlos y abrir esta otra?",
+      );
+      if (!ok) return;
+    }
+    applyQuoteToForm(q);
+    setEditingQuoteId(q.id);
+    setOriginalSnapshot({
+      config: q.config,
+      piece: { ...q.piece, materials: q.piece.materials ?? [] },
+      quantity: q.quantity,
+      chargeOverride: q.chargeOverride,
+      printerId: q.printerId ?? null,
+    });
+  };
+
+  /** Resetea el form a defaults y sale del modo edición. */
+  const handleNewQuote = () => {
+    if (isDirty) {
+      const ok = window.confirm(
+        "Tenés cambios sin guardar. ¿Descartarlos y empezar una nueva?",
+      );
+      if (!ok) return;
+    }
+    const freshConfig = { ...DEFAULT_CONFIG };
+    setConfig(freshConfig);
+    saveConfig(freshConfig);
+    setPiece({ ...DEFAULT_PIECE, materials: [] });
+    setQuantity(1);
+    setChargeOverride("");
+    setPrinterId(null);
+    saveSelection({ materialLines: [], printerId: null });
+    setEditingQuoteId(null);
+    setOriginalSnapshot(null);
+  };
+
+  /** Carga los valores de una quote pero en modo "nuevo" para crear variante. */
+  const handleDuplicateQuote = (q: SavedQuote) => {
+    if (isDirty) {
+      const ok = window.confirm(
+        "Tenés cambios sin guardar. ¿Descartarlos y duplicar esta otra?",
+      );
+      if (!ok) return;
+    }
+    applyQuoteToForm(q);
+    setEditingQuoteId(null);
+    setOriginalSnapshot(null);
+    toast.push({
+      kind: "info",
+      message: `Duplicada — modificá y guardá como nueva`,
+    });
+  };
+
+  /** Revierte el form al snapshot original sin tocar el storage. */
+  const handleDiscardChanges = () => {
+    if (!isDirty || !editingQuoteId) return;
+    const original = quotes.find((q) => q.id === editingQuoteId);
+    if (!original) return;
+    applyQuoteToForm(original);
+    setOriginalSnapshot({
+      config: original.config,
+      piece: { ...original.piece, materials: original.piece.materials ?? [] },
+      quantity: original.quantity,
+      chargeOverride: original.chargeOverride,
+      printerId: original.printerId ?? null,
+    });
+  };
+
+  // Aviso del browser cuando hay cambios sin guardar y se intenta cerrar.
+  useEffect(() => {
+    if (!isDirty) return;
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome requiere setear returnValue para mostrar el prompt nativo.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [isDirty]);
+
+  // Atajos de teclado: Ctrl/Cmd+S guarda; Ctrl/Cmd+N empieza una nueva.
+  // No interrumpe cuando el foco está en un input/textarea con texto libre.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod) return;
+      const key = e.key.toLowerCase();
+      if (key !== "s" && key !== "n") return;
+      const target = e.target as HTMLElement | null;
+      // En inputs de texto libre, dejar pasar Ctrl+N (browser) pero capturar
+      // Ctrl+S igual: querés guardar sin perder el foco.
+      const isTextField =
+        target instanceof HTMLInputElement &&
+        (target.type === "text" || target.type === "search");
+      const isTextarea = target instanceof HTMLTextAreaElement;
+      if (key === "n" && (isTextField || isTextarea)) return;
+      e.preventDefault();
+      if (key === "s") handleSaveQuote("auto");
+      else if (key === "n") handleNewQuote();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // handleSaveQuote/handleNewQuote dependen del estado actual; los recreamos
+    // en cada render, así que el listener se reemplaza también para ver los
+    // valores frescos. Dependencias estables vía closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingQuoteId, isDirty, currentSnapshot]);
 
   const handleCreateOrder = () => {
     handleSaveQuote();
@@ -308,6 +527,20 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
         open={onboardingOpen}
         onClose={() => setOnboardingOpen(false)}
       />
+
+      {isEditing &&
+        (() => {
+          const openQuote = quotes.find((q) => q.id === editingQuoteId);
+          if (!openQuote) return null;
+          return (
+            <EditingBanner
+              editing={openQuote}
+              isDirty={isDirty}
+              onDiscard={handleDiscardChanges}
+              onNew={handleNewQuote}
+            />
+          );
+        })()}
 
       <div className="calc__layout">
         {/* ===================== COLUMNA IZQUIERDA: DATOS ===================== */}
@@ -919,13 +1152,52 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                 </div>
 
                 <div className="caja-form__actions calc__actions">
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={handleSaveQuote}
-                  >
-                    {savedFlash ? "✓ Guardada" : "Guardar cotización"}
-                  </button>
+                  {isEditing ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn--primary"
+                        onClick={() => handleSaveQuote("auto")}
+                        disabled={!isDirty && !savedFlash}
+                        title={
+                          isDirty
+                            ? "Actualizar la cotización abierta (Ctrl+S)"
+                            : "Sin cambios por guardar"
+                        }
+                      >
+                        {savedFlash
+                          ? "✓ Cambios guardados"
+                          : isDirty
+                            ? "● Guardar cambios"
+                            : "✓ Sincronizada"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => handleSaveQuote("copy")}
+                        title="Guardar como una cotización nueva (variante)"
+                      >
+                        Guardar como copia
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={handleNewQuote}
+                        title="Empezar una cotización en blanco (Ctrl+N)"
+                      >
+                        Nueva cotización
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      onClick={() => handleSaveQuote("auto")}
+                      title="Guardar esta cotización (Ctrl+S)"
+                    >
+                      {savedFlash ? "✓ Guardada" : "Guardar cotización"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn--ghost"
@@ -991,78 +1263,168 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
 
       {/* ---- Últimas cotizaciones ---- */}
       <section className="calc__history">
-        <h3>Últimas cotizaciones</h3>
+        <div className="calc__history-head">
+          <h3>
+            Últimas cotizaciones
+            {quotes.length > 5 && (
+              <span className="hint"> · mostrando 5 de {quotes.length}</span>
+            )}
+          </h3>
+          {quotes.length > 5 && (
+            <button
+              type="button"
+              className="btn btn--sm btn--ghost"
+              onClick={() => setHistoryModalOpen(true)}
+              title="Ver todas las cotizaciones guardadas con buscador"
+            >
+              Ver todas ({quotes.length})
+            </button>
+          )}
+        </div>
         {quotes.length === 0 ? (
-          <p className="hint">Todavía no guardaste ninguna cotización.</p>
+          <div className="calc__history-empty">
+            <strong>Tu historial está vacío</strong>
+            <p className="hint">
+              Cuando guardes una cotización aparecerá acá — vas a poder
+              re-abrirla, duplicarla para hacer variantes, o convertirla en
+              pedido directamente.
+            </p>
+          </div>
         ) : (
           <ul className="calc__history-list">
-            {quotes.map((q) => (
-              <li key={q.id} className="calc__history-item">
-                <div className="calc__history-main">
-                  <strong>{q.piece.pieceName || "Sin nombre"}</strong>
-                  <span className="hint">
-                    {new Date(q.createdAt).toLocaleString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    · {q.quantity} u · ×{q.piece.profitMultiplier} ·{" "}
-                    {formatARS(q.breakdown.total)}/u
-                    {q.piece.materials && q.piece.materials.length > 1
-                      ? ` · ${q.piece.materials.length} filamentos`
-                      : ""}
-                    {q.chargeOverride != null && " · ✎ valor manual"}
+            {quotes.slice(0, 5).map((q) => {
+              const isOpen = q.id === editingQuoteId;
+              const wasEdited = !!q.updatedAt;
+              return (
+                <li
+                  key={q.id}
+                  className={`calc__history-item${
+                    isOpen ? " calc__history-item--editing" : ""
+                  }`}
+                >
+                  <div className="calc__history-main">
+                    <strong>
+                      {q.piece.pieceName || "Sin nombre"}
+                      {isOpen && (
+                        <span className="calc__history-badge" title="Esta cotización está abierta en el form">
+                          Abierta{isDirty ? " · ● sin guardar" : ""}
+                        </span>
+                      )}
+                    </strong>
+                    <span className="hint">
+                      {new Date(q.updatedAt ?? q.createdAt).toLocaleString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {wasEdited ? " · editada" : ""} · {q.quantity} u · ×
+                      {q.piece.profitMultiplier} ·{" "}
+                      {formatARS(q.breakdown.total)}/u
+                      {q.piece.materials && q.piece.materials.length > 1
+                        ? ` · ${q.piece.materials.length} filamentos`
+                        : ""}
+                      {q.chargeOverride != null && " · ✎ valor manual"}
+                    </span>
+                  </div>
+                  <span className="calc__history-total">
+                    {formatARS(
+                      q.chargeOverride ??
+                        round2(q.breakdown.total * q.quantity),
+                    )}
                   </span>
-                </div>
-                <span className="calc__history-total">
-                  {formatARS(
-                    q.chargeOverride ??
-                      round2(q.breakdown.total * q.quantity),
-                  )}
-                </span>
-                <div className="calc__history-actions">
-                  <button
-                    type="button"
-                    className="btn btn--sm btn--ghost"
-                    onClick={() => handleLoadQuote(q)}
-                  >
-                    Cargar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--sm btn--ghost"
-                    onClick={() => {
-                      const minutesPerUnit =
-                        Math.max(0, q.piece.printHours) * 60 +
-                        Math.max(0, q.piece.printMinutes);
-                      onCreateOrder({
-                        value:
-                          q.chargeOverride ??
-                          round2(q.breakdown.total * q.quantity),
-                        quantity: q.quantity,
-                        costItems: breakdownToCostItems(q.breakdown),
-                        estimatedMinutesPerUnit:
-                          minutesPerUnit > 0 ? minutesPerUnit : null,
-                      });
-                    }}
-                  >
-                    Pedido →
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--sm btn--ghost"
-                    onClick={() => setQuotes(deleteQuote(q.id))}
-                    aria-label="Eliminar"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="calc__history-actions">
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--ghost"
+                      onClick={() => handleLoadQuote(q)}
+                      disabled={isOpen && !isDirty}
+                      title={
+                        isOpen
+                          ? "Ya está abierta"
+                          : "Abrir esta cotización en el form para editarla"
+                      }
+                    >
+                      {isOpen ? "Abierta" : "Abrir"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--ghost"
+                      onClick={() => handleDuplicateQuote(q)}
+                      title="Cargar los datos como una cotización NUEVA (para hacer variantes)"
+                    >
+                      Duplicar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--ghost"
+                      onClick={() => {
+                        const minutesPerUnit =
+                          Math.max(0, q.piece.printHours) * 60 +
+                          Math.max(0, q.piece.printMinutes);
+                        onCreateOrder({
+                          value:
+                            q.chargeOverride ??
+                            round2(q.breakdown.total * q.quantity),
+                          quantity: q.quantity,
+                          costItems: breakdownToCostItems(q.breakdown),
+                          estimatedMinutesPerUnit:
+                            minutesPerUnit > 0 ? minutesPerUnit : null,
+                        });
+                      }}
+                    >
+                      Pedido →
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--ghost"
+                      onClick={() => {
+                        setQuotes(deleteQuote(q.id));
+                        // Si borro la que estoy editando, salgo del modo edición
+                        if (q.id === editingQuoteId) {
+                          setEditingQuoteId(null);
+                          setOriginalSnapshot(null);
+                        }
+                      }}
+                      aria-label="Eliminar"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+
+      <HistoryModal
+        open={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        quotes={quotes}
+        editingQuoteId={editingQuoteId}
+        onOpenQuote={handleLoadQuote}
+        onDuplicateQuote={handleDuplicateQuote}
+        onCreateOrderFromQuote={(q) => {
+          const minutesPerUnit =
+            Math.max(0, q.piece.printHours) * 60 +
+            Math.max(0, q.piece.printMinutes);
+          onCreateOrder({
+            value: q.chargeOverride ?? round2(q.breakdown.total * q.quantity),
+            quantity: q.quantity,
+            costItems: breakdownToCostItems(q.breakdown),
+            estimatedMinutesPerUnit:
+              minutesPerUnit > 0 ? minutesPerUnit : null,
+          });
+        }}
+        onDeleteQuote={(id) => {
+          setQuotes(deleteQuote(id));
+          if (id === editingQuoteId) {
+            setEditingQuoteId(null);
+            setOriginalSnapshot(null);
+          }
+        }}
+      />
     </div>
   );
 }

@@ -3170,6 +3170,140 @@ button.chip.chip--prod:hover {
   gap: 0.4rem;
 }
 
+/* ---- Banner sticky de modo edición ----------------------------------- */
+.calc__editing-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.95rem;
+  margin: 0.6rem 0 1.1rem;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.calc__editing-banner--dirty {
+  border-color: #d4a017;
+  background: color-mix(in srgb, #d4a017 8%, transparent);
+}
+
+.calc__editing-banner__main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.calc__editing-banner__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.calc__editing-banner--dirty .calc__editing-banner__label {
+  color: #d4a017;
+}
+
+.calc__editing-banner__name {
+  font-size: 1rem;
+  font-weight: 600;
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calc__editing-banner__status {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+.calc__editing-banner__status--synced {
+  color: #2a8848;
+  background: color-mix(in srgb, #2a8848 12%, transparent);
+}
+
+.calc__editing-banner__status--dirty {
+  color: #b07c00;
+  background: color-mix(in srgb, #d4a017 16%, transparent);
+  animation: calc-dirty-pulse 2s ease-in-out infinite;
+}
+
+@keyframes calc-dirty-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.calc__editing-banner__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Header de historial con botón "Ver todas" */
+.calc__history-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.calc__history-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/* Empty state del historial */
+.calc__history-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--border) 12%, transparent);
+}
+
+.calc__history-empty strong {
+  font-size: 0.95rem;
+}
+
+/* Item del historial cuando está "abierto" en el form */
+.calc__history-item--editing {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.calc__history-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  vertical-align: middle;
+}
+
 /* Banner de cotización cargada en el formulario de pedido */
 .quote-banner {
   display: flex;
@@ -3898,4 +4032,148 @@ button.chip.chip--prod:hover {
   .cat-manager {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================================
+   Toast notifications (queue arriba-derecha)
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(380px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  animation: toast-in 0.22s ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.toast--ok {
+  border-left: 3px solid #2a8848;
+}
+.toast--info {
+  border-left: 3px solid var(--accent);
+}
+.toast--warn {
+  border-left: 3px solid #d4a017;
+}
+
+.toast__message {
+  flex: 1;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+.toast__action {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toast__action:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.toast__close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #888);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  line-height: 1;
+}
+
+.toast__close:hover {
+  color: var(--text, #333);
+}
+
+/* ============================================================
+   HistoryModal — lista completa con buscador
+   ============================================================ */
+.history-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.history-modal__search input {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.history-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.history-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.history-modal__item--editing {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.history-modal__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 160px;
+}
+
+.history-modal__total {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.history-modal__actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
 }

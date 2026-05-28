@@ -73,6 +73,32 @@ export function OnboardingModal({ open, onClose }: Props) {
                 hasta que las cambies.
               </p>
             </section>
+
+            <section className="onboarding__section">
+              <header>
+                <span className="onboarding__dot" /> EDITAR Y DUPLICAR
+              </header>
+              <p>
+                Tocá <strong>Abrir</strong> sobre una cotización del
+                historial para editarla — el banner arriba te avisa cuál
+                estás modificando y si hay cambios sin guardar.{" "}
+                <strong>Guardar cambios</strong> actualiza la misma entrada;{" "}
+                <strong>Guardar como copia</strong> deja la original intacta
+                y crea una variante. Para variantes desde cero, usá{" "}
+                <strong>Duplicar</strong> en el historial.
+              </p>
+            </section>
+
+            <section className="onboarding__section">
+              <header>
+                <span className="onboarding__dot" /> ATAJOS DE TECLADO
+              </header>
+              <p>
+                <kbd>Ctrl</kbd>+<kbd>S</kbd> guarda la cotización actual.{" "}
+                <kbd>Ctrl</kbd>+<kbd>N</kbd> empieza una nueva en blanco. Si
+                tenés cambios sin guardar, te avisa antes de descartarlos.
+              </p>
+            </section>
           </div>
         </div>
       </Modal.Body>

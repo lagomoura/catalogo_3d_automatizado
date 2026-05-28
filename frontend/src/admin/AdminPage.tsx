@@ -15,6 +15,7 @@ import { ImpressorasPage } from "./impressoras/ImpressorasPage";
 import { OrcamentoPage } from "./orcamento/OrcamentoPage";
 import { PedidosPage } from "./pedidos/PedidosPage";
 import { ReportesPage } from "./reportes/ReportesPage";
+import { ToastProvider } from "../components/Toast";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
@@ -118,6 +119,7 @@ export default function AdminPage() {
   });
 
   return (
+    <ToastProvider>
     <div className="app">
       <header className="app__header">
         <div className="app__header-row">
@@ -288,5 +290,6 @@ export default function AdminPage() {
         />
       )}
     </div>
+    </ToastProvider>
   );
 }
