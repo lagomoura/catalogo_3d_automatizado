@@ -1,10 +1,10 @@
-// Persistencia local de la calculadora: parámetros de config y las últimas
-// 5 cotizaciones. Es estado de trabajo de un único admin en un navegador;
-// no necesita backend. Si se borra, vuelve a los valores por defecto.
+// Persistencia local de la calculadora: config global del negocio y dos
+// cubetas de cotizaciones (activas + archivadas). Estado de trabajo de un
+// único admin en un navegador; no necesita backend. Si se borra, vuelve a
+// los valores por defecto.
 
 import {
   DEFAULT_CONFIG,
-  type MaterialLine,
   type QuoteBreakdown,
   type QuoteConfig,
   type QuotePiece,
@@ -12,12 +12,16 @@ import {
 
 const CONFIG_KEY = "calc.config.v1";
 const QUOTES_KEY = "calc.quotes.v1";
+const ARCHIVED_QUOTES_KEY = "calc.quotes.archived.v1";
 export const MAX_QUOTES = 20;
+export const MAX_ARCHIVED = 20;
 
 export interface SavedQuote {
   id: string;
   createdAt: string;
   updatedAt?: string;
+  /** Si está seteado, la quote está en la cubeta de archivadas. */
+  archivedAt?: string;
   /** Unidades cotizadas. Las cotizaciones viejas sin este campo asumen 1. */
   quantity: number;
   /** Total a cobrar pisado a mano. null = usar el calculado. */
@@ -32,59 +36,6 @@ export interface SavedQuote {
    */
   materialId?: number | null;
   printerId?: number | null;
-}
-
-const SELECTION_KEY = "calc.selection.v1";
-
-export interface CalcSelection {
-  /**
-   * Líneas de material del último estado. La calculadora arranca con esto;
-   * si la pieza tenía sólo 1 material en versiones viejas, se hidrata como
-   * una única línea sin gramos (el usuario la completa).
-   */
-  materialLines: MaterialLine[];
-  printerId: number | null;
-}
-
-export function loadSelection(): CalcSelection {
-  try {
-    const raw = localStorage.getItem(SELECTION_KEY);
-    if (!raw) return { materialLines: [], printerId: null };
-    const parsed = JSON.parse(raw) as Partial<CalcSelection> & {
-      // formato viejo: { materialId, printerId }
-      materialId?: number | null;
-    };
-    if (Array.isArray(parsed.materialLines)) {
-      return {
-        materialLines: parsed.materialLines.filter(
-          (l): l is MaterialLine =>
-            !!l && typeof l.id === "string" && "materialId" in l,
-        ),
-        printerId: parsed.printerId ?? null,
-      };
-    }
-    // Migración del formato viejo: un único materialId se hidrata como una
-    // línea sin gramos. El usuario completa los gramos en la UI.
-    if (parsed.materialId != null) {
-      return {
-        materialLines: [
-          { id: `legacy-${parsed.materialId}`, materialId: parsed.materialId, grams: 0 },
-        ],
-        printerId: parsed.printerId ?? null,
-      };
-    }
-    return { materialLines: [], printerId: parsed.printerId ?? null };
-  } catch {
-    return { materialLines: [], printerId: null };
-  }
-}
-
-export function saveSelection(sel: CalcSelection): void {
-  try {
-    localStorage.setItem(SELECTION_KEY, JSON.stringify(sel));
-  } catch {
-    /* no crítico */
-  }
 }
 
 export function loadConfig(): QuoteConfig {
@@ -107,13 +58,13 @@ export function saveConfig(config: QuoteConfig): void {
   }
 }
 
-export function loadQuotes(): SavedQuote[] {
+function readQuotes(key: string, cap: number): SavedQuote[] {
   try {
-    const raw = localStorage.getItem(QUOTES_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as SavedQuote[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.slice(0, MAX_QUOTES).map((q) => ({
+    return parsed.slice(0, cap).map((q) => ({
       ...q,
       quantity: q.quantity && q.quantity > 0 ? q.quantity : 1,
       chargeOverride: q.chargeOverride ?? null,
@@ -127,29 +78,58 @@ export function loadQuotes(): SavedQuote[] {
   }
 }
 
-/** Agrega una cotización al frente y conserva sólo las últimas N. */
+function writeQuotes(key: string, list: SavedQuote[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    /* no crítico */
+  }
+}
+
+export function loadQuotes(): SavedQuote[] {
+  return readQuotes(QUOTES_KEY, MAX_QUOTES);
+}
+
+export function loadArchivedQuotes(): SavedQuote[] {
+  return readQuotes(ARCHIVED_QUOTES_KEY, MAX_ARCHIVED);
+}
+
+/**
+ * Agrega una cotización al frente de la lista activa. Si el resultado supera
+ * MAX_QUOTES, la(s) más vieja(s) se mueven a la cubeta de archivadas en vez
+ * de eliminarse (preserva trabajo del usuario ante explosiones de uso).
+ */
 export function pushQuote(
   quote: Omit<SavedQuote, "id" | "createdAt">,
-): SavedQuote[] {
+): { active: SavedQuote[]; archived: SavedQuote[] } {
   const entry: SavedQuote = {
     ...quote,
+    archivedAt: undefined,
     id:
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : String(Date.now()),
     createdAt: new Date().toISOString(),
   };
-  const next = [entry, ...loadQuotes()].slice(0, MAX_QUOTES);
-  try {
-    localStorage.setItem(QUOTES_KEY, JSON.stringify(next));
-  } catch {
-    /* no crítico */
-  }
+  const combined = [entry, ...loadQuotes()];
+  const active = combined.slice(0, MAX_QUOTES);
+  const overflow = combined.slice(MAX_QUOTES);
+  writeQuotes(QUOTES_KEY, active);
+  const archived = overflow.length ? archiveOverflow(overflow) : loadArchivedQuotes();
+  return { active, archived };
+}
+
+/** Marca las quotes como archivadas y las prepende al archivo, capeando. */
+function archiveOverflow(quotes: SavedQuote[]): SavedQuote[] {
+  const now = new Date().toISOString();
+  const stamped = quotes.map((q) => ({ ...q, archivedAt: now }));
+  const next = [...stamped, ...loadArchivedQuotes()].slice(0, MAX_ARCHIVED);
+  writeQuotes(ARCHIVED_QUOTES_KEY, next);
   return next;
 }
 
 /**
- * Actualiza una cotización existente in place preservando `id` y `createdAt`.
+ * Actualiza una cotización activa in place preservando `id` y `createdAt`.
  * La mueve al frente para mantener orden por recencia. Si el id no existe,
  * la lista vuelve sin cambios (idempotente).
  */
@@ -168,20 +148,69 @@ export function updateQuote(
   };
   const rest = all.filter((q) => q.id !== id);
   const next = [merged, ...rest];
-  try {
-    localStorage.setItem(QUOTES_KEY, JSON.stringify(next));
-  } catch {
-    /* no crítico */
-  }
+  writeQuotes(QUOTES_KEY, next);
   return next;
 }
 
+/**
+ * Elimina sin archivar. Se usa para "Deshacer" un guardado recién hecho —
+ * el usuario nunca pidió guardarla, no tiene sentido archivarla.
+ */
 export function deleteQuote(id: string): SavedQuote[] {
   const next = loadQuotes().filter((q) => q.id !== id);
-  try {
-    localStorage.setItem(QUOTES_KEY, JSON.stringify(next));
-  } catch {
-    /* no crítico */
+  writeQuotes(QUOTES_KEY, next);
+  return next;
+}
+
+/**
+ * Mueve una quote activa al archivo. Esta es la acción "Archivar" del UI:
+ * recuperable mientras quede espacio en el archivo (cap FIFO).
+ */
+export function archiveQuote(
+  id: string,
+): { active: SavedQuote[]; archived: SavedQuote[] } {
+  const all = loadQuotes();
+  const target = all.find((q) => q.id === id);
+  if (!target) {
+    return { active: all, archived: loadArchivedQuotes() };
   }
+  const active = all.filter((q) => q.id !== id);
+  writeQuotes(QUOTES_KEY, active);
+  const stamped: SavedQuote = { ...target, archivedAt: new Date().toISOString() };
+  const archived = [stamped, ...loadArchivedQuotes()].slice(0, MAX_ARCHIVED);
+  writeQuotes(ARCHIVED_QUOTES_KEY, archived);
+  return { active, archived };
+}
+
+/**
+ * Mueve una quote archivada a activas. Si la activación deja >MAX_QUOTES,
+ * la activa más vieja vuelve al archivo (efecto rebote esperado).
+ */
+export function restoreArchivedQuote(
+  id: string,
+): { active: SavedQuote[]; archived: SavedQuote[] } {
+  const archivedAll = loadArchivedQuotes();
+  const target = archivedAll.find((q) => q.id === id);
+  if (!target) {
+    return { active: loadQuotes(), archived: archivedAll };
+  }
+  const archivedRest = archivedAll.filter((q) => q.id !== id);
+  writeQuotes(ARCHIVED_QUOTES_KEY, archivedRest);
+  const { archivedAt: _drop, ...restored } = target;
+  const restoredQuote = restored as SavedQuote;
+  const combined = [restoredQuote, ...loadQuotes()];
+  const active = combined.slice(0, MAX_QUOTES);
+  const overflow = combined.slice(MAX_QUOTES);
+  writeQuotes(QUOTES_KEY, active);
+  const archived = overflow.length
+    ? archiveOverflow(overflow)
+    : loadArchivedQuotes();
+  return { active, archived };
+}
+
+/** Borrado definitivo desde el archivo. No tiene undo. */
+export function deleteArchivedQuote(id: string): SavedQuote[] {
+  const next = loadArchivedQuotes().filter((q) => q.id !== id);
+  writeQuotes(ARCHIVED_QUOTES_KEY, next);
   return next;
 }

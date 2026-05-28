@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getMaterials, getPrinters } from "../../api/client";
 import type { Material, PendingQuote, PendingQuoteDraft, Printer } from "../../types";
 import { formatARS } from "../../utils/format";
@@ -18,19 +18,22 @@ import {
   type QuotePiece,
 } from "./calc";
 import {
+  archiveQuote,
+  deleteArchivedQuote,
   deleteQuote,
+  loadArchivedQuotes,
   loadConfig,
   loadQuotes,
-  loadSelection,
   pushQuote,
+  restoreArchivedQuote,
   saveConfig,
-  saveSelection,
   updateQuote,
   type SavedQuote,
 } from "./storage";
 import { OnboardingModal } from "./OnboardingModal";
 import { EditingBanner } from "./EditingBanner";
 import { HistoryModal } from "./HistoryModal";
+import { ConfirmModal } from "../../components/ConfirmModal";
 import { useToast } from "../../components/Toast";
 
 interface Props {
@@ -69,16 +72,26 @@ function snapshotsEqual(a: QuoteSnapshot, b: QuoteSnapshot): boolean {
 
 export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft }: Props) {
   const [config, setConfig] = useState<QuoteConfig>(() => loadConfig());
-  const [piece, setPiece] = useState<QuotePiece>(() => ({
-    ...DEFAULT_PIECE,
-    materials: loadSelection().materialLines,
-  }));
+  // La pieza arranca SIEMPRE vacía: si el usuario quiere persistir trabajo,
+  // guarda la cotización. Evita el efecto "abro la calculadora y veo datos
+  // viejos sin saber qué estoy editando".
+  const [piece, setPiece] = useState<QuotePiece>(() => ({ ...DEFAULT_PIECE }));
   const [quantity, setQuantity] = useState(1);
   // Total a cobrar pisado a mano (string del input). "" = usar el calculado.
   const [chargeOverride, setChargeOverride] = useState("");
   const [quotes, setQuotes] = useState<SavedQuote[]>(() => loadQuotes());
+  const [archived, setArchived] = useState<SavedQuote[]>(() =>
+    loadArchivedQuotes(),
+  );
   const [savedFlash, setSavedFlash] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: ReactNode;
+    confirmLabel: string;
+    danger?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
 
   /** Si != null, el form está "abierto" sobre una cotización del historial. */
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
@@ -94,9 +107,7 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
   // Integración con Estoque + Impressoras.
   const [materials, setMaterials] = useState<Material[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [printerId, setPrinterId] = useState<number | null>(
-    () => loadSelection().printerId,
-  );
+  const [printerId, setPrinterId] = useState<number | null>(null);
 
   useEffect(() => {
     void getMaterials().then(setMaterials).catch(() => {});
@@ -139,7 +150,6 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
 
   const patchLines = (next: MaterialLine[]) => {
     setPiece((prev) => ({ ...prev, materials: next }));
-    saveSelection({ materialLines: next, printerId });
   };
 
   const addLine = () => patchLines([...materialLines, makeMaterialLine()]);
@@ -162,7 +172,6 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
   //  - Si no se elige impresora, limpiamos el override.
   const handleSelectPrinter = (id: number | null) => {
     setPrinterId(id);
-    saveSelection({ materialLines, printerId: id });
     if (id == null) {
       patchConfig({ printerHourlyCostOverride: null });
       return;
@@ -309,9 +318,11 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
         },
       });
     } else {
-      const next = pushQuote(payload);
-      setQuotes(next);
-      const newId = next[0]?.id ?? null;
+      const previousArchived = archived;
+      const { active, archived: nextArchived } = pushQuote(payload);
+      setQuotes(active);
+      setArchived(nextArchived);
+      const newId = active[0]?.id ?? null;
       setEditingQuoteId(newId);
       toast.push({
         kind: "ok",
@@ -321,6 +332,17 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
           onClick: () => {
             if (!newId) return;
             setQuotes(deleteQuote(newId));
+            // Si el push había archivado una activa vieja por overflow,
+            // restauramos el archivo previo para no dejar residuos.
+            try {
+              localStorage.setItem(
+                "calc.quotes.archived.v1",
+                JSON.stringify(previousArchived),
+              );
+            } catch {
+              /* no crítico */
+            }
+            setArchived(previousArchived);
             setEditingQuoteId(null);
             setOriginalSnapshot(null);
           },
@@ -343,10 +365,6 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
     setQuantity(q.quantity);
     setChargeOverride(q.chargeOverride != null ? String(q.chargeOverride) : "");
     setPrinterId(q.printerId ?? null);
-    saveSelection({
-      materialLines: restoredPiece.materials,
-      printerId: q.printerId ?? null,
-    });
   };
 
   const handleLoadQuote = (q: SavedQuote) => {
@@ -382,9 +400,63 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
     setQuantity(1);
     setChargeOverride("");
     setPrinterId(null);
-    saveSelection({ materialLines: [], printerId: null });
     setEditingQuoteId(null);
     setOriginalSnapshot(null);
+  };
+
+  // ---- Archivado de cotizaciones --------------------------------------------
+  const clearEditingIfMatches = (id: string) => {
+    if (id === editingQuoteId) {
+      setEditingQuoteId(null);
+      setOriginalSnapshot(null);
+    }
+  };
+
+  const requestArchive = (q: SavedQuote) => {
+    const name = q.piece.pieceName?.trim() || "esta cotización";
+    setConfirmDialog({
+      title: "¿Mover al archivado?",
+      message: (
+        <>
+          Vas a archivar <strong>«{name}»</strong>. Podés restaurarla más tarde
+          desde el historial mientras quede espacio en el archivo (máximo 20).
+        </>
+      ),
+      confirmLabel: "Archivar",
+      onConfirm: () => {
+        const { active, archived: nextArchived } = archiveQuote(q.id);
+        setQuotes(active);
+        setArchived(nextArchived);
+        clearEditingIfMatches(q.id);
+        setConfirmDialog(null);
+      },
+    });
+  };
+
+  const handleRestoreArchived = (q: SavedQuote) => {
+    const { active, archived: nextArchived } = restoreArchivedQuote(q.id);
+    setQuotes(active);
+    setArchived(nextArchived);
+  };
+
+  const requestDeleteArchived = (q: SavedQuote) => {
+    const name = q.piece.pieceName?.trim() || "esta cotización";
+    setConfirmDialog({
+      title: "¿Eliminar para siempre?",
+      message: (
+        <>
+          Vas a borrar <strong>«{name}»</strong> definitivamente. Esta acción no
+          tiene undo.
+        </>
+      ),
+      confirmLabel: "Eliminar",
+      danger: true,
+      onConfirm: () => {
+        const nextArchived = deleteArchivedQuote(q.id);
+        setArchived(nextArchived);
+        setConfirmDialog(null);
+      },
+    });
   };
 
   /** Carga los valores de una quote pero en modo "nuevo" para crear variante. */
@@ -717,7 +789,7 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                         </div>
                         <span className="calc__mat-row-info">
                           {mat
-                            ? `${matPriceLabel({ cost_per_g: mat.cost_per_g, unit })} · stock ${mat.stock_g.toLocaleString("es-AR")}${unitLabel(unit)}`
+                            ? `stock ${mat.stock_g.toLocaleString("es-AR")}${unitLabel(unit)}`
                             : "—"}
                         </span>
                         <button
@@ -1151,7 +1223,7 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                   </div>
                 </div>
 
-                <div className="caja-form__actions calc__actions">
+                <div className="calc__actions">
                   {isEditing ? (
                     <>
                       <button
@@ -1166,27 +1238,38 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                         }
                       >
                         {savedFlash
-                          ? "✓ Cambios guardados"
+                          ? "✓ Guardado"
                           : isDirty
                             ? "● Guardar cambios"
                             : "✓ Sincronizada"}
                       </button>
-                      <button
-                        type="button"
-                        className="btn btn--ghost"
-                        onClick={() => handleSaveQuote("copy")}
-                        title="Guardar como una cotización nueva (variante)"
-                      >
-                        Guardar como copia
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--ghost"
-                        onClick={handleNewQuote}
-                        title="Empezar una cotización en blanco (Ctrl+N)"
-                      >
-                        Nueva cotización
-                      </button>
+                      <details className="calc__actions-more">
+                        <summary
+                          className="btn btn--ghost"
+                          title="Más acciones"
+                          aria-label="Más acciones"
+                        >
+                          ⋯ Más
+                        </summary>
+                        <div className="calc__actions-more__panel">
+                          <button
+                            type="button"
+                            className="btn btn--ghost"
+                            onClick={() => handleSaveQuote("copy")}
+                            title="Guardar como una cotización nueva (variante)"
+                          >
+                            Guardar copia
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn--ghost"
+                            onClick={handleNewQuote}
+                            title="Empezar una cotización en blanco (Ctrl+N)"
+                          >
+                            Nueva cotización
+                          </button>
+                        </div>
+                      </details>
                     </>
                   ) : (
                     <button
@@ -1205,15 +1288,16 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                     disabled={charge <= 0}
                     title="Mandar este total al Generador de Presupuestos"
                   >
-                    Crear presupuesto →
+                    Presupuesto →
                   </button>
                   <button
                     type="button"
                     className="btn btn--primary"
                     onClick={handleCreateOrder}
                     disabled={charge <= 0}
+                    title="Crear pedido con esta cotización"
                   >
-                    Crear pedido con esta cotización →
+                    Crear pedido →
                   </button>
                 </div>
               </>
@@ -1378,15 +1462,9 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                     <button
                       type="button"
                       className="btn btn--sm btn--ghost"
-                      onClick={() => {
-                        setQuotes(deleteQuote(q.id));
-                        // Si borro la que estoy editando, salgo del modo edición
-                        if (q.id === editingQuoteId) {
-                          setEditingQuoteId(null);
-                          setOriginalSnapshot(null);
-                        }
-                      }}
-                      aria-label="Eliminar"
+                      onClick={() => requestArchive(q)}
+                      aria-label="Archivar"
+                      title="Archivar (podés restaurarla luego)"
                     >
                       ✕
                     </button>
@@ -1417,13 +1495,20 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
               minutesPerUnit > 0 ? minutesPerUnit : null,
           });
         }}
-        onDeleteQuote={(id) => {
-          setQuotes(deleteQuote(id));
-          if (id === editingQuoteId) {
-            setEditingQuoteId(null);
-            setOriginalSnapshot(null);
-          }
-        }}
+        archived={archived}
+        onArchiveQuote={requestArchive}
+        onRestoreArchived={handleRestoreArchived}
+        onDeleteArchived={requestDeleteArchived}
+      />
+
+      <ConfirmModal
+        open={confirmDialog !== null}
+        title={confirmDialog?.title ?? ""}
+        message={confirmDialog?.message ?? ""}
+        confirmLabel={confirmDialog?.confirmLabel ?? "Confirmar"}
+        danger={confirmDialog?.danger ?? false}
+        onConfirm={() => confirmDialog?.onConfirm()}
+        onCancel={() => setConfirmDialog(null)}
       />
     </div>
   );
