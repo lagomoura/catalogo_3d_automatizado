@@ -41,6 +41,14 @@ interface Props {
   /** Cambia a otra pestaña del admin shell (para los CTAs de empty-state). */
   onNavigate?: (tab: string) => void;
   onCreateQuoteDraft?: (draft: PendingQuoteDraft) => void;
+  /**
+   * Si está presente, el usuario llegó desde Pedidos → "Cotizar este producto".
+   * La Calculadora pre-selecciona el producto y muestra un banner aclarando
+   * que al confirmar volverá a Pedidos con la cotización lista.
+   */
+  preselectedCatalogItemId?: number | null;
+  /** Limpia la preselección tras consumirla (idempotente). */
+  onPreselectionConsumed?: () => void;
 }
 
 const MULTIPLIERS: { value: ProfitMultiplier; label: string; sub: string }[] = [
@@ -105,7 +113,16 @@ function snapshotsEqual(a: QuoteSnapshot, b: QuoteSnapshot): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft }: Props) {
+export function CalculadoraPage({
+  onCreateOrder,
+  onNavigate,
+  onCreateQuoteDraft,
+  preselectedCatalogItemId,
+  onPreselectionConsumed,
+}: Props) {
+  // Limpiar la preselección sólo cuando el usuario navega fuera o crea el pedido.
+  // El banner se muestra mientras el flujo "cotizar para pedido" esté vivo.
+  const fromPedidos = preselectedCatalogItemId != null;
   const [config, setConfig] = useState<QuoteConfig>(() => loadConfig());
   // La pieza arranca SIEMPRE vacía: si el usuario quiere persistir trabajo,
   // guarda la cotización. Evita el efecto "abro la calculadora y veo datos
@@ -642,6 +659,29 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
         open={onboardingOpen}
         onClose={() => setOnboardingOpen(false)}
       />
+
+      {fromPedidos && (
+        <div className="quote-banner quote-banner--info">
+          <div className="quote-banner__main">
+            <strong>Cotizando para un pedido nuevo</strong>
+            <span className="hint">
+              Configurá la cotización. Al darle "Crear pedido con esta
+              cotización", el pedido se va a crear con los costos snapshoteados
+              y vas a volver a la tab Pedidos.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn--sm btn--ghost"
+            onClick={() => {
+              onPreselectionConsumed?.();
+              onNavigate?.("pedidos");
+            }}
+          >
+            Volver a Pedidos
+          </button>
+        </div>
+      )}
 
       {isEditing &&
         (() => {

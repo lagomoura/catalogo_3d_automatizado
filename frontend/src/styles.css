@@ -4264,3 +4264,15 @@ button.chip.chip--prod:hover {
   gap: 0.35rem;
   flex-wrap: wrap;
 }
+
+/* Toggle "Mostrar archivados" en la toolbar del catálogo (Fase A archivado). */
+.catalog__archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.catalog__archived-toggle input { margin: 0; }

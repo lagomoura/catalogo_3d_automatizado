@@ -11,6 +11,9 @@ interface Props {
   onFilterChange: (categoryId: number | null) => void;
   onItemChanged: (item: CatalogItem) => void;
   onItemsRemoved: (ids: number[]) => void;
+  /** Si true, el grid pide al server include_archived=true (mostrar todos). */
+  showArchived?: boolean;
+  onShowArchivedChange?: (value: boolean) => void;
 }
 
 export function CatalogGrid({
@@ -20,6 +23,8 @@ export function CatalogGrid({
   onFilterChange,
   onItemChanged,
   onItemsRemoved,
+  showArchived = false,
+  onShowArchivedChange,
 }: Props) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -140,6 +145,16 @@ export function CatalogGrid({
             value={filterCategoryId}
             onChange={onFilterChange}
           />
+          {onShowArchivedChange && (
+            <label className="catalog__archived-toggle" title="Incluir productos archivados">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => onShowArchivedChange(e.target.checked)}
+              />
+              Mostrar archivados
+            </label>
+          )}
           {selectionMode ? (
             <button
               type="button"

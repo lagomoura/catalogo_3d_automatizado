@@ -36,23 +36,32 @@ export default function AdminPage() {
   const [submitMode, setSubmitMode] = useState<SubmitMode>("makerworld");
   const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
   const [pendingQuoteDraft, setPendingQuoteDraft] = useState<PendingQuoteDraft | null>(null);
+  /**
+   * Producto que el usuario seleccionó en Pedidos antes de saltar a la
+   * Calculadora a cotizar. La Calculadora lo pre-selecciona si está presente
+   * (Fase A: flujo unificado).
+   */
+  const [pendingCotizarItemId, setPendingCotizarItemId] = useState<number | null>(null);
   const [activeJobs, setActiveJobs] = useState<Job[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<number | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const refreshCatalog = useCallback(
     async (categoryId: number | null = filterCategoryId) => {
       try {
-        const items = await getCatalog(categoryId);
+        const items = await getCatalog(categoryId, {
+          include_archived: showArchived,
+        });
         setCatalog(items);
         setCatalogError(null);
       } catch (err) {
         setCatalogError(err instanceof Error ? err.message : "No se pudo cargar el catálogo");
       }
     },
-    [filterCategoryId],
+    [filterCategoryId, showArchived],
   );
 
   useEffect(() => {
@@ -259,6 +268,8 @@ export default function AdminPage() {
             onFilterChange={setFilterCategoryId}
             onItemChanged={handleItemChanged}
             onItemsRemoved={handleItemsRemoved}
+            showArchived={showArchived}
+            onShowArchivedChange={setShowArchived}
           />
         </>
       ) : tab === "reportes" ? (
@@ -270,6 +281,8 @@ export default function AdminPage() {
           onCreateOrder={handleQuoteToOrder}
           onNavigate={(t) => setTab(t as Tab)}
           onCreateQuoteDraft={handleCalcToQuote}
+          preselectedCatalogItemId={pendingCotizarItemId}
+          onPreselectionConsumed={() => setPendingCotizarItemId(null)}
         />
       ) : tab === "impressoras" ? (
         <ImpressorasPage />
@@ -287,6 +300,10 @@ export default function AdminPage() {
         <PedidosPage
           pendingQuote={pendingQuote}
           onPendingQuoteConsumed={() => setPendingQuote(null)}
+          onCotizarInCalculadora={(catalogItemId) => {
+            setPendingCotizarItemId(catalogItemId);
+            setTab("calculadora");
+          }}
         />
       )}
     </div>

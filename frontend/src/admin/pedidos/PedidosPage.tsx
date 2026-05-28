@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   advanceOrder,
   appendOrderCost,
+  cancelOrderRuns,
   cancelProductionRun,
   createOrder,
   createProductionRun,
   deleteOrder,
-  deleteProductionRun,
   finishProductionRun,
   getCatalog,
   getContacts,
@@ -16,12 +16,9 @@ import {
   getProductionRuns,
   getProductionSummary,
   pauseProductionRun,
-  reopenProductionRun,
   replaceOrderCosts,
   resumeProductionRun,
   setOrderPayment,
-  setOrderPriority,
-  startOrder,
   startProductionRun,
   updateOrder,
   updateProductionRun,
@@ -29,12 +26,10 @@ import {
   type OrderCreatePayload,
   type OrderUpdatePayload,
 } from "../../api/client";
-import { KpiCard } from "../../components/KpiCard";
 import type {
   CatalogItem,
   Contact,
   Order,
-  OrderPriority,
   OrderSummary,
   PendingQuote,
   Printer,
@@ -45,69 +40,69 @@ import type {
 } from "../../types";
 import { OnboardingModal } from "./OnboardingModal";
 import { OrderForm } from "./OrderForm";
-import { OrderQueue } from "./OrderQueue";
-import { ProductionRunForm } from "./ProductionRunForm";
+import { OrderEditModal } from "./OrderEditModal";
+import { ExtraCostModal } from "./ExtraCostModal";
 import { useProductionTicker } from "./useProductionTicker";
+import { KpiBar } from "./board/KpiBar";
+import { PrinterHeroGrid } from "./board/PrinterHeroGrid";
+import { BoardColumns } from "./board/BoardColumns";
+import { PiecesModal } from "./board/PiecesModal";
+import { EntregadosPanel } from "./board/EntregadosPanel";
+import type { HeroOrderActions } from "./board/PrinterHeroCard";
 import "./pedidos.css";
+import "./board/board.css";
 
 interface PedidosPageProps {
   pendingQuote?: PendingQuote | null;
   onPendingQuoteConsumed?: () => void;
+  /**
+   * Salta a la Calculadora con el producto pre-seleccionado para cotizar
+   * antes de crear el pedido (flujo unificado Fase A).
+   */
+  onCotizarInCalculadora?: (catalogItemId: number | null) => void;
 }
 
-type StatusTab =
-  | "todos"
-  | "pendentes"
-  | "proximos_prazo"
-  | "atrasados"
-  | "en_produccion"
-  | "finalizados";
-
-const STATUS_TABS: { key: StatusTab; label: string }[] = [
-  { key: "todos", label: "Todos" },
-  { key: "pendentes", label: "En cola" },
-  { key: "proximos_prazo", label: "Próximos al plazo" },
-  { key: "atrasados", label: "Atrasados" },
-  { key: "en_produccion", label: "En curso" },
-  { key: "finalizados", label: "Entregados" },
-];
-
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const inDaysISO = (days: number) =>
-  new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+const ACTIVE_RUN = new Set<ProductionRun["status"]>([
+  "PENDENTE",
+  "EM_PRODUCAO",
+  "PAUSADA",
+]);
 
 export function PedidosPage({
   pendingQuote = null,
   onPendingQuoteConsumed,
+  onCotizarInCalculadora,
 }: PedidosPageProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [filterProductId, setFilterProductId] = useState<number | null>(null);
-  const [summary, setSummary] = useState<OrderSummary | null>(null);
+  const [, setSummary] = useState<OrderSummary | null>(null);
   const [query, setQuery] = useState("");
-  const [statusTab, setStatusTab] = useState<StatusTab>("todos");
   const [error, setError] = useState<string | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  // Vista: tablero operativo vs. histórico de entregados.
+  const [estadoView, setEstadoView] = useState<"tablero" | "entregados">(
+    "tablero",
+  );
+  // Filtro de pago (aplica a "Listos para entrega" y "Entregados").
+  const [payFilter, setPayFilter] = useState<"todos" | "pagado" | "pendiente">(
+    "todos",
+  );
 
   const [runs, setRuns] = useState<ProductionRun[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [productionSummary, setProductionSummary] =
-    useState<ProductionSummary | null>(null);
-  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
-    () => new Set(),
-  );
-  const [runFormOrderId, setRunFormOrderId] = useState<number | null>(null);
-  const [runFormEditing, setRunFormEditing] = useState<ProductionRun | null>(
-    null,
-  );
+  const [, setProductionSummary] = useState<ProductionSummary | null>(null);
+  const [editing, setEditing] = useState<Order | null>(null);
+  const [extraFor, setExtraFor] = useState<Order | null>(null);
+  const [extraBusy, setExtraBusy] = useState(false);
+  const [piecesForOrderId, setPiecesForOrderId] = useState<number | null>(null);
   const { now } = useProductionTicker();
 
   const refreshOrders = useCallback(async () => {
     const [list, sum, runsList, prodSum] = await Promise.all([
-      getOrders({
-        catalog_item_id: filterProductId ?? undefined,
-      }),
+      getOrders({ catalog_item_id: filterProductId ?? undefined }),
       getOrdersSummary().catch(() => null),
       getProductionRuns().catch(() => [] as ProductionRun[]),
       getProductionSummary().catch(() => null),
@@ -130,8 +125,17 @@ export function PedidosPage({
     getPrinters().then(setPrinters).catch(() => undefined);
   }, []);
 
-  // Pull silencioso cada 30s para reflejar cambios de runs (start/pause/finish
-  // disparados en otra pestaña o por otro usuario).
+  // Llegada desde la Calculadora con una cotización: abrir el formulario y
+  // saltar a la vista tablero para que el pedido se cargue sin pasos extra.
+  useEffect(() => {
+    if (pendingQuote) {
+      setFormOpen(true);
+      setEstadoView("tablero");
+    }
+  }, [pendingQuote]);
+
+  // Pull silencioso cada 30s para reflejar cambios de runs disparados en otra
+  // pestaña o por otro usuario.
   useEffect(() => {
     const id = window.setInterval(() => {
       void refreshOrders();
@@ -139,23 +143,10 @@ export function PedidosPage({
     return () => window.clearInterval(id);
   }, [refreshOrders]);
 
-  // Auto-expand pedidos en EJECUTANDO al cargar, para que sus runs queden visibles.
-  useEffect(() => {
-    const inCurso = orders
-      .filter((o) => o.order_status === "EJECUTANDO")
-      .map((o) => o.id);
-    if (inCurso.length === 0) return;
-    setExpandedOrderIds((prev) => {
-      const next = new Set(prev);
-      let changed = false;
-      for (const id of inCurso) {
-        if (!next.has(id)) {
-          next.add(id);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
+  const ordersById = useMemo(() => {
+    const m = new Map<number, Order>();
+    for (const o of orders) m.set(o.id, o);
+    return m;
   }, [orders]);
 
   const runsByOrder = useMemo(() => {
@@ -173,23 +164,148 @@ export function PedidosPage({
     return m;
   }, [runs]);
 
-  const runsCountByOrder = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const [oid, arr] of runsByOrder) m.set(oid, arr.length);
+  const matchOrder = useCallback(
+    (orderId: number | null | undefined): boolean => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      if (orderId == null) return false;
+      const o = ordersById.get(orderId);
+      if (!o) return false;
+      return [o.catalog_item?.name, o.contact?.name, o.person_label, o.note, String(o.id)]
+        .filter(Boolean)
+        .some((s) => s!.toLowerCase().includes(q));
+    },
+    [query, ordersById],
+  );
+
+  // Cola de producción (order-centric): pedidos CREADO, fijados (★) primero,
+  // luego por el sort_order mínimo de sus piezas pendientes.
+  const queueOrders = useMemo(() => {
+    const arr = orders.filter(
+      (o) => o.order_status === "CREADO" && matchOrder(o.id),
+    );
+    const minSort = (o: Order) => {
+      const pend = (runsByOrder.get(o.id) ?? []).filter(
+        (r) => r.status === "PENDENTE",
+      );
+      return pend.length
+        ? Math.min(...pend.map((r) => r.sort_order))
+        : Number.MAX_SAFE_INTEGER;
+    };
+    arr.sort(
+      (a, b) =>
+        (a.is_pinned === b.is_pinned ? 0 : a.is_pinned ? -1 : 1) ||
+        minSort(a) - minSort(b) ||
+        a.id - b.id,
+    );
+    return arr;
+  }, [orders, runsByOrder, matchOrder]);
+
+  const payOk = useCallback(
+    (o: Order) =>
+      payFilter === "todos" ||
+      (payFilter === "pagado" && o.payment_status === "PAGADO") ||
+      (payFilter === "pendiente" && o.payment_status === "PENDIENTE"),
+    [payFilter],
+  );
+
+  // Listos para entrega: pedidos EJECUTADO + pedidos EJECUTANDO cuya producción
+  // ya terminó (todas las piezas CONCLUIDA/CANCELADA, ninguna activa) → "Marcar listo".
+  const deliveryItems = useMemo(() => {
+    const out: { order: Order; awaitingReady: boolean }[] = [];
+    for (const o of orders) {
+      if (!matchOrder(o.id) || !payOk(o)) continue;
+      if (o.order_status === "EJECUTADO") {
+        out.push({ order: o, awaitingReady: false });
+      } else if (o.order_status === "EJECUTANDO") {
+        const rs = runsByOrder.get(o.id) ?? [];
+        const done =
+          rs.length > 0 &&
+          rs.every((r) => !ACTIVE_RUN.has(r.status)) &&
+          rs.some((r) => r.status === "CONCLUIDA");
+        if (done) out.push({ order: o, awaitingReady: true });
+      }
+    }
+    return out;
+  }, [orders, runsByOrder, matchOrder, payOk]);
+
+  // Histórico de entregados (vista dedicada), con filtro de pago + búsqueda.
+  const entregados = useMemo(
+    () =>
+      orders
+        .filter(
+          (o) => o.order_status === "ENTREGADO" && matchOrder(o.id) && payOk(o),
+        )
+        .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1)),
+    [orders, matchOrder, payOk],
+  );
+
+  // Impresoras ocupadas (con una pieza EM_PRODUCAO) → el resto está libre.
+  const busyPrinterIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const r of runs) {
+      if (r.status === "EM_PRODUCAO" && r.printer?.id != null) s.add(r.printer.id);
+    }
+    return s;
+  }, [runs]);
+
+  const idlePrinters = useMemo(
+    () => printers.filter((p) => !p.archived && !busyPrinterIds.has(p.id)),
+    [printers, busyPrinterIds],
+  );
+
+  // ¿Hay alguna pieza pendiente vinculada a un pedido? (para "Iniciar próximo").
+  // Excluye runs huérfanas (sin order) que no representan trabajo de la cola.
+  const hasQueue = useMemo(
+    () => runs.some((r) => r.status === "PENDENTE" && r.order?.id != null),
+    [runs],
+  );
+
+  // ¿Se puede iniciar un pedido ahora? Hay pieza pendiente y, o bien su
+  // impresora asignada está libre, o hay alguna impresora libre para asignarle.
+  const canStartByOrder = useMemo(() => {
+    const m = new Map<number, boolean>();
+    for (const o of queueOrders) {
+      const pend = (runsByOrder.get(o.id) ?? []).filter(
+        (r) => r.status === "PENDENTE",
+      );
+      const first = pend.find((r) => r.printer?.id != null) ?? pend[0];
+      if (!first) {
+        m.set(o.id, false);
+        continue;
+      }
+      const assigned = first.printer?.id ?? null;
+      m.set(
+        o.id,
+        assigned != null
+          ? !busyPrinterIds.has(assigned)
+          : idlePrinters.length > 0,
+      );
+    }
     return m;
-  }, [runsByOrder]);
+  }, [queueOrders, runsByOrder, busyPrinterIds, idlePrinters]);
 
   const run = useCallback(
     async (action: () => Promise<unknown>) => {
       setError(null);
       try {
         await action();
-        await Promise.all([
-          refreshOrders(),
-          getContacts().then(setContacts),
-        ]);
+        await Promise.all([refreshOrders(), getContacts().then(setContacts)]);
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo completar la acción");
+      }
+    },
+    [refreshOrders],
+  );
+
+  const runAction = useCallback(
+    async (fn: () => Promise<unknown>) => {
+      setError(null);
+      try {
+        await fn();
+        await refreshOrders();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Error en la acción");
       }
     },
     [refreshOrders],
@@ -199,6 +315,9 @@ export function PedidosPage({
     async (p: OrderCreatePayload) => {
       const order = await createOrder(p);
       await Promise.all([refreshOrders(), getContacts().then(setContacts)]);
+      // El pedido ya alimentó la cola: cerramos el form y mostramos el tablero.
+      setFormOpen(false);
+      setEstadoView("tablero");
       return order;
     },
     [refreshOrders],
@@ -231,147 +350,156 @@ export function PedidosPage({
     [refreshOrders],
   );
 
-  const runAction = useCallback(
-    async (fn: () => Promise<unknown>) => {
-      setError(null);
-      try {
-        await fn();
-        await refreshOrders();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Error en la acción");
+  // Reordenar la cola (drag&drop de pedidos): reasigna el sort_order de las
+  // piezas pendientes en bloques según el nuevo orden de los pedidos. Persiste
+  // solo lo que cambió, con mutación optimista local y rollback si falla.
+  const handleReorder = useCallback(
+    (orderedOrderIds: number[]) => {
+      const updates: { id: number; sort_order: number }[] = [];
+      orderedOrderIds.forEach((oid, idx) => {
+        const pend = (runsByOrder.get(oid) ?? [])
+          .filter((r) => r.status === "PENDENTE")
+          .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+        pend.forEach((r, j) => {
+          const so = (idx + 1) * 100 + j;
+          if (r.sort_order !== so) updates.push({ id: r.id, sort_order: so });
+        });
+      });
+      if (updates.length === 0) return;
+      const set = new Map(updates.map((u) => [u.id, u.sort_order]));
+      setRuns((prev) =>
+        prev.map((r) => (set.has(r.id) ? { ...r, sort_order: set.get(r.id)! } : r)),
+      );
+      Promise.all(
+        updates.map((u) => updateProductionRun(u.id, { sort_order: u.sort_order })),
+      ).catch((e) => {
+        setError(e instanceof Error ? e.message : "No se pudo reordenar la cola");
+        void refreshOrders();
+      });
+    },
+    [runsByOrder, refreshOrders],
+  );
+
+  // Arranca un run asignándole una impresora si no tiene (auto-assign): primero
+  // respeta la asignada; si no hay, usa la impresora libre indicada o la primera
+  // disponible. Sin impresora libre → error claro.
+  const startRun = useCallback(
+    (run: ProductionRun, preferPrinterId?: number) =>
+      runAction(async () => {
+        let printerId = run.printer?.id ?? null;
+        if (printerId == null) {
+          printerId =
+            preferPrinterId ?? idlePrinters[0]?.id ?? null;
+          if (printerId == null) {
+            throw new Error("No hay impresora libre para iniciar esta pieza.");
+          }
+          await updateProductionRun(run.id, { printer_id: printerId });
+        }
+        await startProductionRun(run.id);
+      }),
+    [runAction, idlePrinters],
+  );
+
+  // "Iniciar próximo" desde una impresora libre: toma la primera pieza pendiente
+  // (priorizando las ya asignadas a esa impresora) y la arranca en ella.
+  const handleStartNext = useCallback(
+    (printerId: number) => {
+      const pend = runs
+        .filter((r) => r.status === "PENDENTE" && r.order?.id != null)
+        .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+      const next =
+        pend.find((r) => r.printer?.id === printerId) ??
+        pend.find((r) => r.printer?.id == null) ??
+        pend[0];
+      if (next) void startRun(next, printerId);
+    },
+    [runs, startRun],
+  );
+
+  // Iniciar un pedido = arrancar su primera pieza pendiente (auto-assign).
+  const handleStartOrder = useCallback(
+    (orderId: number) => {
+      const pend = (runsByOrder.get(orderId) ?? [])
+        .filter((r) => r.status === "PENDENTE")
+        .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
+      const first = pend.find((r) => r.printer?.id != null) ?? pend[0];
+      if (first) void startRun(first);
+    },
+    [runsByOrder, startRun],
+  );
+
+  const heroActions: HeroOrderActions = useMemo(
+    () => ({
+      onEditar: (o) => setEditing(o),
+      onCobrar: (o) =>
+        void run(() => setOrderPayment(o.id, o.payment_status !== "PAGADO")),
+      onCostoExtra: (o) => setExtraFor(o),
+      onGestionarPiezas: (o) => setPiecesForOrderId(o.id),
+      onCancelarRun: (id) => void runAction(() => cancelProductionRun(id)),
+    }),
+    [run, runAction],
+  );
+
+  const deleteOrderWithRuns = useCallback(async (id: number) => {
+    if (!window.confirm("¿Borrar este pedido?")) return;
+    try {
+      await deleteOrder(id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.startsWith("409") && /cancel_runs_then_delete/.test(msg)) {
+        const m = msg.match(/"active_runs":\s*\[([^\]]*)\]/);
+        const count = m ? (m[1].match(/"id"/g)?.length ?? 0) : 0;
+        const ok = window.confirm(
+          `Este pedido tiene ${count} producción(es) activa(s). ` +
+            `Cancelar las producciones y eliminar el pedido?`,
+        );
+        if (!ok) return;
+        await cancelOrderRuns(id);
+        await deleteOrder(id);
+      } else {
+        throw e;
       }
-    },
-    [refreshOrders],
-  );
-
-  const handleToggleExpand = useCallback((orderId: number) => {
-    setExpandedOrderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(orderId)) next.delete(orderId);
-      else next.add(orderId);
-      return next;
-    });
+    }
   }, []);
 
-  const handleRunStart = useCallback(
-    (id: number) => void runAction(() => startProductionRun(id)),
-    [runAction],
-  );
-  const handleRunPause = useCallback(
-    (id: number) => void runAction(() => pauseProductionRun(id)),
-    [runAction],
-  );
-  const handleRunResume = useCallback(
-    (id: number) => void runAction(() => resumeProductionRun(id)),
-    [runAction],
-  );
-  const handleRunFinish = useCallback(
-    (id: number) => void runAction(() => finishProductionRun(id)),
-    [runAction],
-  );
-  const handleRunCancel = useCallback(
-    (id: number) => void runAction(() => cancelProductionRun(id)),
-    [runAction],
-  );
-  const handleRunReopen = useCallback(
-    (id: number) => void runAction(() => reopenProductionRun(id)),
-    [runAction],
-  );
-  const handleRunDelete = useCallback(
-    (id: number) => {
-      if (!window.confirm("¿Eliminar esta producción del historial?")) return;
-      void runAction(() => deleteProductionRun(id));
-    },
-    [runAction],
-  );
-  const handleRunEdit = useCallback((r: ProductionRun) => {
-    setRunFormOrderId(null);
-    setRunFormEditing(r);
-  }, []);
-  const handleRunCreateOpen = useCallback((orderId: number) => {
-    setRunFormEditing(null);
-    setRunFormOrderId(orderId);
-  }, []);
-  const handleRunCreateSubmit = useCallback(
-    async (payload: ProductionRunCreatePayload) => {
-      const enriched: ProductionRunCreatePayload =
-        runFormOrderId != null ? { ...payload, order_id: runFormOrderId } : payload;
-      await createProductionRun(enriched);
-      await refreshOrders();
-    },
-    [refreshOrders, runFormOrderId],
-  );
-  const handleRunUpdateSubmit = useCallback(
+  // Handlers de piezas (PiecesModal): asignar impresora / minutos, agregar,
+  // cancelar e iniciar piezas individuales.
+  const handlePieceUpdate = useCallback(
     async (id: number, payload: ProductionRunUpdatePayload) => {
       await updateProductionRun(id, payload);
       await refreshOrders();
     },
     [refreshOrders],
   );
-  const handleRunFormClose = useCallback(() => {
-    setRunFormOrderId(null);
-    setRunFormEditing(null);
-  }, []);
+  const handlePieceCreate = useCallback(
+    async (orderId: number, payload: ProductionRunCreatePayload) => {
+      await createProductionRun({ ...payload, order_id: orderId });
+      await refreshOrders();
+    },
+    [refreshOrders],
+  );
 
-  const filteredOrders = useMemo(() => {
-    const today = todayISO();
-    const week = inDaysISO(summary?.prazo_window_days ?? 7);
-    let arr = orders;
-    switch (statusTab) {
-      case "pendentes":
-        arr = arr.filter((o) => o.order_status === "CREADO");
-        break;
-      case "proximos_prazo":
-        arr = arr.filter(
-          (o) =>
-            o.order_status !== "ENTREGADO" &&
-            o.deadline != null &&
-            o.deadline >= today &&
-            o.deadline <= week,
-        );
-        break;
-      case "atrasados":
-        arr = arr.filter(
-          (o) =>
-            o.order_status !== "ENTREGADO" &&
-            o.deadline != null &&
-            o.deadline < today,
-        );
-        break;
-      case "en_produccion":
-        arr = arr.filter((o) => o.order_status === "EJECUTANDO");
-        break;
-      case "finalizados":
-        arr = arr.filter((o) => o.order_status === "ENTREGADO");
-        break;
-    }
-    const q = query.trim().toLowerCase();
-    if (q) {
-      arr = arr.filter((o) =>
-        [
-          o.catalog_item?.name,
-          o.contact?.name,
-          o.person_label,
-          o.note,
-          String(o.id),
-        ]
-          .filter(Boolean)
-          .some((s) => s!.toLowerCase().includes(q)),
-      );
-    }
-    return arr;
-  }, [orders, statusTab, query, summary?.prazo_window_days]);
+  const sortedCatalog = useMemo(
+    () => [...catalog].sort((a, b) => a.name.localeCompare(b.name)),
+    [catalog],
+  );
+
+  const editingOrder = editing
+    ? orders.find((o) => o.id === editing.id) ?? editing
+    : null;
+  const extraOrder = extraFor
+    ? orders.find((o) => o.id === extraFor.id) ?? extraFor
+    : null;
 
   return (
-    <div className="pedidos">
+    <div className="pedidos pb">
       <header className="pedidos__header">
         <div>
           <p className="pedidos__eyebrow">Operación</p>
           <h2>Pedidos & Producción</h2>
           <p className="pedidos__subtitle">
-            Cada venta como una orden: cliente, producto, cantidad, plazo.
-            Expandí un pedido para ver y manejar sus piezas en producción
-            en vivo.
+            Cada impresora muestra su trabajo en vivo. Reordená la cola
+            arrastrando, iniciá la próxima pieza y entregá cuando esté lista.
           </p>
         </div>
         <button
@@ -385,115 +513,169 @@ export function PedidosPage({
         </button>
       </header>
 
-      <OnboardingModal
-        open={onboardingOpen}
-        onClose={() => setOnboardingOpen(false)}
-      />
+      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
 
       {error && <p className="error-banner">{error}</p>}
 
-      <section className="pedidos__kpi-grid">
-        <KpiCard
-          label="En cola"
-          value={summary?.em_aberto ?? "—"}
-          tone="blue"
-        />
-        <KpiCard
-          label={`Próximos (${summary?.prazo_window_days ?? 7}d)`}
-          value={summary?.prazo_proximo ?? "—"}
-          tone="orange"
-        />
-        <KpiCard
-          label="Atrasados"
-          value={summary?.atrasados ?? "—"}
-          tone="red"
-        />
-        <KpiCard
-          label="Imprimiendo ahora"
-          value={productionSummary?.em_producao ?? "—"}
-          tone="purple"
-        />
-        <KpiCard
-          label="Terminadas hoy"
-          value={productionSummary?.concluidas_hoy ?? "—"}
-          tone="green"
-        />
-      </section>
-
-      <OrderForm
-        catalog={catalog}
-        contacts={contacts}
-        onCreate={handleCreate}
-        pendingQuote={pendingQuote}
-        onPendingQuoteConsumed={onPendingQuoteConsumed}
-      />
-
-      <div className="pedidos__board-controls">
+      <div className="pb-toolbar">
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => setFormOpen((v) => !v)}
+        >
+          {formOpen ? "× Cerrar" : "＋ Nuevo pedido"}
+        </button>
         <input
-          className="pedidos__search"
+          className="pb-search"
           type="search"
           placeholder="Buscar por cliente, producto, nota, #pedido…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <nav className="pedidos__substabs" role="tablist">
-          {STATUS_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={statusTab === t.key}
-              className={`pedidos__substab ${
-                statusTab === t.key ? "pedidos__substab--active" : ""
-              }`}
-              onClick={() => setStatusTab(t.key)}
-            >
-              {t.label}
-            </button>
+        <span className="pb-toolbar__spacer" />
+        <select
+          aria-label="Vista"
+          className="pb-select"
+          value={estadoView}
+          onChange={(e) =>
+            setEstadoView(e.target.value as "tablero" | "entregados")
+          }
+        >
+          <option value="tablero">Tablero (activos)</option>
+          <option value="entregados">Entregados</option>
+        </select>
+        <select
+          aria-label="Filtrar por pago"
+          className="pb-select"
+          value={payFilter}
+          onChange={(e) =>
+            setPayFilter(e.target.value as "todos" | "pagado" | "pendiente")
+          }
+        >
+          <option value="todos">Pago: todos</option>
+          <option value="pendiente">Pago pendiente</option>
+          <option value="pagado">Pagado</option>
+        </select>
+        <select
+          aria-label="Filtrar por producto"
+          className="pb-select"
+          value={filterProductId == null ? "" : String(filterProductId)}
+          onChange={(e) =>
+            setFilterProductId(e.target.value ? Number(e.target.value) : null)
+          }
+        >
+          <option value="">Todos los productos</option>
+          {sortedCatalog.map((it) => (
+            <option key={it.id} value={String(it.id)}>
+              {it.name}
+            </option>
           ))}
-        </nav>
+        </select>
       </div>
 
-      <OrderQueue
-        orders={filteredOrders}
-        catalog={catalog}
-        contacts={contacts}
-        filterProductId={filterProductId}
-        onFilterChange={setFilterProductId}
-        onStart={(id) => void run(() => startOrder(id))}
-        onAdvance={(id) => void run(() => advanceOrder(id))}
-        onPayment={(id, paid) => void run(() => setOrderPayment(id, paid))}
-        onPriority={(id, p: OrderPriority | null) =>
-          void run(() => setOrderPriority(id, p))
-        }
-        onUpdate={handleUpdate}
-        onSaveCosts={handleSaveCosts}
-        onAppendCost={handleAppendCost}
-        onDelete={(id) => void run(() => deleteOrder(id))}
-        runsCountByOrder={runsCountByOrder}
-        runsByOrder={runsByOrder}
-        expandedOrderIds={expandedOrderIds}
-        onToggleExpand={handleToggleExpand}
-        now={now}
-        onRunStart={handleRunStart}
-        onRunPause={handleRunPause}
-        onRunResume={handleRunResume}
-        onRunFinish={handleRunFinish}
-        onRunCancel={handleRunCancel}
-        onRunReopen={handleRunReopen}
-        onRunDelete={handleRunDelete}
-        onRunEdit={handleRunEdit}
-        onRunCreate={handleRunCreateOpen}
-      />
+      {formOpen && (
+        <OrderForm
+          catalog={catalog}
+          contacts={contacts}
+          onCreate={handleCreate}
+          onCotizarInCalculadora={onCotizarInCalculadora}
+          pendingQuote={pendingQuote}
+          onPendingQuoteConsumed={onPendingQuoteConsumed}
+        />
+      )}
 
-      <ProductionRunForm
-        open={runFormOrderId != null || runFormEditing != null}
-        run={runFormEditing}
-        printers={printers}
-        onClose={handleRunFormClose}
-        onCreate={handleRunCreateSubmit}
-        onUpdate={handleRunUpdateSubmit}
-      />
+      <KpiBar orders={orders} />
+
+      {estadoView === "tablero" ? (
+        <>
+          <PrinterHeroGrid
+            printers={printers}
+            runs={runs}
+            ordersById={ordersById}
+            runsByOrder={runsByOrder}
+            now={now}
+            hasQueue={hasQueue}
+            onPause={(id) => void runAction(() => pauseProductionRun(id))}
+            onResume={(id) => void runAction(() => resumeProductionRun(id))}
+            onFinish={(id) => void runAction(() => finishProductionRun(id))}
+            onStartNext={handleStartNext}
+            orderActions={heroActions}
+          />
+
+          <BoardColumns
+            queueOrders={queueOrders}
+            runsByOrder={runsByOrder}
+            allRuns={runs}
+            canStartByOrder={canStartByOrder}
+            deliveryItems={deliveryItems}
+            now={now}
+            onReorder={handleReorder}
+            onStartOrder={handleStartOrder}
+            onGestionarPiezas={(o) => setPiecesForOrderId(o.id)}
+            onAdvance={(id) => void run(() => advanceOrder(id))}
+            onPayment={(id, paid) => void run(() => setOrderPayment(id, paid))}
+            onEditar={(o) => setEditing(o)}
+            onCostoExtra={(o) => setExtraFor(o)}
+            onDelete={(id) => void run(() => deleteOrderWithRuns(id))}
+          />
+        </>
+      ) : (
+        <section className="pb-col" aria-label="Entregados">
+          <header className="pb-col__head">
+            <span className="pb-col__icon" aria-hidden="true">✓</span>
+            Entregados <span className="pb-col__count">{entregados.length}</span>
+          </header>
+          <EntregadosPanel
+            orders={entregados}
+            onPayment={(id, paid) => void run(() => setOrderPayment(id, paid))}
+            onEditar={(o) => setEditing(o)}
+          />
+        </section>
+      )}
+
+      {editingOrder && (
+        <OrderEditModal
+          order={editingOrder}
+          contacts={contacts}
+          onClose={() => setEditing(null)}
+          onSave={handleUpdate}
+          onSaveCosts={handleSaveCosts}
+        />
+      )}
+
+      {extraOrder && (
+        <ExtraCostModal
+          order={extraOrder}
+          busy={extraBusy}
+          onClose={() => setExtraFor(null)}
+          onSubmit={async ({ concept, amount }) => {
+            setExtraBusy(true);
+            try {
+              await handleAppendCost(extraOrder.id, {
+                concept,
+                amount,
+                per_unit: false,
+              });
+              setExtraFor(null);
+            } finally {
+              setExtraBusy(false);
+            }
+          }}
+        />
+      )}
+
+      {piecesForOrderId != null && ordersById.get(piecesForOrderId) && (
+        <PiecesModal
+          order={ordersById.get(piecesForOrderId)!}
+          runs={runsByOrder.get(piecesForOrderId) ?? []}
+          printers={printers}
+          onClose={() => setPiecesForOrderId(null)}
+          onUpdate={handlePieceUpdate}
+          onCreate={handlePieceCreate}
+          onCancel={(id) => void runAction(() => cancelProductionRun(id))}
+          onStart={(id) => void runAction(() => startProductionRun(id))}
+        />
+      )}
     </div>
   );
 }

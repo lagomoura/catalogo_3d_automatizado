@@ -49,6 +49,18 @@ export interface CategoryNode {
   children: CategoryNode[];
 }
 
+export interface CatalogItemQuote {
+  id: number;
+  catalog_item_id: number;
+  /**
+   * Snapshot crudo del estado de la Calculadora: líneas de material, tarifa
+   * de marketplace, impresora, costo, precio sugerido, minutos por pieza.
+   * Estructura libre — el frontend la consume tal cual la persistió.
+   */
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface CatalogItem {
   id: number;
   name: string;
@@ -57,6 +69,10 @@ export interface CatalogItem {
   images: CatalogImage[];
   category: CategoryRef | null;
   model_3d_url: string | null;
+  /** Soft-delete del catálogo. Si true, se oculta de selectores y listados. */
+  archived: boolean;
+  /** Última cotización guardada (template para pedidos nuevos). */
+  latest_quote: CatalogItemQuote | null;
 }
 
 export type TransactionKind = "credit" | "debit";
@@ -341,6 +357,8 @@ export interface Order {
   id: number;
   catalog_item: { id: number; name: string } | null;
   catalog_cover_url: string | null;
+  /** Si el producto del catálogo fue archivado: la card muestra badge "Archivado". */
+  catalog_archived: boolean;
   contact: { id: number; name: string } | null;
   person_label: string | null;
   quantity: number;
@@ -348,7 +366,10 @@ export interface Order {
   note: string | null;
   order_status: OrderStatus;
   payment_status: PaymentStatus;
+  /** Legacy: P1/P2/P3 (deprecado, reemplazado por is_pinned + urgencia calculada). */
   priority: OrderPriority | null;
+  /** Fijación manual al tope de la cola (★). */
+  is_pinned: boolean;
   cost_items: OrderCostItem[];
   sale_date: string | null; // ISO date
   deadline: string | null; // ISO date
@@ -551,6 +572,7 @@ export interface ProductionRunUpdatePayload {
   grams?: number | null;
   clear_grams?: boolean;
   notes?: string | null;
+  sort_order?: number;
 }
 
 export interface ProductionSummary {

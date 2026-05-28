@@ -6,6 +6,7 @@ import type {
   CashTransaction,
   CashTransactionPage,
   CatalogItem,
+  CatalogItemQuote,
   CategoryNode,
   ClientLink as ClientLinkRef,
   Contact,
@@ -118,9 +119,34 @@ export function getJob(jobId: number): Promise<Job> {
   return request<Job>(`/api/jobs/${jobId}`);
 }
 
-export function getCatalog(categoryId: number | null = null): Promise<CatalogItem[]> {
-  const qs = categoryId != null ? `?category_id=${categoryId}` : "";
-  return request<CatalogItem[]>(`/api/catalog${qs}`);
+export function getCatalog(
+  categoryId: number | null = null,
+  options: { include_archived?: boolean } = {},
+): Promise<CatalogItem[]> {
+  const params = new URLSearchParams();
+  if (categoryId != null) params.set("category_id", String(categoryId));
+  if (options.include_archived) params.set("include_archived", "true");
+  const qs = params.toString();
+  return request<CatalogItem[]>(`/api/catalog${qs ? `?${qs}` : ""}`);
+}
+
+export function getCatalogItemLatestQuote(id: number): Promise<CatalogItemQuote | null> {
+  // El endpoint devuelve 404 si no hay quote. Convertimos a null para que el
+  // caller no tenga que distinguir 404 de otros errores.
+  return request<CatalogItemQuote>(`/api/catalog/${id}/quotes/latest`).catch((err) => {
+    if (err instanceof Error && /^404\b/.test(err.message)) return null;
+    throw err;
+  });
+}
+
+export function saveCatalogItemQuote(
+  id: number,
+  payload: Record<string, unknown>,
+): Promise<CatalogItemQuote> {
+  return request<CatalogItemQuote>(`/api/catalog/${id}/quotes`, {
+    method: "POST",
+    body: JSON.stringify({ payload }),
+  });
 }
 
 export function getCatalogItem(id: number): Promise<CatalogItem> {
@@ -135,6 +161,8 @@ export interface CatalogItemUpdatePayload {
   name?: string;
   category_id?: number | null;
   clear_category?: boolean;
+  /** Toggle de soft-delete (archivar / desarchivar). */
+  archived?: boolean;
 }
 
 export function updateCatalogItem(
@@ -481,6 +509,8 @@ export interface OrderCreatePayload {
   person_label?: string | null;
   save_contact?: boolean;
   priority?: OrderPriority | null;
+  /** Fijar al tope de la cola desde el alta (reemplaza el viejo priority). */
+  is_pinned?: boolean;
   cost_items?: OrderCostItemInput[];
   sale_date?: string | null;
   deadline?: string | null;
@@ -488,6 +518,11 @@ export interface OrderCreatePayload {
   quote_id?: number | null;
   /** Minutos por pieza para propagar a las ProductionRun que el backend genera. */
   estimated_minutes_per_unit?: number | null;
+  /**
+   * Snapshot completo del estado de la Calculadora. Si está presente, el backend
+   * lo persiste como `latest_quote` del producto — template para próximos pedidos.
+   */
+  quote_payload?: Record<string, unknown> | null;
 }
 
 export interface OrderUpdatePayload {
@@ -505,6 +540,8 @@ export interface OrderUpdatePayload {
   deadline?: string | null;
   clear_deadline?: boolean;
   is_draft?: boolean;
+  /** Fijación manual al tope de la cola. */
+  is_pinned?: boolean;
 }
 
 export function getOrders(filters: OrderFilters = {}): Promise<Order[]> {
@@ -583,6 +620,10 @@ export function setOrderPriority(
 
 export function deleteOrder(id: number): Promise<void> {
   return request<void>(`/api/orders/${id}`, { method: "DELETE" });
+}
+
+export function cancelOrderRuns(id: number): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/cancel-runs`, { method: "POST" });
 }
 
 export function resolveStorageUrl(relativeOrAbsolute: string): string {

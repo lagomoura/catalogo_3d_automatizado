@@ -20,6 +20,11 @@ interface Props {
   onCreate: (p: OrderCreatePayload) => Promise<Order>;
   pendingQuote?: PendingQuote | null;
   onPendingQuoteConsumed?: () => void;
+  /**
+   * Disparado cuando el usuario quiere ir a la Calculadora para cotizar
+   * el producto seleccionado (Fase A: el snapshot de costos es obligatorio).
+   */
+  onCotizarInCalculadora?: (catalogItemId: number | null) => void;
 }
 
 const PRIORITIES: (OrderPriority | null)[] = [null, 1, 2, 3];
@@ -30,6 +35,7 @@ export function OrderForm({
   onCreate,
   pendingQuote,
   onPendingQuoteConsumed,
+  onCotizarInCalculadora,
 }: Props) {
   const [catalogId, setCatalogId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -203,6 +209,27 @@ export function OrderForm({
         </div>
       )}
 
+      {!quoteCosts && onCotizarInCalculadora && (
+        <div className="quote-banner quote-banner--alert">
+          <div className="quote-banner__main">
+            <strong>Cotizá el producto antes de crear el pedido</strong>
+            <span className="hint">
+              Para que cada pedido tenga sus costos snapshoteados (control
+              financiero confiable), pasalo por la Calculadora.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn btn--sm btn--primary"
+            onClick={() => onCotizarInCalculadora(catalogId)}
+          >
+            {catalogId === null
+              ? "Abrir Calculadora"
+              : "Cotizar este producto →"}
+          </button>
+        </div>
+      )}
+
       <div className="field">
         <label>Producto (tocá una tarjeta)</label>
         <div className="product-picker-grid">
@@ -320,7 +347,18 @@ export function OrderForm({
         <button
           type="submit"
           className="btn btn--primary"
-          disabled={busy || catalogId === null}
+          disabled={
+            busy ||
+            catalogId === null ||
+            // El backend rechaza pedidos sin snapshot de costos — el flujo
+            // unificado pasa por la Calculadora (banner arriba lo guía).
+            (!quoteCosts && pendingQuote?.source_quote_id == null)
+          }
+          title={
+            !quoteCosts && pendingQuote?.source_quote_id == null
+              ? "Cotizá el producto en la Calculadora primero"
+              : ""
+          }
         >
           {busy ? "Creando…" : "Crear pedido"}
         </button>

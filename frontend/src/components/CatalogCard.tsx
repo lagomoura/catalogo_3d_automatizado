@@ -102,7 +102,41 @@ export function CatalogCard({
       await deleteCatalogItem(item.id);
       onItemDeleted(item.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo eliminar");
+      // El backend devuelve 409 con action=archive cuando hay pedidos/runs
+      // que dependen del producto. Ofrecemos archivar como salida limpia.
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.startsWith("409") && /"action":\s*"archive"/.test(msg)) {
+        const ok = window.confirm(
+          `"${item.name}" tiene pedidos o producciones asociadas y no puede ` +
+            `eliminarse sin perder historial.\n\n¿Archivar el producto? ` +
+            `(quedará oculto del catálogo pero seguirá visible en sus pedidos).`,
+        );
+        if (ok) {
+          try {
+            const updated = await updateCatalogItem(item.id, { archived: true });
+            onItemChanged(updated);
+          } catch (e2) {
+            setError(e2 instanceof Error ? e2.message : "No se pudo archivar");
+          }
+        }
+      } else {
+        setError(err instanceof Error ? err.message : "No se pudo eliminar");
+      }
+      setBusy(false);
+    }
+  };
+
+  const handleToggleArchived = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await updateCatalogItem(item.id, {
+        archived: !item.archived,
+      });
+      onItemChanged(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo cambiar el estado");
+    } finally {
       setBusy(false);
     }
   };
@@ -301,10 +335,23 @@ export function CatalogCard({
             </button>
             <button
               type="button"
+              className="card__action-btn"
+              onClick={handleToggleArchived}
+              disabled={busy}
+              title={
+                item.archived
+                  ? "Volver a mostrar este producto en el catálogo"
+                  : "Ocultar del catálogo sin perder pedidos/producciones asociadas"
+              }
+            >
+              {item.archived ? "Desarchivar" : "Archivar"}
+            </button>
+            <button
+              type="button"
               className="card__action-btn card__action-btn--danger"
               onClick={handleDeleteItem}
               disabled={busy}
-              title="Eliminar producto"
+              title="Eliminar producto (si no tiene pedidos asociados)"
             >
               {busy ? "…" : "Eliminar"}
             </button>

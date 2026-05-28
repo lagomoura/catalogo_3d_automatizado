@@ -368,3 +368,638 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Fase A — pin toggle ★, badge "Archivado", urgencia.
+ * El rediseño visual completo del card va en Fase B; estos estilos son los
+ * mínimos para que las nuevas interacciones se distingan a simple vista.
+ * --------------------------------------------------------------------------*/
+
+.ticket__archived {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(30, 30, 30, 0.78);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.ticket__pin {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0.1rem 0.35rem;
+  color: var(--muted);
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.ticket__pin:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.ticket__pin[data-pinned="true"] {
+  color: #f4a65a;
+}
+.ticket__pin:active {
+  transform: scale(0.9);
+}
+
+.ticket__urgency {
+  margin-top: 0.4rem;
+}
+
+.urgency-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  color: var(--text);
+}
+.urgency-badge strong { font-weight: 600; }
+.urgency-badge[data-urgency="critico"] {
+  background: color-mix(in srgb, #e5484d 16%, transparent);
+  color: #e5484d;
+}
+.urgency-badge[data-urgency="apretado"] {
+  background: color-mix(in srgb, #f4a65a 20%, transparent);
+  color: #b3641a;
+}
+.urgency-badge[data-urgency="holgado"] {
+  background: color-mix(in srgb, #54c58a 16%, transparent);
+  color: #2b7a4d;
+}
+.urgency-badge[data-urgency="sin-deadline"] {
+  background: color-mix(in srgb, var(--muted) 15%, transparent);
+  color: var(--muted);
+}
+.urgency-badge__slack,
+.urgency-badge__prod {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===========================================================================
+ * Fase B — Rediseño visual: timeline stepper + sub-tabs sticky +
+ * RunSubList enriquecida.
+ *
+ * Convención: las clases nuevas tienen prefijo `tl-` (timeline) o `run-card`
+ * para no chocar con las anteriores. El selector raíz `.ticket--timeline`
+ * habilita el modo nuevo.
+ * ==========================================================================*/
+
+:root {
+  --st-creado: #5b6b7f;
+  --st-creado-soft: #eef1f5;
+  --st-ejecutando: #e8590c;
+  --st-ejecutando-soft: #fff1e6;
+  --st-ejecutado: #4f46e5;
+  --st-ejecutado-soft: #ececfb;
+  --st-entregado: #0d9268;
+  --st-entregado-soft: #e6f5ef;
+
+  --pay-paid: #0d9268;
+  --pay-pending: #e8590c;
+
+  --urg-critico: #e5484d;
+  --urg-apretado: #e8590c;
+  --urg-holgado: #0d9268;
+  --urg-none: #8a93a4;
+}
+
+/* Sub-tabs sticky con scroll horizontal en mobile. */
+.pedidos__substabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(
+    to bottom,
+    var(--bg) 70%,
+    color-mix(in srgb, var(--bg) 88%, transparent) 100%
+  );
+  padding: 0.35rem 0;
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.pedidos__substab--active {
+  background: var(--text);
+  color: var(--card-bg);
+  border-color: var(--text);
+}
+
+/* -------- Timeline OrderCard -------- */
+
+.ticket--timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: 4px 84px 1fr;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.13s ease, box-shadow 0.13s ease,
+    border-color 0.13s ease;
+}
+
+.ticket--timeline:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -16px rgba(0, 0, 0, 0.4);
+}
+
+.ticket--timeline[data-status="CREADO"] { --st: var(--st-creado); --st-soft: var(--st-creado-soft); }
+.ticket--timeline[data-status="EJECUTANDO"] { --st: var(--st-ejecutando); --st-soft: var(--st-ejecutando-soft); }
+.ticket--timeline[data-status="EJECUTADO"] { --st: var(--st-ejecutado); --st-soft: var(--st-ejecutado-soft); }
+.ticket--timeline[data-status="ENTREGADO"] { --st: var(--st-entregado); --st-soft: var(--st-entregado-soft); }
+
+.ticket--timeline .ticket__spine {
+  grid-row: 1 / -1;
+  background: var(--st);
+}
+
+.ticket--timeline[data-status="EJECUTANDO"] {
+  grid-template-columns: 6px 104px 1fr;
+  border-color: var(--st);
+  box-shadow: 0 0 0 2px var(--st-soft),
+    0 12px 26px -18px rgba(232, 89, 12, 0.55);
+}
+
+.ticket--timeline[data-pinned="true"] {
+  border-color: color-mix(in srgb, #f4a65a 55%, var(--border));
+}
+
+.ticket--timeline .ticket__photo {
+  position: relative;
+  background: var(--st-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* No estirar la foto cuando crece el contenido (especialmente las runs):
+     se queda con el alto de la fila principal del card. */
+  align-self: start;
+  aspect-ratio: 1 / 1;
+}
+
+.tl-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  min-width: 0;
+}
+
+.tl-row1 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.tl-row1__id {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.tl-row1__product {
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-row1__buyer {
+  font-size: 0.82rem;
+  color: var(--muted);
+  white-space: nowrap;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pin toggle en la esquina del card */
+.tl-pin {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+  color: var(--muted);
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.tl-pin:hover {
+  background: color-mix(in srgb, #f4a65a 12%, transparent);
+  color: #f4a65a;
+}
+.tl-pin[data-pinned="true"] { color: #f4a65a; }
+.tl-pin:active { transform: scale(0.9); }
+
+/* Chip de pago siempre arriba a la derecha del row1 */
+.tl-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tl-pay[data-paid="true"] {
+  background: color-mix(in srgb, var(--pay-paid) 14%, transparent);
+  color: var(--pay-paid);
+}
+.tl-pay[data-paid="false"] {
+  background: color-mix(in srgb, var(--pay-pending) 14%, transparent);
+  color: var(--pay-pending);
+}
+
+/* Stepper horizontal 4 puntos */
+.tl-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  gap: 0;
+  margin: 0.1rem 0 0.2rem;
+}
+
+.tl-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0;
+}
+
+.tl-step + .tl-step::before {
+  content: "";
+  position: absolute;
+  left: -50%;
+  right: 50%;
+  top: calc(0.2rem + 6px);
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+
+.tl-step[data-state="done"] + .tl-step::before,
+.tl-step[data-state="current"] + .tl-step::before {
+  background: var(--st);
+}
+
+.tl-step__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+
+.tl-step[data-state="done"] .tl-step__dot {
+  background: var(--st);
+  border-color: var(--st);
+}
+.tl-step[data-state="current"] .tl-step__dot {
+  background: var(--st);
+  border-color: var(--st);
+  box-shadow: 0 0 0 4px var(--st-soft);
+}
+
+.tl-step__label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+  line-height: 1;
+}
+.tl-step[data-state="done"] .tl-step__label,
+.tl-step[data-state="current"] .tl-step__label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Línea de microinfo + acción contextual */
+.tl-row3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.tl-row3 .urgency-badge { flex: none; }
+
+.tl-row3__spacer { flex: 1; }
+
+.tl-row3__value {
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.tl-row3__profit {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+}
+.tl-row3__profit[data-tone="ok"] {
+  background: color-mix(in srgb, var(--pay-paid) 12%, transparent);
+  color: var(--pay-paid);
+}
+.tl-row3__profit[data-tone="bad"] {
+  background: color-mix(in srgb, var(--urg-critico) 12%, transparent);
+  color: var(--urg-critico);
+}
+
+.tl-row3__note {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 0.78rem;
+  flex-basis: 100%;
+}
+
+/* Acciones (botones) en fila al final */
+.tl-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.1rem;
+}
+
+/* Badge archivado en la foto */
+.ticket--timeline .ticket__archived {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(40, 40, 40, 0.85);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------------------
+ * Cola de producciones del pedido — stack vertical full-width
+ * (patrón Linear/Notion: una fila por run, NO grid horizontal de cards).
+ *
+ * El contenedor `.run-queue` se renderiza como hijo directo del article
+ * `.ticket--timeline` y ocupa las 3 columnas del grid del card vía
+ * `grid-column: 1 / -1`, de modo que la fila del card no estira la celda
+ * de la foto.
+ * --------------------------------------------------------------------------*/
+
+.run-queue {
+  grid-column: 1 / -1;
+  border-top: 1px dashed var(--border);
+  padding: 0.6rem 0.85rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: color-mix(in srgb, var(--st-soft) 18%, transparent);
+}
+
+.run-queue__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.run-queue__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  counter-reset: run-row;
+}
+
+.run-queue__add {
+  align-self: flex-start;
+  padding: 0.25rem 0.7rem !important;
+  font-size: 0.78rem !important;
+}
+
+/* ---- Fila (run-row) ---- */
+
+.run-row {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem 0.6rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  position: relative;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.run-row[data-status="EM_PRODUCAO"] {
+  border-color: color-mix(in srgb, var(--st-ejecutando) 60%, var(--border));
+  border-left-color: var(--st-ejecutando);
+  background: color-mix(in srgb, var(--st-ejecutando-soft) 38%, var(--card-bg));
+}
+.run-row[data-status="PAUSADA"] {
+  border-color: color-mix(in srgb, #5eb1ff 50%, var(--border));
+  border-left-color: #5eb1ff;
+}
+.run-row[data-status="PENDENTE"] {
+  border-left-color: color-mix(in srgb, var(--muted) 35%, var(--border));
+}
+.run-row[data-status="CONCLUIDA"] {
+  border-left-color: var(--pay-paid);
+  opacity: 0.75;
+}
+.run-row[data-status="CANCELADA"] {
+  border-left-color: var(--urg-critico);
+  opacity: 0.55;
+}
+
+.run-row__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.run-row__status {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex: none;
+}
+.run-row__status[data-status="PENDENTE"] {
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  color: var(--muted);
+}
+.run-row__status[data-status="EM_PRODUCAO"] {
+  background: color-mix(in srgb, var(--st-ejecutando) 18%, transparent);
+  color: var(--st-ejecutando);
+}
+.run-row__status[data-status="EM_PRODUCAO"]::before {
+  content: "●";
+  margin-right: 0.25rem;
+  color: var(--st-ejecutando);
+  animation: live-pulse 1.4s infinite;
+}
+.run-row__status[data-status="PAUSADA"] {
+  background: color-mix(in srgb, #5eb1ff 22%, transparent);
+  color: #2470d4;
+}
+.run-row__status[data-status="CONCLUIDA"] {
+  background: color-mix(in srgb, var(--pay-paid) 16%, transparent);
+  color: var(--pay-paid);
+}
+.run-row__status[data-status="CANCELADA"] {
+  background: color-mix(in srgb, var(--urg-critico) 16%, transparent);
+  color: var(--urg-critico);
+}
+
+.run-row__title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.25;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.run-row__title-sub {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.run-row__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* `.run-chip` y `.run-chip__swatch` se reusan tal cual del bloque previo. */
+.run-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  font-size: 0.74rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.run-chip__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
+  display: inline-block;
+}
+
+.run-row__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.run-row__bar {
+  flex: 1 1 60%;
+  min-width: 120px;
+  height: 6px;
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.run-row__fill {
+  display: block;
+  height: 100%;
+  background: var(--st-ejecutando, var(--accent));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.run-row[data-status="PAUSADA"] .run-row__fill { background: #5eb1ff; }
+.run-row[data-status="CONCLUIDA"] .run-row__fill { background: var(--pay-paid); }
+
+.run-row__pct {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--muted);
+  min-width: 2.6rem;
+  text-align: right;
+}
+
+.run-row__remaining {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.run-row__pauses {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.run-row__actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.run-row__actions .tbtn {
+  padding: 0.22rem 0.55rem;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 560px) {
+  .run-row__head { flex-wrap: wrap; }
+  .run-row__title { font-size: 0.86rem; }
+  .run-row__pct { min-width: auto; }
+}
+
+/* Estilo del toggle "ver producciones" del card — fila más informativa */
+.ticket__runs-toggle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
