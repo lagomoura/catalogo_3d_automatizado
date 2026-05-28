@@ -1476,6 +1476,79 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
         )}
       </section>
 
+      {/* ---- Cotizaciones archivadas ---- */}
+      {archived.length > 0 && (
+        <section className="calc__history">
+          <div className="calc__history-head">
+            <h3>
+              Cotizaciones archivadas
+              {archived.length > 5 && (
+                <span className="hint"> · mostrando 5 de {archived.length}</span>
+              )}
+            </h3>
+            {archived.length > 5 && (
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() => setHistoryModalOpen(true)}
+                title="Ver todas las cotizaciones archivadas"
+              >
+                Ver todas ({archived.length})
+              </button>
+            )}
+          </div>
+          <ul className="calc__history-list">
+            {archived.slice(0, 5).map((q) => (
+              <li key={q.id} className="calc__history-item">
+                <div className="calc__history-main">
+                  <strong>{q.piece.pieceName || "Sin nombre"}</strong>
+                  <span className="hint">
+                    archivada{" "}
+                    {new Date(q.archivedAt ?? q.updatedAt ?? q.createdAt).toLocaleString("es-AR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    {" · "}
+                    {q.quantity} u · ×{q.piece.profitMultiplier} ·{" "}
+                    {formatARS(q.breakdown.total)}/u
+                    {q.piece.materials && q.piece.materials.length > 1
+                      ? ` · ${q.piece.materials.length} filamentos`
+                      : ""}
+                    {q.chargeOverride != null && " · ✎ valor manual"}
+                  </span>
+                </div>
+                <span className="calc__history-total">
+                  {formatARS(
+                    q.chargeOverride ?? round2(q.breakdown.total * q.quantity),
+                  )}
+                </span>
+                <div className="calc__history-actions">
+                  <button
+                    type="button"
+                    className="btn btn--sm btn--ghost"
+                    onClick={() => handleRestoreArchived(q)}
+                    title="Restaurar a cotizaciones activas"
+                  >
+                    Restaurar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--sm btn--ghost"
+                    onClick={() => requestDeleteArchived(q)}
+                    title="Eliminar permanentemente"
+                    aria-label="Eliminar permanentemente"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <HistoryModal
         open={historyModalOpen}
         onClose={() => setHistoryModalOpen(false)}

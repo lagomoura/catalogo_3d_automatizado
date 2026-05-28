@@ -144,20 +144,11 @@ export default function AdminPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={tab === "reportes"}
-          className={`tab ${tab === "reportes" ? "tab--active" : ""}`}
-          onClick={() => setTab("reportes")}
+          aria-selected={tab === "calculadora"}
+          className={`tab ${tab === "calculadora" ? "tab--active" : ""}`}
+          onClick={() => setTab("calculadora")}
         >
-          Reportes
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "caja"}
-          className={`tab ${tab === "caja" ? "tab--active" : ""}`}
-          onClick={() => setTab("caja")}
-        >
-          Control de caja
+          Calculadora & Cotizaciones
         </button>
         <button
           type="button"
@@ -168,15 +159,6 @@ export default function AdminPage() {
           onClick={() => setTab("pedidos")}
         >
           Pedidos & Producción
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "calculadora"}
-          className={`tab ${tab === "calculadora" ? "tab--active" : ""}`}
-          onClick={() => setTab("calculadora")}
-        >
-          Calculadora
         </button>
         <button
           type="button"
@@ -208,11 +190,29 @@ export default function AdminPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "reportes"}
+          className={`tab ${tab === "reportes" ? "tab--active" : ""}`}
+          onClick={() => setTab("reportes")}
+        >
+          Reportes
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "caja"}
+          className={`tab ${tab === "caja" ? "tab--active" : ""}`}
+          onClick={() => setTab("caja")}
+        >
+          Control de caja
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "orcamento"}
           className={`tab ${tab === "orcamento" ? "tab--active" : ""}`}
           onClick={() => setTab("orcamento")}
         >
-          Presupuestos
+          Generador de Presupuestos (PDF)
         </button>
       </nav>
 
