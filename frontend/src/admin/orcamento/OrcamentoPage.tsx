@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createQuote,
   deleteQuote,
@@ -89,6 +89,9 @@ export function OrcamentoPage({
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [tuEmpresaOpen, setTuEmpresaOpen] = useState(true);
+  const profileHydrated = useRef(false);
+  const clienteHeaderRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     void getQuotes().then(setQuotes).catch(() => {});
@@ -122,6 +125,10 @@ export function OrcamentoPage({
       business_phone: profile.business_phone,
     }));
     setLogoPath(profile.business_logo_path ?? null);
+    if (!profileHydrated.current) {
+      setTuEmpresaOpen(false);
+      profileHydrated.current = true;
+    }
   }, [profile, editing]);
 
   useEffect(() => {
@@ -256,6 +263,13 @@ export function OrcamentoPage({
       const saved = await putBusinessProfile(payload);
       setProfile(saved);
       setProfileMsg("Guardado. Se usará como default en los próximos.");
+      setTuEmpresaOpen(false);
+      window.requestAnimationFrame(() => {
+        clienteHeaderRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
     } catch (err) {
       setProfileMsg(
         err instanceof Error ? err.message : "Error al guardar el perfil",
@@ -456,99 +470,111 @@ export function OrcamentoPage({
 
       <div className="orc__cols">
         <section className="orc__form">
-          <h3>Tu empresa</h3>
-          <div className="orc__profile-row">
-            <button
-              type="button"
-              className="btn-ghost btn-ghost--sm"
-              onClick={handleSaveAsDefault}
-              disabled={savingProfile || !draft.business_name.trim()}
-              title="Guarda estos datos como default para los próximos presupuestos"
-            >
-              {savingProfile ? "Guardando…" : "Guardar como datos por defecto"}
-            </button>
-            {profileMsg ? (
-              <span className="orc__profile-msg">{profileMsg}</span>
-            ) : null}
-            {!profile && !profileMsg ? (
-              <span className="orc__profile-hint">
-                Llená tu marca una vez y la reusás en cada presupuesto.
-              </span>
-            ) : null}
-          </div>
-          <div className="form-grid">
-            <label className="field field--full">
-              Nombre de la empresa *
-              <input
-                type="text"
-                value={draft.business_name}
-                onChange={(e) => patch({ business_name: e.target.value })}
-                required
-              />
-            </label>
-            <label className="field field--full">
-              Slogan / especialidad
-              <input
-                type="text"
-                value={draft.business_slogan ?? ""}
-                onChange={(e) =>
-                  patch({ business_slogan: e.target.value || null })
-                }
-              />
-            </label>
-            <label className="field">
-              Email
-              <input
-                type="email"
-                value={draft.business_email ?? ""}
-                onChange={(e) =>
-                  patch({ business_email: e.target.value || null })
-                }
-              />
-            </label>
-            <label className="field">
-              Teléfono
-              <input
-                type="tel"
-                value={draft.business_phone ?? ""}
-                onChange={(e) =>
-                  patch({ business_phone: e.target.value || null })
-                }
-              />
-            </label>
-            <label className="field field--full">
-              Logo
-              <div className="orc__logo-row">
-                {logoPath ? (
-                  <img
-                    src={resolveStorageUrl(`/${logoPath}`)}
-                    alt="logo"
-                    className="orc__logo-preview"
-                  />
-                ) : (
-                  <span className="orc__logo-empty">Sin logo</span>
-                )}
+          <details
+            className="orc__section"
+            open={tuEmpresaOpen}
+            onToggle={(e) =>
+              setTuEmpresaOpen((e.currentTarget as HTMLDetailsElement).open)
+            }
+          >
+            <summary className="orc__section-summary">
+              <span className="orc__section-title">Tu empresa</span>
+              {profileMsg ? (
+                <span className="orc__profile-msg">{profileMsg}</span>
+              ) : null}
+            </summary>
+            <div className="orc__profile-row">
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm"
+                onClick={handleSaveAsDefault}
+                disabled={savingProfile || !draft.business_name.trim()}
+                title="Guarda estos datos como default para los próximos presupuestos"
+              >
+                {savingProfile
+                  ? "Guardando…"
+                  : "Guardar como datos por defecto"}
+              </button>
+              {!profile && !profileMsg ? (
+                <span className="orc__profile-hint">
+                  Llená tu marca una vez y la reusás en cada presupuesto.
+                </span>
+              ) : null}
+            </div>
+            <div className="form-grid">
+              <label className="field field--full">
+                Nombre de la empresa *
                 <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  type="text"
+                  value={draft.business_name}
+                  onChange={(e) => patch({ business_name: e.target.value })}
+                  required
+                />
+              </label>
+              <label className="field field--full">
+                Slogan / especialidad
+                <input
+                  type="text"
+                  value={draft.business_slogan ?? ""}
                   onChange={(e) =>
-                    handleLogoUpload(e.target.files?.[0] ?? null)
+                    patch({ business_slogan: e.target.value || null })
                   }
                 />
-                {logoPath ? (
-                  <button
-                    type="button"
-                    className="btn--inline"
-                    onClick={removeLogo}
-                  >
-                    Quitar
-                  </button>
-                ) : null}
-              </div>
-            </label>
-          </div>
+              </label>
+              <label className="field">
+                Email
+                <input
+                  type="email"
+                  value={draft.business_email ?? ""}
+                  onChange={(e) =>
+                    patch({ business_email: e.target.value || null })
+                  }
+                />
+              </label>
+              <label className="field">
+                Teléfono
+                <input
+                  type="tel"
+                  value={draft.business_phone ?? ""}
+                  onChange={(e) =>
+                    patch({ business_phone: e.target.value || null })
+                  }
+                />
+              </label>
+              <label className="field field--full">
+                Logo
+                <div className="orc__logo-row">
+                  {logoPath ? (
+                    <img
+                      src={resolveStorageUrl(`/${logoPath}`)}
+                      alt="logo"
+                      className="orc__logo-preview"
+                    />
+                  ) : (
+                    <span className="orc__logo-empty">Sin logo</span>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    onChange={(e) =>
+                      handleLogoUpload(e.target.files?.[0] ?? null)
+                    }
+                  />
+                  {logoPath ? (
+                    <button
+                      type="button"
+                      className="btn--inline"
+                      onClick={removeLogo}
+                    >
+                      Quitar
+                    </button>
+                  ) : null}
+                </div>
+              </label>
+            </div>
+          </details>
 
-          <h3>Cliente</h3>
+          <h3 ref={clienteHeaderRef}>Cliente</h3>
           <div className="orc__contact-picker-row">
             <label className="field field--full">
               Elegir cliente existente
