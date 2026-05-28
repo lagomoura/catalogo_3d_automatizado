@@ -49,6 +49,41 @@ const MULTIPLIERS: { value: ProfitMultiplier; label: string; sub: string }[] = [
   { value: 5, label: "×5", sub: "Llaveros" },
 ];
 
+function formatPieceForQuote(
+  pieceName: string,
+  printHours: number,
+  printMinutes: number,
+  materialLines: MaterialLine[],
+  stockMaterials: Material[],
+): string {
+  const baseName = pieceName.trim() || "Cotización 3D";
+  const parts: string[] = [];
+
+  const totalMin =
+    Math.max(0, printHours) * 60 + Math.max(0, printMinutes);
+  if (totalMin > 0) {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h > 0 && m > 0) parts.push(`${h}h ${m}min`);
+    else if (h > 0) parts.push(`${h}h`);
+    else parts.push(`${m}min`);
+  }
+
+  const matSummaries = materialLines
+    .filter((l) => l.materialId != null && l.grams > 0)
+    .map((l) => {
+      const mat = stockMaterials.find((m) => m.id === l.materialId);
+      if (!mat) return null;
+      const unit = mat.unit === "g" ? "g" : mat.unit === "ml" ? "ml" : "u";
+      return `${l.grams}${unit} ${mat.name}`;
+    })
+    .filter((s): s is string => s != null);
+
+  if (matSummaries.length > 0) parts.push(matSummaries.join(", "));
+
+  return parts.length > 0 ? `${baseName} (${parts.join(" · ")})` : baseName;
+}
+
 function numField(v: string): number {
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -551,9 +586,17 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
 
   const handleCreateQuoteDraft = () => {
     if (!onCreateQuoteDraft || charge <= 0) return;
-    const description = piece.pieceName?.trim() || "Cotización 3D";
+    const description = formatPieceForQuote(
+      piece.pieceName,
+      piece.printHours,
+      piece.printMinutes,
+      piece.materials,
+      stockMaterials,
+    );
+    const qty = Math.max(1, quantity);
+    const unitPrice = Math.round((charge / qty) * 100) / 100;
     onCreateQuoteDraft({
-      items: [{ description, quantity: 1, unit_price: charge }],
+      items: [{ description, quantity: qty, unit_price: unitPrice }],
     });
   };
 
@@ -1288,7 +1331,7 @@ export function CalculadoraPage({ onCreateOrder, onNavigate, onCreateQuoteDraft 
                     disabled={charge <= 0}
                     title="Mandar este total al Generador de Presupuestos"
                   >
-                    Presupuesto →
+                    Crear Presupuesto PDF
                   </button>
                   <button
                     type="button"

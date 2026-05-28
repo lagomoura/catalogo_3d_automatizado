@@ -112,9 +112,17 @@ export function OrcamentoPage({
   };
 
   useEffect(() => {
-    if (!editing) startNew();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile]);
+    if (!profile || editing) return;
+    setDraft((prev) => ({
+      ...prev,
+      business_name: profile.business_name ?? prev.business_name,
+      business_slogan: profile.business_slogan,
+      business_logo_url: profile.business_logo_url,
+      business_email: profile.business_email,
+      business_phone: profile.business_phone,
+    }));
+    setLogoPath(profile.business_logo_path ?? null);
+  }, [profile, editing]);
 
   useEffect(() => {
     if (!pendingQuoteDraft) return;
