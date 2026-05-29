@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  createMaterialMovement,
-  resolveStorageUrl,
-  type OrderCreatePayload,
-} from "../../api/client";
+import { resolveStorageUrl, type OrderCreatePayload } from "../../api/client";
 import type {
   CatalogItem,
   Contact,
@@ -105,7 +101,32 @@ export function OrderForm({
     setBusy(true);
     setError(null);
     try {
-      const created = await onCreate({
+      // Consumo de material POR UNIDAD: el backend lo stampa en cada
+      // ProductionRun y descuenta el stock al INICIAR cada pieza (no al crear
+      // el pedido), devolviéndolo si se cancela. Las cotizaciones modernas usan
+      // `materials[]` (multi-color); las viejas mandan `materialId` +
+      // `gramsPerUnit` y caemos a una sola línea.
+      const materialLines: { material_id: number; grams_per_unit: number }[] = [];
+      if (pendingQuote?.materials && pendingQuote.materials.length > 0) {
+        for (const m of pendingQuote.materials) {
+          if (m.materialId && (m.gramsPerUnit || 0) > 0) {
+            materialLines.push({
+              material_id: m.materialId,
+              grams_per_unit: m.gramsPerUnit,
+            });
+          }
+        }
+      } else if (
+        pendingQuote?.materialId &&
+        (pendingQuote.gramsPerUnit ?? 0) > 0
+      ) {
+        materialLines.push({
+          material_id: pendingQuote.materialId,
+          grams_per_unit: pendingQuote.gramsPerUnit as number,
+        });
+      }
+
+      await onCreate({
         catalog_item_id: catalogId,
         quantity,
         value: valueNum,
@@ -117,59 +138,12 @@ export function OrderForm({
         priority,
         deadline: deadline || null,
         cost_items: quoteCosts ?? undefined,
+        materials: materialLines.length > 0 ? materialLines : undefined,
         quote_id: pendingQuote?.source_quote_id ?? null,
         // Propaga el tiempo por pieza a las ProductionRun que el backend genera.
         estimated_minutes_per_unit:
           pendingQuote?.estimatedMinutesPerUnit ?? null,
       });
-
-      // Si la cotización venía con material(es) vinculado(s), descontá del
-      // stock con un OUT por material trazado al pedido recién creado. Las
-      // cotizaciones modernas usan `materials[]` (multi-color); las viejas
-      // mandan `materialId` + `gramsPerUnit` y caemos a una sola línea.
-      const consumeLines: { materialId: number; grams: number }[] = [];
-      if (pendingQuote?.materials && pendingQuote.materials.length > 0) {
-        for (const m of pendingQuote.materials) {
-          const grams = (m.gramsPerUnit || 0) * quantity;
-          if (m.materialId && grams > 0) {
-            consumeLines.push({ materialId: m.materialId, grams });
-          }
-        }
-      } else if (
-        pendingQuote?.materialId &&
-        (pendingQuote.gramsPerUnit ?? 0) > 0
-      ) {
-        consumeLines.push({
-          materialId: pendingQuote.materialId,
-          grams: (pendingQuote.gramsPerUnit as number) * quantity,
-        });
-      }
-
-      if (consumeLines.length > 0) {
-        const failures: string[] = [];
-        for (const line of consumeLines) {
-          try {
-            await createMaterialMovement(line.materialId, {
-              kind: "OUT",
-              grams: line.grams,
-              order_id: created.id,
-              note: `Consumo automático del pedido #${created.id}`,
-            });
-          } catch (mvErr) {
-            // No bloqueamos el flujo del pedido si el stock no alcanza — solo
-            // avisamos. La intervención manual queda al admin desde Estoque.
-            console.warn("No se pudo descontar stock:", mvErr);
-            failures.push(
-              mvErr instanceof Error ? mvErr.message : "error desconocido",
-            );
-          }
-        }
-        if (failures.length > 0) {
-          setError(
-            `Pedido creado, pero no se pudo descontar stock de ${failures.length} material(es): ${failures.join("; ")}`,
-          );
-        }
-      }
 
       reset();
       onPendingQuoteConsumed?.();

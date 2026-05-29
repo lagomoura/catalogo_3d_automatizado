@@ -14,6 +14,11 @@ interface Props {
   onClose: () => void;
   onCreate: (payload: MaterialCreatePayload) => Promise<void>;
   onUpdate: (id: number, payload: MaterialUpdatePayload) => Promise<void>;
+  /**
+   * Corrección de stock al editar: crea un movimiento ADJUST con el delta para
+   * preservar la auditoría. `delta` está en la unidad nativa del material.
+   */
+  onAdjustStock?: (id: number, delta: number) => Promise<void>;
 }
 
 type FilamentKind = "PLA" | "PETG" | "ABS" | "TPU";
@@ -110,6 +115,7 @@ export function MaterialForm({
   onClose,
   onCreate,
   onUpdate,
+  onAdjustStock,
 }: Props) {
   const isEdit = !!material;
   const [category, setCategory] = useState<Category>(
@@ -129,6 +135,9 @@ export function MaterialForm({
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [stockQty, setStockQty] = useState("1000");
+  // Edición: valor absoluto del stock para corregir cargas iniciales erróneas.
+  // Al guardar, si cambió, se aplica un ADJUST con el delta (auditado).
+  const [stockCorrect, setStockCorrect] = useState("");
   const [costInput, setCostInput] = useState("");
   const [minStock, setMinStock] = useState("");
   const [notes, setNotes] = useState("");
@@ -161,6 +170,9 @@ export function MaterialForm({
       setBrand(material.brand ?? "");
       setModel(material.model ?? "");
       setStockQty("");
+      setStockCorrect(
+        material.stock_g != null ? material.stock_g.toString() : "",
+      );
       // cost_per_g (stored) → cost input (display).
       // Si la unidad usa "per thousand" (g→kg, ml→L), multiplico ×1000;
       // si es "un", se muestra tal cual.
@@ -188,6 +200,7 @@ export function MaterialForm({
       setBrand("");
       setModel("");
       setStockQty("1000");
+      setStockCorrect("");
       setCostInput("");
       setMinStock("");
       setNotes("");
@@ -246,6 +259,16 @@ export function MaterialForm({
           notes: notes.trim() || null,
         };
         await onUpdate(material.id, payload);
+        // Corrección de stock: si el valor absoluto cambió, aplicamos un ADJUST
+        // con el delta para dejar el inventario auditado (no se edita stock_g
+        // directo). El stock se guarda en unidad nativa, sin conversión ×1000.
+        const corrected = toNumberOrNull(stockCorrect);
+        if (onAdjustStock != null && corrected != null) {
+          const delta = corrected - (material.stock_g ?? 0);
+          if (Math.abs(delta) > 1e-9) {
+            await onAdjustStock(material.id, delta);
+          }
+        }
       } else {
         const payload: MaterialCreatePayload = {
           name: finalName,
@@ -511,7 +534,21 @@ export function MaterialForm({
                     placeholder={unitOpt.qtyPlaceholder}
                   />
                 </label>
-              ) : null}
+              ) : (
+                <label className="mat-form__field">
+                  <span>
+                    Stock actual (corregir, {unit === "un" ? "unidades" : unit})
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={stockCorrect}
+                    onChange={(e) => setStockCorrect(e.target.value)}
+                    placeholder={unitOpt.qtyPlaceholder}
+                  />
+                </label>
+              )}
               <label className="mat-form__field">
                 <span>{unitOpt.costLabel}</span>
                 <input
@@ -526,8 +563,9 @@ export function MaterialForm({
             </div>
             {isEdit ? (
               <p className="form-hint">
-                Para cambiar el stock usá un movimiento (IN / OUT / ADJUST) — así
-                queda auditado.
+                Editá el stock acá para corregir una carga inicial errónea —
+                queda registrado como un ajuste auditado. Para entradas y salidas
+                del día a día usá el botón “Movimiento”.
               </p>
             ) : null}
           </section>

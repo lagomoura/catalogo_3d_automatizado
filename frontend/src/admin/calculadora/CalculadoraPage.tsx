@@ -497,10 +497,19 @@ export function CalculadoraPage({
   const createOrderFromQuote = (q: SavedQuote) => {
     const minutesPerUnit =
       Math.max(0, q.piece.printHours) * 60 + Math.max(0, q.piece.printMinutes);
+    // Consumo de material por unidad: sale de las líneas guardadas de la quote
+    // (no del form actual). Habilita el descuento de stock al iniciar la pieza.
+    const quoteMaterials = (q.piece.materials ?? [])
+      .filter((l) => l.materialId != null && l.grams > 0)
+      .map((l) => ({
+        materialId: l.materialId as number,
+        gramsPerUnit: l.grams,
+      }));
     onCreateOrder({
       value: q.chargeOverride ?? round2(q.breakdown.total * q.quantity),
       quantity: q.quantity,
       costItems: breakdownToCostItems(q.breakdown),
+      materials: quoteMaterials.length > 0 ? quoteMaterials : undefined,
       estimatedMinutesPerUnit: minutesPerUnit > 0 ? minutesPerUnit : null,
     });
   };

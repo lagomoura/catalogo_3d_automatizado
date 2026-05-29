@@ -150,6 +150,16 @@ export function EstoquePage() {
     await refresh();
   };
 
+  // Corrección de stock desde "Editar": delta absoluto → movimiento ADJUST.
+  const handleAdjustStock = async (materialId: number, delta: number) => {
+    await createMaterialMovement(materialId, {
+      kind: "ADJUST",
+      grams: delta,
+      note: "Corrección de inventario",
+    });
+    await refresh();
+  };
+
   return (
     <div className="estoque">
       <header className="estoque__header">
@@ -315,6 +325,7 @@ export function EstoquePage() {
         }}
         onCreate={handleCreate}
         onUpdate={handleUpdate}
+        onAdjustStock={handleAdjustStock}
       />
       <MovementForm
         open={movementMaterial !== null}

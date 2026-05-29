@@ -85,10 +85,11 @@
 - **Endpoints destacados**:
   - `GET /api/orders?status=&payment_status=&include_drafts=`.
   - `GET /api/orders/summary?start=&end=&prazo_window_days=`.
-  - `POST /api/orders` (acepta `deadline`, `sale_date`, `is_draft`).
+  - `POST /api/orders` (acepta `deadline`, `sale_date`, `is_draft`, `materials` — consumo por unidad que se stampa en cada `ProductionRun`).
   - `POST /api/orders/{id}/start | /advance` (transiciones de estado, con índice único para máx 1 EJECUTANDO).
   - `POST /api/orders/{id}/payment` (vuelca al control de caja).
   - `PUT /api/orders/{id}/costs` (replace) + `POST /api/orders/{id}/costs/item` (append).
+  - `POST /api/orders/{id}/reprint` (reimpresión): descuenta material del stock (un `OUT` por línea, `allow_negative`) y agrega un `OrderCostItem` "Reimpresión" (`per_unit=false`); si no se manda `amount`, se computa desde gramos × `cost_per_g`. UI: el `ExtraCostModal` suma un selector de material + gramos (modo "Calcular").
 
 ### 2.3 Clientes (CRM)
 
@@ -127,9 +128,10 @@
 
 ### 3.2 Estoque (Materiales)
 
-- **Qué hace**: inventario de materiales (PLA/PETG/ABS/TPU/RESIN/OTRO) con marca, color, modelo, stock en gramos, costo por gramo. Auditoría completa via `MaterialMovement` (IN/OUT/ADJUST). El stock se recalcula al registrar movements, con validación de no-negativo (409 si rompe). Vinculación opcional con `Order` para trazabilidad de consumo.
-- **Backend**: `routes/materials.py`. Modelos `Material`, `MaterialMovement`.
-- **Frontend admin**: tab **Estoque** (`admin/estoque/EstoquePage.tsx`) con `MaterialForm`, `MovementForm`, `OnboardingModal`.
+- **Qué hace**: inventario de materiales (PLA/PETG/ABS/TPU/RESIN/OTRO) con marca, color, modelo, stock en gramos, costo por gramo. Auditoría completa via `MaterialMovement` (IN/OUT/ADJUST). El stock se recalcula al registrar movements, con validación de no-negativo (409 si rompe; producción usa `allow_negative` para no bloquear el piso). Vinculación opcional con `Order` y `ProductionRun` (`production_run_id`) para trazabilidad de consumo.
+- **Corregir stock desde "Editar"**: el form de edición tiene un campo **"Stock actual (corregir)"** precargado con el valor actual. Si se cambia, además del PATCH se crea un `MaterialMovement` ADJUST con el delta (`note="Corrección de inventario"`) — así se arregla una carga inicial errónea sin romper la auditoría (no se edita `stock_g` directo). Para entradas/salidas del día a día sigue el botón "Movimiento".
+- **Backend**: `routes/materials.py`. Modelos `Material`, `MaterialMovement`. Helper reutilizable `apply_stock_movement(...)` (lo usan Producción y la reimpresión).
+- **Frontend admin**: tab **Estoque** (`admin/estoque/EstoquePage.tsx`) con `MaterialForm` (prop `onAdjustStock`), `MovementForm`, `OnboardingModal`.
 - **Endpoints**:
   - `GET / POST / PATCH / DELETE /api/materials`.
   - `GET / POST /api/materials/{id}/movements`.
@@ -137,7 +139,10 @@
 ### 3.3 Producción (tracking de impresiones)
 
 - **Qué hace**: cada impresión es un `ProductionRun` con state machine (PENDENTE → EM_PRODUCAO ↔ PAUSADA → CONCLUIDA/CANCELADA). Acumula `total_paused_seconds` reales en cada pausa/resume. Frontend muestra **timer en vivo** del tiempo restante (refresca cada 1s client-side, congelado en PAUSADA, signo "+" si excedido). 4 KPI cards + 6 sub-tabs. Vinculación opcional con order, printer, material.
-- **Volver a la cola (`requeue`)**: deshace el inicio de una pieza en curso/pausada (EM_PRODUCAO/PAUSADA → PENDENTE), libera la impresora y **descarta el progreso** (cronómetro a cero; conserva la impresora asignada). Si era la última pieza activa de un pedido que había avanzado a EJECUTANDO, el pedido vuelve a CREADO (espejo de `start`). Expuesto en el kebab del hero de impresora y en "Gestionar piezas" (botón "↩ Volver a la cola", con confirmación).
+- **Inventario↔Producción (descuento por pieza)**: el consumo de material se descuenta al **iniciar** cada pieza, no al crear el pedido. Cada `ProductionRun` nace con un `consumption_snapshot` (JSON `[{material_id, grams}]` por unidad) tomado de las líneas de material de la Calculadora al crear el pedido (`OrderCreate.materials`). `start` genera un `OUT` por filamento (idempotente vía `stock_deducted`); `finish` lo deja consumido. Soporta multicolor (un movimiento por material).
+  - **Devolución al cancelar**: `cancel?restock=true` devuelve el material al stock (un `IN` por línea); `restock=false` lo da por perdido. El frontend pregunta al usuario al cancelar una pieza **ya iniciada** (dos confirmaciones: cancelar la acción / devolver / no devolver). Cancelar una pieza PENDENTE no toca stock.
+  - **Reabrir/Requeue**: `requeue` devuelve el material automáticamente (la pieza vuelve a la cola y se re-descuenta al re-iniciarla); `reopen` a un estado iniciado vuelve a descontar.
+- **Volver a la cola (`requeue`)**: deshace el inicio de una pieza en curso/pausada (EM_PRODUCAO/PAUSADA → PENDENTE), libera la impresora, **descarta el progreso** (cronómetro a cero; conserva la impresora asignada) y **devuelve el material al stock**. Si era la última pieza activa de un pedido que había avanzado a EJECUTANDO, el pedido vuelve a CREADO (espejo de `start`). Expuesto en el kebab del hero de impresora y en "Gestionar piezas" (botón "↩ Volver a la cola", con confirmación).
 - **Invariante de ocupación**: una impresora sostiene **una sola pieza activa (EM_PRODUCAO *o* PAUSADA)** a la vez — una pieza pausada sigue ocupando físicamente la impresora. Se garantiza en frontend (`busyPrinterIds`), backend (`start_run` rechaza con 409) y DB (índice único parcial `one_run_per_printer` sobre `status IN ('EM_PRODUCAO','PAUSADA')`, solo Postgres). **Prerrequisito de deploy**: si en prod ya hay impresoras con PAUSADA + EM_PRODUCAO simultáneas (bug previo), limpiar esos duplicados con requeue/cancel antes de desplegar, o el índice ampliado no se recreará.
 - **Backend**: `routes/production.py`. Modelo `ProductionRun`.
 - **Frontend admin**: tab **Producción** (`admin/produccion/ProduccionPage.tsx`) con `ProductionRunForm`.
@@ -145,7 +150,7 @@
   - `GET /api/production?status=&printer_id=&order_id=`.
   - `GET /api/production/summary?start=&end=`.
   - `POST /api/production`, `PATCH /api/production/{id}`.
-  - `POST /api/production/{id}/{start|pause|resume|finish|cancel|reopen|requeue}` (409 si transición inválida). `reopen`: revierte una run terminal (CONCLUIDA/CANCELADA) a su estado previo. `requeue`: EM_PRODUCAO/PAUSADA → PENDENTE.
+  - `POST /api/production/{id}/{start|pause|resume|finish|cancel|reopen|requeue}` (409 si transición inválida). `start` descuenta el material del `consumption_snapshot`. `cancel?restock=bool` devuelve (o no) el material. `reopen`: revierte una run terminal (CONCLUIDA/CANCELADA) a su estado previo (re-descuenta si vuelve a un estado iniciado). `requeue`: EM_PRODUCAO/PAUSADA → PENDENTE (devuelve material).
 
 ---
 
@@ -158,7 +163,7 @@
     - Filamentos: `max(precio/kg) × Σ gramos` (regla multicolor — cobramos como si todo el filamento fuera el más caro de la pieza).
     - Insumos / líquidos: `Σ (qty × costo unitario)` directo.
     - El campo "Otros insumos sueltos ($)" sigue disponible para cosas no rastreadas (pegamento, alcohol) — se suma con +30%.
-    Cada material se descuenta del stock con su propio movement OUT trazado al pedido.
+    Las líneas de material viajan al pedido (`OrderCreate.materials`) y se descuentan del stock **al iniciar cada pieza** en Producción (no al crear el pedido), devolviéndose si la pieza se cancela. Ver §3.3.
   - Selección de **Impressora** del inventario (auto-completa `cost_per_hour`, reemplaza el cálculo watts × kWh + desgaste).
   - **Taxa de marketplace** (presets: Mercado Libre 14% / 17.5%, Shopee 12%, Magalu 16%, custom).
   - Margen ×3 Mayorista / ×4 Minorista / ×5 Llaveros + insumos extra +30%.
@@ -168,7 +173,7 @@
   - **Parámetros avanzados** plegables (`<details>`): precio filamento fallback, kWh, watts, vida útil, repuesto, % margen de error.
   - Override manual del total a cobrar.
   - Historia de últimas 5 cotizaciones (localStorage). Quotes viejas (1 sólo material) siguen abriendo via migración transparente.
-  - Bridge "Crear pedido con esta cotización" → al guardar el pedido, **descuenta automáticamente del stock** un OUT por filamento, todos trazados al `order_id` recién creado.
+  - Bridge "Crear pedido con esta cotización" → las líneas de material se mandan al pedido (`OrderCreate.materials`) y se stampan en cada `ProductionRun`; el stock se descuenta **al iniciar cada pieza** (ver §3.3), no al crear el pedido.
 - **Frontend admin**: tab **Calculadora** (`admin/calculadora/CalculadoraPage.tsx`) + `calc.ts` (función pura — `MaterialLine`, `materialsTotals()`, `computeQuote()` con `resolveCostPerG` opcional) + `storage.ts` (persistencia local con `materialLines[]`).
 - **Notas**: el cálculo es pure function; multicolor se modela arriba del cálculo "1 precio × 1 gramaje" inyectando `(Σ g, max $/kg)` antes de llamar a `computeQuote`. Mantiene back-compat con cotizaciones viejas (`materialId` único → primera línea legacy).
 

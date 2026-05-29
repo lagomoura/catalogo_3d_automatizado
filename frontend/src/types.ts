@@ -548,6 +548,14 @@ export interface ProductionRun {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  /** Integración Inventario↔Producción: si esta pieza ya descontó stock. */
+  stock_deducted: boolean;
+  /** Consumo de material por pieza (para el diálogo de devolución al cancelar). */
+  consumption: {
+    material_id: number;
+    material_name: string | null;
+    grams: number;
+  }[];
 }
 
 export interface ProductionRunCreatePayload {

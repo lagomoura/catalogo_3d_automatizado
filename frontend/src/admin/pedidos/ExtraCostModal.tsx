@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Order } from "../../types";
+import { getMaterials } from "../../api/client";
+import type { Material, Order } from "../../types";
 import { formatARS } from "../../utils/format";
 import {
   breakdownToCostItems,
   computeProfitability,
   computeQuote,
+  makeMaterialLine,
   round2,
+  type MaterialLine,
   type QuotePiece,
+  type ResolvedMaterial,
 } from "../calculadora/calc";
 import { loadConfig } from "../calculadora/storage";
 
@@ -14,8 +18,16 @@ interface Props {
   order: Order;
   busy?: boolean;
   onClose: () => void;
-  /** Recibe el costo extra ya resuelto. per_unit=false lo decide el caller. */
-  onSubmit: (item: { concept: string; amount: number }) => Promise<void> | void;
+  /**
+   * Recibe el costo extra resuelto. Si `materials` viene con líneas, el caller
+   * además descuenta ese material del stock (reimpresión). per_unit=false.
+   */
+  onSubmit: (item: {
+    concept: string;
+    amount: number;
+    note: string;
+    materials: { material_id: number; grams: number }[];
+  }) => Promise<void> | void;
 }
 
 const numOr0 = (s: string): number => {
@@ -37,6 +49,8 @@ export function ExtraCostModal({ order, busy, onClose, onSubmit }: Props) {
   const [minutes, setMinutes] = useState("");
   const [grams, setGrams] = useState("");
   const [supplies, setSupplies] = useState("");
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [matLines, setMatLines] = useState<MaterialLine[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,7 +61,33 @@ export function ExtraCostModal({ order, busy, onClose, onSubmit }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Materiales del inventario para resolver costo real por gramo y descontar
+  // stock al reimprimir.
+  useEffect(() => {
+    void getMaterials().then(setMaterials).catch(() => setMaterials([]));
+  }, []);
+
+  const resolveMaterial = useMemo(() => {
+    const byId = new Map(materials.map((m) => [m.id, m]));
+    return (id: number): ResolvedMaterial | null => {
+      const m = byId.get(id);
+      if (!m) return null;
+      return { costPer: m.cost_per_g, unit: (m.unit ?? "g") as "g" | "un" | "ml" };
+    };
+  }, [materials]);
+
+  // Líneas de material válidas (elegidas y con gramos > 0) → para descontar stock.
+  const consumeLines = useMemo(
+    () =>
+      matLines
+        .filter((l) => l.materialId != null && l.grams > 0)
+        .map((l) => ({ material_id: l.materialId as number, grams: l.grams })),
+    [matLines],
+  );
+
   // Desglose del costo calculado (sin margen): suma de los conceptos reales.
+  // Si hay materiales elegidos, computeQuote usa su costo real (cost_per_g) en
+  // vez del campo "Gramos" genérico.
   const calc = useMemo(() => {
     const piece: QuotePiece = {
       pieceName: "",
@@ -56,13 +96,13 @@ export function ExtraCostModal({ order, busy, onClose, onSubmit }: Props) {
       grams: numOr0(grams),
       extraSupplies: numOr0(supplies),
       profitMultiplier: 4, // irrelevante: no se aplica margen al costo
-      materials: [],
+      materials: matLines,
     };
-    const breakdown = computeQuote(loadConfig(), piece);
+    const breakdown = computeQuote(loadConfig(), piece, resolveMaterial);
     const items = breakdownToCostItems(breakdown);
     const total = round2(items.reduce((a, b) => a + b.amount, 0));
     return { items, total };
-  }, [hours, minutes, grams, supplies]);
+  }, [hours, minutes, grams, supplies, matLines, resolveMaterial]);
 
   const amount = manual ? round2(numOr0(manualAmount)) : calc.total;
   const concept = `Reimpresión${note.trim() ? ` – ${note.trim()}` : ""}`.slice(
@@ -88,7 +128,14 @@ export function ExtraCostModal({ order, busy, onClose, onSubmit }: Props) {
     }
     setError(null);
     try {
-      await onSubmit({ concept, amount });
+      await onSubmit({
+        concept,
+        amount,
+        note: note.trim(),
+        // El selector de material vive en el modo "Calcular"; en monto manual no
+        // descontamos stock (el usuario no ve las líneas).
+        materials: manual ? [] : consumeLines,
+      });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "No se pudo agregar el costo",
@@ -175,6 +222,77 @@ export function ExtraCostModal({ order, busy, onClose, onSubmit }: Props) {
           </div>
         ) : (
           <>
+            <div className="field">
+              <label>Material a reimprimir (descuenta stock)</label>
+              {matLines.map((line) => {
+                const mat = materials.find((m) => m.id === line.materialId);
+                return (
+                  <div key={line.id} className="reprint-mat-row">
+                    <select
+                      value={line.materialId ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value ? Number(e.target.value) : null;
+                        setMatLines((prev) =>
+                          prev.map((l) =>
+                            l.id === line.id ? { ...l, materialId: v } : l,
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="">— Elegí material —</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.stock_g} {m.unit === "un" ? "un" : m.unit})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      inputMode="decimal"
+                      placeholder={mat?.unit === "un" ? "un" : "g"}
+                      value={line.grams || ""}
+                      onChange={(e) => {
+                        const g = numOr0(e.target.value);
+                        setMatLines((prev) =>
+                          prev.map((l) =>
+                            l.id === line.id ? { ...l, grams: g } : l,
+                          ),
+                        );
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--small"
+                      onClick={() =>
+                        setMatLines((prev) =>
+                          prev.filter((l) => l.id !== line.id),
+                        )
+                      }
+                      aria-label="Quitar material"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                className="btn btn--sm btn--ghost"
+                onClick={() =>
+                  setMatLines((prev) => [...prev, makeMaterialLine()])
+                }
+              >
+                + Agregar material
+              </button>
+              <p className="hint">
+                El material elegido se descuenta del stock con su costo real.
+                Dejá esto vacío y usá “Gramos” para un costo aproximado sin
+                tocar inventario.
+              </p>
+            </div>
+
             <div className="caja-form__grid">
               <div className="field">
                 <label htmlFor="extra-h">Horas</label>

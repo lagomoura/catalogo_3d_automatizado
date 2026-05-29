@@ -17,6 +17,7 @@ import {
   getProductionSummary,
   pauseProductionRun,
   replaceOrderCosts,
+  reprintOrder,
   requeueProductionRun,
   resumeProductionRun,
   setOrderPayment,
@@ -447,6 +448,39 @@ export function PedidosPage({
     [runAction],
   );
 
+  // Cancelar una pieza. Si ya había descontado material (pieza iniciada),
+  // preguntamos si devolverlo al stock. Tres salidas: devolver / no devolver /
+  // cancelar la acción. Una pieza que nunca arrancó no tocó stock → confirm simple.
+  const handleCancelRun = useCallback(
+    (id: number) => {
+      const target = runs.find((r) => r.id === id);
+      if (!target || !target.stock_deducted) {
+        if (!window.confirm("¿Cancelar esta pieza?")) return;
+        void runAction(() => cancelProductionRun(id, false));
+        return;
+      }
+      // Paso 1: confirmar la cancelación (Cancelar = abortar la acción).
+      if (!window.confirm("¿Cancelar esta pieza ya iniciada?")) return;
+      // Paso 2: decidir la devolución del material al stock.
+      const detail =
+        target.consumption.length > 0
+          ? target.consumption
+              .map(
+                (c) =>
+                  `${c.grams} g de ${c.material_name ?? `material #${c.material_id}`}`,
+              )
+              .join(", ")
+          : "el material consumido";
+      const restock = window.confirm(
+        `¿Devolver ${detail} al stock?\n\n` +
+          "Aceptar = devolver al stock (la compra se canceló antes de imprimir).\n" +
+          "Cancelar = no devolver (el material ya se gastó / se perdió).",
+      );
+      void runAction(() => cancelProductionRun(id, restock));
+    },
+    [runs, runAction],
+  );
+
   const heroActions: HeroOrderActions = useMemo(
     () => ({
       onEditar: (o) => setEditing(o),
@@ -454,10 +488,10 @@ export function PedidosPage({
         void run(() => setOrderPayment(o.id, o.payment_status !== "PAGADO")),
       onCostoExtra: (o) => setExtraFor(o),
       onGestionarPiezas: (o) => setPiecesForOrderId(o.id),
-      onCancelarRun: (id) => void runAction(() => cancelProductionRun(id)),
+      onCancelarRun: handleCancelRun,
       onRequeueRun: handleRequeueRun,
     }),
-    [run, runAction, handleRequeueRun],
+    [run, handleCancelRun, handleRequeueRun],
   );
 
   const deleteOrderWithRuns = useCallback(async (id: number) => {
@@ -668,14 +702,24 @@ export function PedidosPage({
           order={extraOrder}
           busy={extraBusy}
           onClose={() => setExtraFor(null)}
-          onSubmit={async ({ concept, amount }) => {
+          onSubmit={async ({ concept, amount, note, materials }) => {
             setExtraBusy(true);
             try {
-              await handleAppendCost(extraOrder.id, {
-                concept,
-                amount,
-                per_unit: false,
-              });
+              if (materials.length > 0) {
+                // Reimpresión con material: descuenta stock (OUT) y suma el costo.
+                await reprintOrder(extraOrder.id, {
+                  materials,
+                  amount,
+                  note: note || null,
+                });
+                await refreshOrders();
+              } else {
+                await handleAppendCost(extraOrder.id, {
+                  concept,
+                  amount,
+                  per_unit: false,
+                });
+              }
               setExtraFor(null);
             } finally {
               setExtraBusy(false);
@@ -692,7 +736,7 @@ export function PedidosPage({
           onClose={() => setPiecesForOrderId(null)}
           onUpdate={handlePieceUpdate}
           onCreate={handlePieceCreate}
-          onCancel={(id) => void runAction(() => cancelProductionRun(id))}
+          onCancel={handleCancelRun}
           onStart={(id) => void runAction(() => startProductionRun(id))}
           onRequeue={handleRequeueRun}
         />

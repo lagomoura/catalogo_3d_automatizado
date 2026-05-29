@@ -1010,3 +1010,19 @@
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+/* Fila de material en el modal de reimpresión (costo extra): material + gramos. */
+.reprint-mat-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.reprint-mat-row select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.reprint-mat-row input {
+  width: 5.5rem;
+  flex: 0 0 auto;
+}

@@ -518,6 +518,11 @@ export interface OrderCreatePayload {
   /** Fijar al tope de la cola desde el alta (reemplaza el viejo priority). */
   is_pinned?: boolean;
   cost_items?: OrderCostItemInput[];
+  /**
+   * Consumo de material por unidad (integración Inventario↔Producción). Cada
+   * ProductionRun nace con este snapshot y descuenta el stock al iniciarse.
+   */
+  materials?: { material_id: number; grams_per_unit: number }[];
   sale_date?: string | null;
   deadline?: string | null;
   is_draft?: boolean;
@@ -596,6 +601,25 @@ export function appendOrderCost(
   return request<Order>(`/api/orders/${id}/costs/item`, {
     method: "POST",
     body: JSON.stringify(item),
+  });
+}
+
+/**
+ * Reimpresión de una pieza: descuenta material del stock (OUT) y agrega un costo
+ * único al pedido. Si `amount` es null/omitido, el backend lo computa desde los
+ * gramos × cost_per_g de cada material.
+ */
+export function reprintOrder(
+  id: number,
+  payload: {
+    materials: { material_id: number; grams: number }[];
+    amount?: number | null;
+    note?: string | null;
+  },
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/reprint`, {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 
@@ -770,8 +794,14 @@ export function finishProductionRun(id: number): Promise<ProductionRun> {
   return request<ProductionRun>(`/api/production/${id}/finish`, { method: "POST" });
 }
 
-export function cancelProductionRun(id: number): Promise<ProductionRun> {
-  return request<ProductionRun>(`/api/production/${id}/cancel`, { method: "POST" });
+export function cancelProductionRun(
+  id: number,
+  restock = false,
+): Promise<ProductionRun> {
+  return request<ProductionRun>(
+    `/api/production/${id}/cancel?restock=${restock ? "true" : "false"}`,
+    { method: "POST" },
+  );
 }
 
 export function reopenProductionRun(id: number): Promise<ProductionRun> {
