@@ -359,3 +359,310 @@
   color: var(--rep-muted);
   font-size: 0.78rem;
 }
+
+/* ── Banda hero (financiero destacado) ───────────────────────────────── */
+
+.reportes__hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.reportes__hero .kpi-card {
+  padding: 1.4rem 1.5rem 1.5rem;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, 0.05), transparent 60%),
+    var(--rep-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.reportes__hero .kpi-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--rep-accent);
+  opacity: 0.9;
+}
+
+.reportes__hero .kpi-card--green::before  { background: var(--rep-green); }
+.reportes__hero .kpi-card--blue::before   { background: var(--rep-blue); }
+.reportes__hero .kpi-card--purple::before { background: var(--rep-purple); }
+
+.reportes__hero .kpi-card--green  { background: radial-gradient(120% 140% at 100% 0%, rgba(84, 197, 138, 0.14), transparent 60%), var(--rep-surface); }
+.reportes__hero .kpi-card--blue   { background: radial-gradient(120% 140% at 100% 0%, rgba(94, 177, 255, 0.14), transparent 60%), var(--rep-surface); }
+.reportes__hero .kpi-card--purple { background: radial-gradient(120% 140% at 100% 0%, rgba(167, 140, 244, 0.14), transparent 60%), var(--rep-surface); }
+
+.reportes__hero .kpi-card__value {
+  font-size: 2.3rem;
+}
+
+.reportes__hero .kpi-card__icon {
+  width: 38px;
+  height: 38px;
+  font-size: 1.15rem;
+}
+
+/* ── Encabezados de sección ──────────────────────────────────────────── */
+
+.reportes__section-head {
+  margin: 1.75rem 0 0.9rem;
+}
+
+.reportes__section-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rep-accent);
+  font-weight: 600;
+}
+
+.reportes__section-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--rep-text);
+}
+
+.reportes__section-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--rep-muted);
+  max-width: 70ch;
+}
+
+/* ── Panel full-width (alertas, ventas) ──────────────────────────────── */
+
+.reportes__panel--full {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+/* ── Material en alerta ──────────────────────────────────────────────── */
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.alert-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) 2fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 0.2rem;
+  border-bottom: 1px solid rgba(31, 42, 64, 0.6);
+}
+
+.alert-row:last-child {
+  border-bottom: none;
+}
+
+.alert-row__main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.alert-row__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.alert-row__dot--red    { background: var(--rep-red); box-shadow: 0 0 0 3px rgba(245, 106, 106, 0.18); }
+.alert-row__dot--orange { background: var(--rep-orange); box-shadow: 0 0 0 3px rgba(244, 166, 90, 0.18); }
+
+.alert-row__id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.alert-row__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--rep-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alert-row__meta {
+  font-size: 0.72rem;
+  color: var(--rep-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.alert-row__bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.alert-row__track {
+  height: 7px;
+  background: var(--rep-surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.alert-row__fill {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 4px;
+  transition: width 0.3s ease;
+}
+
+.alert-row__fill--red    { background: var(--rep-red); }
+.alert-row__fill--orange { background: var(--rep-orange); }
+
+.alert-row__nums {
+  font-size: 0.8rem;
+  color: var(--rep-text);
+  font-weight: 600;
+}
+
+.alert-row__min {
+  color: var(--rep-muted);
+  font-weight: 400;
+}
+
+.alert-badge {
+  justify-self: end;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.alert-badge--red    { background: rgba(245, 106, 106, 0.16); color: #ff9d9d; }
+.alert-badge--orange { background: rgba(244, 166, 90, 0.16); color: #ffc78a; }
+
+.alert-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 1.5rem 1rem;
+}
+
+.alert-empty__icon { font-size: 1.8rem; }
+
+.alert-empty__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--rep-green);
+}
+
+.alert-empty__sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--rep-muted);
+  max-width: 52ch;
+}
+
+/* ── Últimas ventas ──────────────────────────────────────────────────── */
+
+.sales-table {
+  width: 100%;
+  font-size: 0.86rem;
+}
+
+.sales-table__head,
+.sales-table__row {
+  display: grid;
+  grid-template-columns: 2fr 1.4fr 1fr 0.8fr;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.25rem;
+}
+
+.sales-table__head {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  color: var(--rep-muted);
+  border-bottom: 1px solid var(--rep-border);
+}
+
+.sales-table__row {
+  border-bottom: 1px solid rgba(31, 42, 64, 0.5);
+}
+
+.sales-table__row:last-child {
+  border-bottom: none;
+}
+
+.sales-table__right {
+  text-align: right;
+}
+
+.sales-table__name {
+  color: var(--rep-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sales-table__qty {
+  color: var(--rep-muted);
+  font-weight: 400;
+}
+
+.sales-table__client {
+  color: var(--rep-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sales-table__price {
+  color: var(--rep-green);
+  font-weight: 600;
+}
+
+.sales-table__date {
+  color: var(--rep-muted);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .alert-row {
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem 0.75rem;
+  }
+  .alert-row__bar {
+    grid-column: 1 / -1;
+  }
+  .sales-table__head {
+    display: none;
+  }
+  .sales-table__row {
+    grid-template-columns: 1fr auto;
+    gap: 0.2rem 0.75rem;
+  }
+  .sales-table__client {
+    grid-column: 1;
+  }
+  .sales-table__price,
+  .sales-table__date {
+    grid-column: 2;
+  }
+}

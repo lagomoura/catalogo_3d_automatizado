@@ -458,6 +458,8 @@ export interface Material {
   stock_g: number;
   cost_per_g: number;
   unit: MaterialUnit;
+  /** Umbral de alerta de stock bajo (en la unidad nativa). 0 = sin alerta. */
+  min_stock: number;
   notes: string | null;
   archived: boolean;
   sort_order: number;
@@ -474,6 +476,7 @@ export interface MaterialCreatePayload {
   stock_g?: number;
   cost_per_g?: number;
   unit?: MaterialUnit;
+  min_stock?: number;
   notes?: string | null;
   sort_order?: number;
 }

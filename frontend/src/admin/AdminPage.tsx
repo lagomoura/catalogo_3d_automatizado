@@ -32,7 +32,7 @@ type Tab =
 type SubmitMode = "makerworld" | "manual";
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<Tab>("catalogo");
+  const [tab, setTab] = useState<Tab>("reportes");
   const [submitMode, setSubmitMode] = useState<SubmitMode>("makerworld");
   const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
   const [pendingQuoteDraft, setPendingQuoteDraft] = useState<PendingQuoteDraft | null>(null);
@@ -144,6 +144,15 @@ export default function AdminPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "reportes"}
+          className={`tab ${tab === "reportes" ? "tab--active" : ""}`}
+          onClick={() => setTab("reportes")}
+        >
+          Reportes
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "catalogo"}
           className={`tab ${tab === "catalogo" ? "tab--active" : ""}`}
           onClick={() => setTab("catalogo")}
@@ -195,15 +204,6 @@ export default function AdminPage() {
           onClick={() => setTab("clientes")}
         >
           Clientes
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "reportes"}
-          className={`tab ${tab === "reportes" ? "tab--active" : ""}`}
-          onClick={() => setTab("reportes")}
-        >
-          Reportes
         </button>
         <button
           type="button"

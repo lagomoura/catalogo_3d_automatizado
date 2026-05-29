@@ -130,6 +130,7 @@ export function MaterialForm({
   const [model, setModel] = useState("");
   const [stockQty, setStockQty] = useState("1000");
   const [costInput, setCostInput] = useState("");
+  const [minStock, setMinStock] = useState("");
   const [notes, setNotes] = useState("");
   const [showMore, setShowMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -171,6 +172,11 @@ export function MaterialForm({
             : material.cost_per_g
           : null;
       setCostInput(display != null ? display.toString() : "");
+      setMinStock(
+        material.min_stock != null && material.min_stock > 0
+          ? material.min_stock.toString()
+          : "",
+      );
       setNotes(material.notes ?? "");
     } else {
       // Create mode
@@ -183,6 +189,7 @@ export function MaterialForm({
       setModel("");
       setStockQty("1000");
       setCostInput("");
+      setMinStock("");
       setNotes("");
     }
   }, [open, material?.id]);
@@ -235,6 +242,7 @@ export function MaterialForm({
           model: model.trim() || null,
           cost_per_g: costPerG,
           unit,
+          min_stock: toNumberOrNull(minStock) ?? 0,
           notes: notes.trim() || null,
         };
         await onUpdate(material.id, payload);
@@ -248,6 +256,7 @@ export function MaterialForm({
           stock_g: toNumberOrNull(stockQty) ?? 0,
           cost_per_g: costPerG,
           unit,
+          min_stock: toNumberOrNull(minStock) ?? 0,
           notes: notes.trim() || null,
         };
         await onCreate(payload);
@@ -521,6 +530,30 @@ export function MaterialForm({
                 queda auditado.
               </p>
             ) : null}
+          </section>
+
+          <section className="mat-form__section">
+            <header className="mat-form__section-h">Alerta de stock bajo</header>
+            <div className="mat-form__row">
+              <label className="mat-form__field">
+                <span>
+                  Stock mínimo (
+                  {unit === "un" ? "unidades" : unit})
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={minStock}
+                  onChange={(e) => setMinStock(e.target.value)}
+                  placeholder="ej. 200"
+                />
+              </label>
+            </div>
+            <p className="form-hint">
+              Cuando el stock baje a este valor o menos, el material aparecerá en
+              alerta en Reportes. Dejalo vacío para no recibir alertas.
+            </p>
           </section>
 
           <button
