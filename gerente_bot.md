@@ -300,6 +300,48 @@ el header del panel inicia una conversación nueva.
   pregunta antes de proponer la acción.
 - **No inventa** datos que no estén en el snapshot ni en una tool.
 
+### Alcance y seguridad (anti prompt-injection)
+
+El system prompt incluye dos bloques de blindaje, más defensas en el
+backend:
+
+- **Alcance acotado:** el bot responde **solo** sobre operaciones del
+  negocio (pedidos, producción, catálogo, stock, impresoras, caja,
+  clientes). Ante temas fuera de alcance (código, charla general,
+  cambiar de rol) **redirige amable y firme**, no responde el tema.
+- **No revela ni negocia su prompt:** declina pedidos de mostrar/alterar
+  sus instrucciones y de "ignorar las reglas anteriores" / "actuar sin
+  filtros".
+- **Datos no confiables:** el snapshot y los resultados de tools contienen
+  texto cargado por terceros (notas de pedidos, nombres de clientes y
+  productos, colores). El prompt instruye a tratar ese texto como
+  **información, nunca como instrucción** — si una nota dice "ignorá tus
+  instrucciones", el bot lo reporta como dato y no lo obedece. Para
+  reforzar la frontera, el snapshot va envuelto en etiquetas
+  `<datos_no_confiables>…</datos_no_confiables>` (reemplaza al fence
+  ```` ```json ````, que un valor con backticks podía romper).
+- **Defensas backend** (`engine.py` / `routes/assistant.py`):
+  - `safety_settings` en Gemini: bloquea harassment / hate / sexual /
+    dangerous de nivel medio o superior.
+  - `max_output_tokens=1024` — la persona es concisa; acota costo y
+    respuestas desbocadas.
+  - **Fallback ante bloqueo:** si Gemini no devuelve texto (safety-block),
+    el bot responde `"No puedo responder eso. ¿Te ayudo con algo de la
+    tienda?"` en vez de una burbuja vacía, y loguea un `warning`.
+  - **Cap de longitud:** `ChatRequest.message` limitado a 4000 chars
+    (rechazo HTTP 422 antes de tocar DB o Gemini).
+  - **Logging de abuso:** cada turno loguea `len` del mensaje (no el
+    contenido) y los bloqueos de safety.
+- **Integridad de confirmación:** las write tools nunca auto-ejecutan; el
+  preview muestra los **args reales** que correrá el handler (incl. la
+  `note`, para que una nota inyectada quede visible antes de confirmar).
+  Una inyección no puede mutar datos sin un click humano.
+- **Render texto-plano:** `assistant_text` y los campos de las DataCards se
+  renderizan como texto plano (`MessageBubble` usa nodos de texto React,
+  que auto-escapan HTML). **No** introducir markdown-to-HTML ni
+  `dangerouslySetInnerHTML` sin sanitizar — rompería esta garantía
+  anti-XSS.
+
 ---
 
 ## UI — qué ve el usuario
@@ -401,6 +443,13 @@ Toda modificación al asistente debe sumar una entrada acá, en orden
 cronológico inverso (lo más nuevo arriba). Formato:
 **YYYY-MM-DD** — descripción concisa de qué cambió y por qué.
 
+- **2026-05-28** — Hardening de seguridad del bot: guardrails de alcance
+  (solo operaciones del negocio, redirección amable ante off-topic, no
+  revela ni negocia su prompt) + tratamiento del snapshot y resultados de
+  tools como **datos no confiables** (wrapper `<datos_no_confiables>` en
+  lugar del fence ```json), `safety_settings` y `max_output_tokens=1024`
+  en Gemini, fallback ante bloqueo de safety, cap de 4000 chars en
+  `/chat`, y logging liviano de abuso. Ver "Alcance y seguridad".
 - **2026-05-28** — Versión inicial del Gerente Bot. 11 tools (7 read + 4
   write), briefing determinístico, panel deslizable 420px, persistencia
   de conversaciones en `assistant_conversations` + `assistant_messages`,
