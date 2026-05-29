@@ -15,6 +15,7 @@ export interface HeroOrderActions {
   onCostoExtra: (order: Order) => void;
   onGestionarPiezas: (order: Order) => void;
   onCancelarRun: (runId: number) => void;
+  onRequeueRun: (runId: number) => void;
 }
 
 interface PrinterHeroCardProps {
@@ -82,12 +83,20 @@ export function PrinterHeroCard({
         },
         { label: "＋ Costo extra", onClick: () => orderActions.onCostoExtra(order) },
         {
+          label: "↩ Devolver a la cola",
+          onClick: () => orderActions.onRequeueRun(run.id),
+        },
+        {
           label: "Cancelar pieza",
           danger: true,
           onClick: () => orderActions.onCancelarRun(run.id),
         },
       ]
     : [
+        {
+          label: "↩ Devolver a la cola",
+          onClick: () => orderActions.onRequeueRun(run.id),
+        },
         {
           label: "Cancelar pieza",
           danger: true,

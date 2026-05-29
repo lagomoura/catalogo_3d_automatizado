@@ -25,6 +25,7 @@ interface PiecesModalProps {
   onCreate: (orderId: number, payload: ProductionRunCreatePayload) => Promise<void>;
   onCancel: (id: number) => void;
   onStart: (id: number) => void;
+  onRequeue: (id: number) => void;
 }
 
 /**
@@ -41,6 +42,7 @@ export function PiecesModal({
   onCreate,
   onCancel,
   onStart,
+  onRequeue,
 }: PiecesModalProps) {
   const [busy, setBusy] = useState(false);
   const activePrinters = printers.filter((p) => !p.archived);
@@ -160,6 +162,18 @@ export function PiecesModal({
                           onClick={() => onStart(run.id)}
                         >
                           ▶ Iniciar
+                        </button>
+                      )}
+                      {(run.status === "EM_PRODUCAO" ||
+                        run.status === "PAUSADA") && (
+                        <button
+                          type="button"
+                          className="tbtn"
+                          disabled={busy}
+                          title="Devolver a la cola (descarta el progreso)"
+                          onClick={() => onRequeue(run.id)}
+                        >
+                          ↩ Volver a la cola
                         </button>
                       )}
                       {(run.status === "PENDENTE" ||

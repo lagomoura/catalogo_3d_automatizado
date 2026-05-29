@@ -108,6 +108,32 @@
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
+
+  /* ---- Escala tipográfica (independiente del tema) ----
+     16px base: en mobile, los inputs nunca deben bajar de --text-base (zoom iOS). */
+  --text-xs: 0.78rem;   /* 12.5px — metadatos, captions */
+  --text-sm: 0.875rem;  /* 14px — UI densa, labels */
+  --text-base: 1rem;    /* 16px — body, inputs */
+  --text-md: 1.125rem;  /* 18px — subtítulos */
+  --text-lg: 1.4rem;    /* 22px — títulos de sección */
+  --text-xl: 1.75rem;   /* 28px — headings de página */
+  --text-2xl: 2.25rem;  /* 36px — momentos editoriales */
+  --text-3xl: 3rem;     /* 48px — hero / números grandes */
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+
+  /* ---- Movimiento (orienta, no decora; cubierto por prefers-reduced-motion) ---- */
+  --dur-fast: 0.15s;
+  --dur: 0.18s;
+  --dur-slow: 0.32s;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Éxito de acción (relleno con texto blanco, AA) ----
+     Token único que reemplaza los verdes hardcodeados sueltos
+     (#0d9268/#0d7a57/#2a8848/#10b981/#059669). --success es para texto/indicadores. */
+  --success-strong: #0d8f6e;        /* fondos de botón "ir/listo/pagado" */
+  --success-soft: #e6f5ef;          /* fondos teñidos de éxito */
 }
 
 /* ===========================================================================
@@ -138,6 +164,8 @@
   --info: #38bdf8;
   --credit: #34d399;
   --debit: #f87171;
+  --success-strong: #12a37e;
+  --success-soft: #122a20;
 
   --st-creado: #94a3b8;
   --st-creado-soft: #1e2a33;
@@ -170,6 +198,41 @@ body {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
+/* Selección con color de marca (cubre todas las superficies, claro y oscuro). */
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ---------- Skeletons (carga percibida) ---------- */
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--muted) 12%, transparent) 30%,
+    color-mix(in srgb, var(--muted) 22%, transparent) 50%,
+    color-mix(in srgb, var(--muted) 12%, transparent) 70%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--r-sm);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.skeleton-card__media {
+  aspect-ratio: 1 / 1;
+}
+
 h1, h2, h3 {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
@@ -188,10 +251,28 @@ h1, h2, h3 {
   }
 }
 
+/* Mobile: ningún control de texto baja de 16px o iOS Safari hace zoom al enfocar
+   y reflowa el layout. Regla global — cubre todos los inputs del repo de un saque.
+   (Solo sube el tamaño en mobile; el padding ya reserva alto suficiente.) */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 .app {
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
+}
+
+/* Mobile angosto: recuperamos ancho útil reduciendo el padding lateral. */
+@media (max-width: 400px) {
+  .app {
+    padding: 1.25rem 0.85rem 3rem;
+  }
 }
 
 /* ===========================================================================
@@ -273,6 +354,13 @@ h1, h2, h3 {
   color: var(--muted);
 }
 
+/* En mobile, el subtítulo promocional roba alto vertical del back-office. */
+@media (max-width: 640px) {
+  .app__subtitle {
+    display: none;
+  }
+}
+
 .submit-form {
   display: grid;
   grid-template-columns: 1fr 100px auto;
@@ -342,6 +430,96 @@ h1, h2, h3 {
   margin: 0;
   padding: 0;
   accent-color: var(--accent);
+}
+
+/* ===========================================================================
+   .form-grid — primitiva de formulario en 2 columnas (global).
+   La usan PrinterForm, ClientForm, MovementForm, ProductionRunForm, OrcamentoPage,
+   EditingBanner y el registro público /c/:token. Vive acá (no en un CSS de feature)
+   para que cargue en todas las rutas, incluida la pública que es lazy.
+   =========================================================================== */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.form-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.form-grid .field input,
+.form-grid .field select,
+.form-grid .field textarea {
+  font-size: 0.95rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--fg);
+  font-family: inherit;
+  line-height: 1.3;
+  height: 40px;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.form-grid .field textarea {
+  resize: vertical;
+  min-height: 76px;
+  height: auto;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.form-grid .field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) calc(50% - 1px),
+    calc(100% - 10px) calc(50% - 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2rem;
+  cursor: pointer;
+  color: var(--fg);
+}
+
+.form-grid .field input:hover,
+.form-grid .field select:hover,
+.form-grid .field textarea:hover {
+  border-color: color-mix(in srgb, var(--fg) 25%, var(--border));
+}
+
+.form-grid .field input:focus,
+.form-grid .field select:focus,
+.form-grid .field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.form-grid .field input::placeholder,
+.form-grid .field textarea::placeholder {
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.form-grid .field--full {
+  grid-column: 1 / -1;
+}
+
+/* En mobile, una sola columna. */
+@media (max-width: 560px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .jobs {
@@ -633,7 +811,7 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   background: rgba(10, 10, 12, 0.7);
-  padding: 1.5rem;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
   animation: lightbox-fade 0.15s ease-out;
 }
 
@@ -673,7 +851,7 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   background: rgba(10, 10, 12, 0.7);
-  padding: 1.5rem;
+  padding: clamp(0.75rem, 3vw, 1.5rem);
   animation: lightbox-fade 0.15s ease-out;
 }
 
@@ -684,8 +862,15 @@ a:focus-visible {
   border-radius: 14px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   max-height: 90vh;
+  max-height: 90dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* Contenedores enfocables por el focus-trap (tabIndex=-1): sin outline propio. */
+.modal-panel:focus,
+.lightbox:focus {
+  outline: none;
 }
 
 .modal-panel--sm { max-width: 420px; }
@@ -738,11 +923,20 @@ a:focus-visible {
   flex: 1;
 }
 
+/* Al enfocar un campo dentro de un modal scrollable, dejamos aire para que el
+   teclado virtual de mobile no lo deje pegado al borde. */
+.modal-panel__body input,
+.modal-panel__body select,
+.modal-panel__body textarea {
+  scroll-margin-block: 1.25rem;
+}
+
 .modal-panel__foot {
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
   padding: 0.9rem 1.25rem;
+  padding-bottom: calc(0.9rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
 }
 
@@ -1132,7 +1326,36 @@ a:focus-visible {
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-  background: #1a1a1a;
+  background: var(--n-900);
+}
+
+/* Visor 3D dentro del lightbox (reemplaza estilos inline). touch-action:pan-y
+   deja que el dedo rote el modelo sin secuestrar el scroll vertical de la página. */
+.lightbox__model {
+  display: block;
+  width: min(1100px, 92vw);
+  height: 80vh;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  background: var(--n-900);
+  touch-action: pan-y;
+}
+
+.lightbox__model--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 2rem;
+}
+
+.lightbox__model-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .lightbox__caption {
@@ -1177,8 +1400,8 @@ a:focus-visible {
 .lightbox__close {
   top: 1rem;
   right: 1rem;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   font-size: 1.6rem;
   line-height: 1;
 }
@@ -1250,8 +1473,8 @@ a:focus-visible {
   }
 
   .lightbox__nav {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     font-size: 1.6rem;
   }
 
@@ -1436,11 +1659,29 @@ a:focus-visible {
   gap: 1.25rem;
 }
 
-.showcase__empty,
 .showcase__loading {
   color: var(--muted);
   text-align: center;
   padding: 3rem 1rem;
+}
+
+.showcase__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 3.5rem 1rem;
+}
+
+.showcase__empty-text {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.showcase__empty .btn-primary {
+  box-shadow: var(--glow);
 }
 
 .showcase-card {
@@ -1491,7 +1732,7 @@ a:focus-visible {
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--accent);
   color: white;
   font-size: 0.7rem;
   font-weight: 700;
@@ -1630,8 +1871,13 @@ a:focus-visible {
 
 .product-detail__name {
   margin: 0 0 0.5rem;
-  font-size: 1.6rem;
-  line-height: 1.2;
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+}
+
+.product-detail__view3d {
+  margin-top: 0.5rem;
+  box-shadow: var(--glow);
 }
 
 .product-detail__category {
@@ -1691,6 +1937,7 @@ a:focus-visible {
 
 .admin-gate {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1770,6 +2017,23 @@ a:focus-visible {
   gap: 0.25rem;
   margin: 0 0 1.5rem;
   border-bottom: 1px solid var(--border);
+  /* Desktop: las 9 tabs envuelven a una segunda línea si no entran, así
+     ninguna queda oculta (ej. "Generador de Presupuestos (PDF)"). */
+  flex-wrap: wrap;
+}
+
+/* Mobile: en vez de envolver, scrollean en horizontal (una sola fila). */
+@media (max-width: 640px) {
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .tab {
@@ -1783,7 +2047,10 @@ a:focus-visible {
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 
 .tab:hover {
@@ -2247,6 +2514,14 @@ a:focus-visible {
   background: var(--bg);
 }
 
+/* Mobile: liberamos el alto fijo para evitar el scroll anidado dentro del
+   form (que ya scrollea), que confunde el gesto en pantallas chicas. */
+@media (max-width: 640px) {
+  .product-picker-grid {
+    max-height: none;
+  }
+}
+
 .product-pick-card {
   display: flex;
   flex-direction: column;
@@ -2339,8 +2614,15 @@ a:focus-visible {
   transition: all 0.12s ease;
 }
 
+/* Touch: alto cómodo para el pulgar al crear/editar pedido. */
+@media (max-width: 640px) {
+  .priority-seg__btn {
+    height: 40px;
+  }
+}
+
 .priority-seg__btn:hover {
-  border-color: #cbd2dc;
+  border-color: var(--border-strong);
 }
 
 .priority-seg__btn.is-active {
@@ -2428,12 +2710,12 @@ a:focus-visible {
 
 .rail[data-rail="queue"] {
   background: var(--st-creado-soft);
-  border-color: #dce2ea;
+  border-color: color-mix(in srgb, var(--st-creado) 25%, transparent);
 }
 
 .rail[data-rail="done"] {
   background: var(--st-entregado-soft);
-  border-color: #cfe9de;
+  border-color: color-mix(in srgb, var(--st-entregado) 25%, transparent);
 }
 
 .rail__head {
@@ -2694,14 +2976,14 @@ a:focus-visible {
 }
 
 .ticket[data-paid="true"] .chip--pay {
-  color: #0d7a57;
+  color: var(--success);
   background: var(--st-entregado-soft);
 }
 
 .ticket[data-paid="false"] .chip--pay {
   color: var(--st-warn);
   background: var(--st-warn-soft);
-  border-color: #f5d8ad;
+  border-color: color-mix(in srgb, var(--st-warn) 35%, transparent);
 }
 
 /* "N piezas" — expande/colapsa la sub-lista de producciones del pedido. */
@@ -2728,7 +3010,7 @@ button.chip.chip--prod:hover {
   align-items: center;
   gap: 0.7rem;
   font-size: 0.8rem;
-  color: #475569;
+  color: var(--muted);
   min-width: 0;
 }
 
@@ -2763,7 +3045,7 @@ button.chip.chip--prod:hover {
 
 .ticket__note {
   font-style: italic;
-  color: #64748b;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2805,11 +3087,12 @@ button.chip.chip--prod:hover {
   color: white;
   border: none;
   border-radius: 8px;
+  min-height: 44px;
   padding: 0.55rem 1rem;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--dur-fast) var(--ease);
 }
 
 .btn-primary:hover:not(:disabled) { opacity: 0.92; }
@@ -2829,8 +3112,8 @@ button.chip.chip--prod:hover {
 .btn-ghost:hover { background: var(--bg); }
 
 .tbtn--go {
-  background: #0d9268;
-  border-color: #0d9268;
+  background: var(--success-strong);
+  border-color: var(--success-strong);
   color: #fff;
   flex: 1;
 }
@@ -2855,19 +3138,19 @@ button.chip.chip--prod:hover {
 .tbtn--pay {
   background: var(--st-entregado-soft);
   border-color: transparent;
-  color: #0d7a57;
+  color: var(--success);
 }
 
 .tbtn--del {
   background: transparent;
   border-color: var(--border);
-  color: #b91c1c;
+  color: var(--error);
   padding: 0.42rem 0.6rem;
 }
 
 .tbtn--del:hover:not(:disabled) {
-  background: #fdecec;
-  border-color: #f3c3c3;
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border-color: color-mix(in srgb, var(--error) 32%, transparent);
 }
 
 @keyframes ticket-in {
@@ -4347,7 +4630,7 @@ button.chip.chip--prod:hover {
 }
 
 .toast--ok {
-  border-left: 3px solid #2a8848;
+  border-left: 3px solid var(--success);
 }
 .toast--info {
   border-left: 3px solid var(--accent);

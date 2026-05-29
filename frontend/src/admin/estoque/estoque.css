@@ -399,6 +399,13 @@
   font-size: 0.9rem;
 }
 
+@media (max-width: 560px) {
+  .estoque__search {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
 .estoque__type {
   padding: 0.55rem 0.8rem;
   border: 1px solid var(--border);
@@ -421,6 +428,17 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* Mobile/tablet: scroll horizontal en vez de recortar columnas. */
+@media (max-width: 760px) {
+  .estoque__table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .estoque__row {
+    min-width: 820px;
+  }
 }
 
 .estoque__row {
@@ -490,7 +508,7 @@
 
 .estoque__actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: flex-end;
 }

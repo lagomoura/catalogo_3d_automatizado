@@ -214,6 +214,7 @@ export function TransactionForm({
           <input
             id="caja-amount"
             type="number"
+            inputMode="decimal"
             min="0"
             step="0.01"
             placeholder="0,00"

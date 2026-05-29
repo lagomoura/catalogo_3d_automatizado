@@ -339,6 +339,18 @@
   font-weight: 600;
 }
 
+/* Mobile: las 6 columnas no se aplastan; la tabla scrollea en horizontal. */
+@media (max-width: 640px) {
+  .profit-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .profit-table__head,
+  .profit-table__row {
+    min-width: 560px;
+  }
+}
+
 /* RangePicker (reutilizado de caja) en contexto oscuro */
 
 .reportes .caja-range,

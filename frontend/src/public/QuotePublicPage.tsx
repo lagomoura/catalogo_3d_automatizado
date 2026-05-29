@@ -14,12 +14,17 @@ export default function QuotePublicPage() {
 
   useEffect(() => {
     if (!token) return;
-    getPublicQuote(token)
+    const ctrl = new AbortController();
+    getPublicQuote(token, ctrl.signal)
       .then(setQuote)
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Link inválido."),
-      )
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (ctrl.signal.aborted) return;
+        setError(err instanceof Error ? err.message : "Link inválido.");
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [token]);
 
   if (loading) {

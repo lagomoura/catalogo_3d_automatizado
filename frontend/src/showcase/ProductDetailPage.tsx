@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCatalogItem, resolveStorageUrl } from "../api/client";
 import { ImageLightbox } from "../components/ImageLightbox";
+import { Model3DLightbox } from "../components/Model3DLightbox";
+import { Skeleton } from "../components/Skeleton";
 import type { CatalogItem } from "../types";
 
 export default function ProductDetailPage() {
@@ -12,6 +14,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxStart, setLightboxStart] = useState<number | null>(null);
+  const [show3d, setShow3d] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(numericId)) {
@@ -19,21 +22,37 @@ export default function ProductDetailPage() {
       setLoading(false);
       return;
     }
+    const ctrl = new AbortController();
     setLoading(true);
-    getCatalogItem(numericId)
+    getCatalogItem(numericId, ctrl.signal)
       .then((data) => {
         setItem(data);
         setActiveIndex(0);
         setError(null);
       })
-      .catch(() => setError("Producto no encontrado"))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (ctrl.signal.aborted) return;
+        setError("Producto no encontrado");
+      })
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [numericId]);
 
   if (loading) {
     return (
       <div className="product-detail">
-        <p className="showcase__loading">Cargando…</p>
+        <div className="product-detail__top">
+          <Link to="/" className="product-detail__back">← Volver</Link>
+        </div>
+        <div className="product-detail__layout">
+          <Skeleton height="min(80vw, 480px)" radius="var(--r-md)" />
+          <div className="product-detail__info">
+            <Skeleton width="70%" height="1.75rem" />
+            <Skeleton width="40%" height="1rem" style={{ marginTop: "0.75rem" }} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -97,6 +116,15 @@ export default function ProductDetailPage() {
           {item.category && (
             <span className="product-detail__category">{item.category.name_es}</span>
           )}
+          {item.model_3d_url && (
+            <button
+              type="button"
+              className="btn-primary product-detail__view3d"
+              onClick={() => setShow3d(true)}
+            >
+              Ver en 3D
+            </button>
+          )}
         </aside>
       </div>
 
@@ -106,6 +134,15 @@ export default function ProductDetailPage() {
           startIndex={lightboxStart}
           title={item.name}
           onClose={() => setLightboxStart(null)}
+        />
+      )}
+
+      {show3d && item.model_3d_url && (
+        <Model3DLightbox
+          src={resolveStorageUrl(item.model_3d_url)}
+          poster={active ? resolveStorageUrl(active.styled_url) : undefined}
+          title={item.name}
+          onClose={() => setShow3d(false)}
         />
       )}
     </div>

@@ -55,6 +55,13 @@
   font-size: 0.9rem;
 }
 
+@media (max-width: 560px) {
+  .pedidos__search {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
 .pedidos__substabs {
   display: flex;
   gap: 0.4rem;

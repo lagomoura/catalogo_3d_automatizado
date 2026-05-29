@@ -7,7 +7,7 @@
 ## Stack
 
 - **Backend**: Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite (default) / Postgres.
-- **Frontend**: React 19, TypeScript, Vite, react-router-dom.
+- **Frontend**: React 18.3, TypeScript, Vite, react-router-dom.
 - **Servicios externos**: Gemini (re-estilización de imágenes), FAL (Flux Kontext + Trellis 3D), Playwright (scraping + render PDF).
 - **Migraciones**: aditivas vía `_ensure_legacy_columns()` en `backend/app/db.py`. Sin Alembic.
 
@@ -137,13 +137,15 @@
 ### 3.3 Producción (tracking de impresiones)
 
 - **Qué hace**: cada impresión es un `ProductionRun` con state machine (PENDENTE → EM_PRODUCAO ↔ PAUSADA → CONCLUIDA/CANCELADA). Acumula `total_paused_seconds` reales en cada pausa/resume. Frontend muestra **timer en vivo** del tiempo restante (refresca cada 1s client-side, congelado en PAUSADA, signo "+" si excedido). 4 KPI cards + 6 sub-tabs. Vinculación opcional con order, printer, material.
+- **Volver a la cola (`requeue`)**: deshace el inicio de una pieza en curso/pausada (EM_PRODUCAO/PAUSADA → PENDENTE), libera la impresora y **descarta el progreso** (cronómetro a cero; conserva la impresora asignada). Si era la última pieza activa de un pedido que había avanzado a EJECUTANDO, el pedido vuelve a CREADO (espejo de `start`). Expuesto en el kebab del hero de impresora y en "Gestionar piezas" (botón "↩ Volver a la cola", con confirmación).
+- **Invariante de ocupación**: una impresora sostiene **una sola pieza activa (EM_PRODUCAO *o* PAUSADA)** a la vez — una pieza pausada sigue ocupando físicamente la impresora. Se garantiza en frontend (`busyPrinterIds`), backend (`start_run` rechaza con 409) y DB (índice único parcial `one_run_per_printer` sobre `status IN ('EM_PRODUCAO','PAUSADA')`, solo Postgres). **Prerrequisito de deploy**: si en prod ya hay impresoras con PAUSADA + EM_PRODUCAO simultáneas (bug previo), limpiar esos duplicados con requeue/cancel antes de desplegar, o el índice ampliado no se recreará.
 - **Backend**: `routes/production.py`. Modelo `ProductionRun`.
 - **Frontend admin**: tab **Producción** (`admin/produccion/ProduccionPage.tsx`) con `ProductionRunForm`.
 - **Endpoints**:
   - `GET /api/production?status=&printer_id=&order_id=`.
   - `GET /api/production/summary?start=&end=`.
   - `POST /api/production`, `PATCH /api/production/{id}`.
-  - `POST /api/production/{id}/{start|pause|resume|finish|cancel}` (409 si transición inválida).
+  - `POST /api/production/{id}/{start|pause|resume|finish|cancel|reopen|requeue}` (409 si transición inválida). `reopen`: revierte una run terminal (CONCLUIDA/CANCELADA) a su estado previo. `requeue`: EM_PRODUCAO/PAUSADA → PENDENTE.
 
 ---
 

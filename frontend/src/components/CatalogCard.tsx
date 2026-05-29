@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { memo, useEffect, useState, type CSSProperties } from "react";
 import {
   deleteCatalogImage,
   deleteCatalogItem,
@@ -21,7 +21,7 @@ interface Props {
   onItemDeleted: (id: number) => void;
 }
 
-export function CatalogCard({
+function CatalogCardImpl({
   item,
   selectionMode,
   selected,
@@ -482,4 +482,8 @@ function Thumb({
     </div>
   );
 }
+
+/* Memoizado: una card solo se re-renderiza si cambian sus props (item, selected,
+   selectionMode, categories o callbacks), no por cada cambio del grid. */
+export const CatalogCard = memo(CatalogCardImpl);
 

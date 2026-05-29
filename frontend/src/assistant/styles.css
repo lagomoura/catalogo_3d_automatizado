@@ -18,8 +18,8 @@
 
 .assistant-fab {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
   z-index: 80;
   display: inline-flex;
   align-items: center;
@@ -92,7 +92,8 @@
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0;
+  height: 100vh;
+  height: 100dvh; /* sigue el viewport dinámico: el teclado virtual no tapa el composer */
   width: 100%;
   max-width: var(--assistant-panel-width);
   background: var(--assistant-bg-tint);
@@ -195,6 +196,7 @@
   border-top: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.65);
   padding: 0.6rem 0.85rem 0.85rem;
+  padding-bottom: calc(0.85rem + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -348,8 +350,8 @@
 }
 
 .assistant-briefing__kpi--alert .assistant-briefing__kpi-value { color: var(--error); }
-.assistant-briefing__kpi--credit .assistant-briefing__kpi-value { color: #059669; }
-.assistant-briefing__kpi--debit .assistant-briefing__kpi-value { color: #dc2626; }
+.assistant-briefing__kpi--credit .assistant-briefing__kpi-value { color: var(--credit); }
+.assistant-briefing__kpi--debit .assistant-briefing__kpi-value { color: var(--debit); }
 
 .assistant-briefing__highlights {
   list-style: none;
@@ -421,8 +423,8 @@
 }
 
 .assistant-action--done .assistant-action__icon {
-  background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  background: color-mix(in srgb, var(--credit) 15%, transparent);
+  color: var(--credit);
 }
 
 .assistant-action__title {
@@ -712,9 +714,5 @@
 :root[data-theme="dark"] .assistant-briefing__kpi {
   background: rgba(255, 255, 255, 0.04);
 }
-:root[data-theme="dark"] .assistant-briefing__kpi--credit .assistant-briefing__kpi-value {
-  color: var(--credit);
-}
-:root[data-theme="dark"] .assistant-briefing__kpi--debit .assistant-briefing__kpi-value {
-  color: var(--debit);
-}
+/* Los valores credit/debit ya usan los tokens --credit/--debit, que cambian
+   solos por tema: no hace falta override dark (una sola fuente de verdad). */

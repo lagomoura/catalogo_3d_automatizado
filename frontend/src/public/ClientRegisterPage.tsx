@@ -18,6 +18,8 @@ const DOC_KINDS: (ContactDocumentKind | null)[] = [
   "OTRO",
 ];
 
+const draftKey = (token: string) => `creg-draft-${token}`;
+
 export default function ClientRegisterPage() {
   const { token } = useParams<{ token: string }>();
   const [info, setInfo] = useState<PublicClientInfo | null>(null);
@@ -40,7 +42,8 @@ export default function ClientRegisterPage() {
 
   useEffect(() => {
     if (!token) return;
-    getPublicClientInfo(token)
+    const ctrl = new AbortController();
+    getPublicClientInfo(token, ctrl.signal)
       .then((data) => {
         setInfo(data);
         if (data.contact) {
@@ -55,16 +58,39 @@ export default function ClientRegisterPage() {
             province: data.contact.province ?? "",
             postal_code: data.contact.postal_code ?? "",
           });
+        } else {
+          // Sin contacto pre-cargado: restauramos el borrador local si existe
+          // (el cliente perdió la red o cerró la pestaña antes de enviar).
+          try {
+            const raw = localStorage.getItem(draftKey(token));
+            if (raw) setForm((f) => ({ ...f, ...JSON.parse(raw) }));
+          } catch {
+            /* almacenamiento no disponible — se ignora */
+          }
         }
         setError(null);
       })
       .catch((err) => {
+        if (ctrl.signal.aborted) return;
         setError(
           err instanceof Error ? err.message : "Link inválido o expirado.",
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [token]);
+
+  // Persistimos el borrador en cada cambio (resiliencia de red mobile).
+  useEffect(() => {
+    if (!token || done) return;
+    try {
+      localStorage.setItem(draftKey(token), JSON.stringify(form));
+    } catch {
+      /* almacenamiento no disponible — se ignora */
+    }
+  }, [form, token, done]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +114,11 @@ export default function ClientRegisterPage() {
         postal_code: form.postal_code?.trim() || null,
       });
       setDone(true);
+      try {
+        localStorage.removeItem(draftKey(token));
+      } catch {
+        /* almacenamiento no disponible — se ignora */
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error al guardar los datos.",
@@ -158,6 +189,8 @@ export default function ClientRegisterPage() {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
               autoFocus
+              autoComplete="name"
+              enterKeyHint="next"
             />
           </label>
           <label className="field">
@@ -166,6 +199,8 @@ export default function ClientRegisterPage() {
               type="email"
               value={form.email ?? ""}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+              inputMode="email"
+              autoComplete="email"
             />
           </label>
           <label className="field">
@@ -175,6 +210,8 @@ export default function ClientRegisterPage() {
               value={form.phone ?? ""}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="+54 11 5555-1234"
+              inputMode="tel"
+              autoComplete="tel"
             />
           </label>
           <label className="field">
@@ -213,6 +250,7 @@ export default function ClientRegisterPage() {
               type="text"
               value={form.address ?? ""}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
+              autoComplete="street-address"
             />
           </label>
           <label className="field">
@@ -221,6 +259,7 @@ export default function ClientRegisterPage() {
               type="text"
               value={form.city ?? ""}
               onChange={(e) => setForm({ ...form, city: e.target.value })}
+              autoComplete="address-level2"
             />
           </label>
           <label className="field">
@@ -229,6 +268,7 @@ export default function ClientRegisterPage() {
               type="text"
               value={form.province ?? ""}
               onChange={(e) => setForm({ ...form, province: e.target.value })}
+              autoComplete="address-level1"
             />
           </label>
           <label className="field">
@@ -239,6 +279,8 @@ export default function ClientRegisterPage() {
               onChange={(e) =>
                 setForm({ ...form, postal_code: e.target.value })
               }
+              inputMode="numeric"
+              autoComplete="postal-code"
             />
           </label>
         </div>

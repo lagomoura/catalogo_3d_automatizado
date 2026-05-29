@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 interface ModalProps {
   open: boolean;
@@ -31,6 +32,8 @@ export function Modal({
   panelClassName = "",
   labelledBy,
 }: ModalProps) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -45,6 +48,8 @@ export function Modal({
     };
   }, [open, onClose, closeOnEscape]);
 
+  useFocusTrap(open, panelRef);
+
   if (!open) return null;
 
   return (
@@ -58,7 +63,11 @@ export function Modal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={`modal-panel modal-panel--${size} ${panelClassName}`}>
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className={`modal-panel modal-panel--${size} ${panelClassName}`}
+      >
         {children}
       </div>
     </div>

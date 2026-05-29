@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createJob, getCatalog, getCategories, getJob } from "../api/client";
 import { CatalogGrid } from "../components/CatalogGrid";
@@ -7,16 +7,36 @@ import { ManualProductForm } from "../components/ManualProductForm";
 import { SubmitForm } from "../components/SubmitForm";
 import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job, PendingQuote, PendingQuoteDraft } from "../types";
-import { CajaPage } from "./caja/CajaPage";
-import { CalculadoraPage } from "./calculadora/CalculadoraPage";
-import { ClientesPage } from "./clientes/ClientesPage";
-import { EstoquePage } from "./estoque/EstoquePage";
-import { ImpressorasPage } from "./impressoras/ImpressorasPage";
-import { OrcamentoPage } from "./orcamento/OrcamentoPage";
-import { PedidosPage } from "./pedidos/PedidosPage";
-import { ReportesPage } from "./reportes/ReportesPage";
 import { ToastProvider } from "../components/Toast";
 import { Logo, ThemeToggle } from "../components/Brand";
+
+// Las páginas de cada tab se cargan bajo demanda: recortan el bundle inicial
+// del admin (sobre todo Caja/Reportes, que arrastran recharts). Son named
+// exports, por eso el `.then(m => ({ default: ... }))`.
+const ReportesPage = lazy(() =>
+  import("./reportes/ReportesPage").then((m) => ({ default: m.ReportesPage })),
+);
+const CajaPage = lazy(() =>
+  import("./caja/CajaPage").then((m) => ({ default: m.CajaPage })),
+);
+const CalculadoraPage = lazy(() =>
+  import("./calculadora/CalculadoraPage").then((m) => ({ default: m.CalculadoraPage })),
+);
+const ImpressorasPage = lazy(() =>
+  import("./impressoras/ImpressorasPage").then((m) => ({ default: m.ImpressorasPage })),
+);
+const EstoquePage = lazy(() =>
+  import("./estoque/EstoquePage").then((m) => ({ default: m.EstoquePage })),
+);
+const ClientesPage = lazy(() =>
+  import("./clientes/ClientesPage").then((m) => ({ default: m.ClientesPage })),
+);
+const OrcamentoPage = lazy(() =>
+  import("./orcamento/OrcamentoPage").then((m) => ({ default: m.OrcamentoPage })),
+);
+const PedidosPage = lazy(() =>
+  import("./pedidos/PedidosPage").then((m) => ({ default: m.PedidosPage })),
+);
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
@@ -229,6 +249,7 @@ export default function AdminPage() {
         </button>
       </nav>
 
+      <Suspense fallback={<p className="showcase__loading">Cargando…</p>}>
       {tab === "catalogo" ? (
         <>
           <div className="tabs" role="tablist" aria-label="Modo de carga">
@@ -310,6 +331,7 @@ export default function AdminPage() {
           }}
         />
       )}
+      </Suspense>
     </div>
     </ToastProvider>
   );

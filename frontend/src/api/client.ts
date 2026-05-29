@@ -121,13 +121,15 @@ export function getJob(jobId: number): Promise<Job> {
 
 export function getCatalog(
   categoryId: number | null = null,
-  options: { include_archived?: boolean } = {},
+  options: { include_archived?: boolean; signal?: AbortSignal } = {},
 ): Promise<CatalogItem[]> {
   const params = new URLSearchParams();
   if (categoryId != null) params.set("category_id", String(categoryId));
   if (options.include_archived) params.set("include_archived", "true");
   const qs = params.toString();
-  return request<CatalogItem[]>(`/api/catalog${qs ? `?${qs}` : ""}`);
+  return request<CatalogItem[]>(`/api/catalog${qs ? `?${qs}` : ""}`, {
+    signal: options.signal,
+  });
 }
 
 export function getCatalogItemLatestQuote(id: number): Promise<CatalogItemQuote | null> {
@@ -149,12 +151,12 @@ export function saveCatalogItemQuote(
   });
 }
 
-export function getCatalogItem(id: number): Promise<CatalogItem> {
-  return request<CatalogItem>(`/api/catalog/${id}`);
+export function getCatalogItem(id: number, signal?: AbortSignal): Promise<CatalogItem> {
+  return request<CatalogItem>(`/api/catalog/${id}`, { signal });
 }
 
-export function getCategories(): Promise<CategoryNode[]> {
-  return request<CategoryNode[]>("/api/categories");
+export function getCategories(signal?: AbortSignal): Promise<CategoryNode[]> {
+  return request<CategoryNode[]>("/api/categories", { signal });
 }
 
 export interface CatalogItemUpdatePayload {
@@ -347,9 +349,13 @@ export function createClientLink(payload: {
   });
 }
 
-export function getPublicClientInfo(token: string): Promise<PublicClientInfo> {
+export function getPublicClientInfo(
+  token: string,
+  signal?: AbortSignal,
+): Promise<PublicClientInfo> {
   return request<PublicClientInfo>(
     `/api/public/clients/info?token=${encodeURIComponent(token)}`,
+    { signal },
   );
 }
 
@@ -772,6 +778,10 @@ export function reopenProductionRun(id: number): Promise<ProductionRun> {
   return request<ProductionRun>(`/api/production/${id}/reopen`, { method: "POST" });
 }
 
+export function requeueProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/requeue`, { method: "POST" });
+}
+
 export function deleteProductionRun(id: number): Promise<void> {
   return request<void>(`/api/production/${id}`, { method: "DELETE" });
 }
@@ -809,8 +819,8 @@ export function deleteQuote(id: number): Promise<void> {
   return request<void>(`/api/quotes/${id}`, { method: "DELETE" });
 }
 
-export function getPublicQuote(token: string): Promise<Quote> {
-  return request<Quote>(`/api/quotes/public/${encodeURIComponent(token)}`);
+export function getPublicQuote(token: string, signal?: AbortSignal): Promise<Quote> {
+  return request<Quote>(`/api/quotes/public/${encodeURIComponent(token)}`, { signal });
 }
 
 /** URL absoluta del PDF del quote (para `<a download>` o `window.open`). */

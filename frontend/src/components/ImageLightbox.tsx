@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { resolveStorageUrl } from "../api/client";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { CatalogImage } from "../types";
 
 interface Props {
@@ -17,6 +18,10 @@ export function ImageLightbox({ images, startIndex, title, onClose }: Props) {
 
   const total = images.length;
   const hasMany = total > 1;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  useFocusTrap(total > 0, containerRef);
 
   const go = useCallback(
     (delta: number) => {
@@ -49,7 +54,18 @@ export function ImageLightbox({ images, startIndex, title, onClose }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      ref={containerRef}
+      tabIndex={-1}
       onClick={onClose}
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(e) => {
+        if (!hasMany || touchStartX.current === null) return;
+        const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+        if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+        touchStartX.current = null;
+      }}
     >
       <button
         type="button"
@@ -89,7 +105,7 @@ export function ImageLightbox({ images, startIndex, title, onClose }: Props) {
         <figcaption className="lightbox__caption">
           <span className="lightbox__title">{title}</span>
           {hasMany && (
-            <span className="lightbox__counter">
+            <span className="lightbox__counter" aria-live="polite">
               {index + 1} / {total}
             </span>
           )}

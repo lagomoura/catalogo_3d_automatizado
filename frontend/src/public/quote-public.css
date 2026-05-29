@@ -1,5 +1,6 @@
 .qpub {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   padding: 1.5rem 1rem;
   display: flex;
@@ -22,4 +23,8 @@
 .qpub__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.qpub__actions .btn-primary {
+  box-shadow: var(--glow);
 }

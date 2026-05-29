@@ -119,8 +119,8 @@ function ToastContainer({
         <div
           key={t.id}
           className={`toast toast--${t.kind}`}
-          role="status"
-          aria-live="polite"
+          role={t.kind === "warn" ? "alert" : "status"}
+          aria-live={t.kind === "warn" ? "assertive" : "polite"}
         >
           <span className="toast__message">{t.message}</span>
           {t.action && (

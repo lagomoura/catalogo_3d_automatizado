@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getProductionRuns,
   type OrderCostItemInput,
@@ -9,6 +9,7 @@ import { formatARS } from "../../utils/format";
 import { computeProfitability } from "../calculadora/calc";
 import { ContactPicker, type PersonValue } from "../caja/ContactPicker";
 import { ExtraCostModal } from "./ExtraCostModal";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 interface Props {
   order: Order;
@@ -34,6 +35,7 @@ export function OrderEditModal({
   onSave,
   onSaveCosts,
 }: Props) {
+  const panelRef = useRef<HTMLFormElement | null>(null);
   const [quantity, setQuantity] = useState(order.quantity);
   const [value, setValue] = useState(
     order.value != null ? String(order.value) : "",
@@ -56,6 +58,9 @@ export function OrderEditModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extraOpen, setExtraOpen] = useState(false);
+  // El trap del modal de edición se desactiva mientras el modal anidado de
+  // costo extra está abierto (si no, no se podría enfocar sus campos).
+  useFocusTrap(!extraOpen, panelRef);
   // Conteo de producciones vinculadas al pedido (para validar bajada de qty).
   const [runsCount, setRunsCount] = useState<{
     total: number;
@@ -213,6 +218,8 @@ export function OrderEditModal({
       onClick={onClose}
     >
       <form
+        ref={panelRef}
+        tabIndex={-1}
         className="caja-form order-modal__panel"
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}

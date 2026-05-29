@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <script>
       // Aura3D — fija el tema antes del primer paint (evita el flash).
       (function () {
@@ -24,10 +24,9 @@
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap"
       rel="stylesheet"
     />
-    <script
-      type="module"
-      src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"
-    ></script>
+    <!-- model-viewer se carga BAJO DEMANDA (ver components/Model3DLightbox)
+         para no penalizar el LCP de la vitrina pública, donde la mayoría de
+         los visitantes nunca abre un modelo 3D. -->
   </head>
   <body>
     <div id="root"></div>

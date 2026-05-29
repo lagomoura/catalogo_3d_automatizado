@@ -146,6 +146,7 @@ export function RecurringExpenses({
             <input
               id="rec-amount"
               type="number"
+              inputMode="decimal"
               min="0"
               step="0.01"
               value={amount}
@@ -173,6 +174,7 @@ export function RecurringExpenses({
             <input
               id="rec-day"
               type="number"
+              inputMode="decimal"
               min="1"
               max="31"
               placeholder="Ej: 5"

@@ -357,6 +357,24 @@
   color: #6b7280;
 }
 
+/* Mobile: el presupuesto (vista pública /q/:token y preview del admin) deja de
+   desbordar. El header de marca + meta se apila y la tabla de ítems scrollea. */
+@media (max-width: 640px) {
+  .quote-preview__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .quote-preview__meta {
+    text-align: left;
+  }
+  .quote-preview__items {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}
+
 .orc__profile-row {
   display: flex;
   align-items: center;

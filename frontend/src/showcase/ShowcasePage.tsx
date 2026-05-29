@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getCatalog, getCategories } from "../api/client";
 import type { CatalogItem, CategoryNode } from "../types";
 import { ShowcaseGrid } from "./ShowcaseGrid";
+import { ShowcaseGridSkeleton } from "../components/Skeleton";
 import { ShowcaseSidebar } from "./ShowcaseSidebar";
 import { ShowcaseToolbar, type SortKey } from "./ShowcaseToolbar";
 import { Logo, ThemeToggle } from "../components/Brand";
@@ -18,22 +19,32 @@ export default function ShowcasePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getCategories()
+    const ctrl = new AbortController();
+    getCategories(ctrl.signal)
       .then(setCategories)
-      .catch((err) => console.warn("Failed to load categories", err));
+      .catch((err) => {
+        if (ctrl.signal.aborted) return;
+        console.warn("Failed to load categories", err);
+      });
+    return () => ctrl.abort();
   }, []);
 
   useEffect(() => {
+    const ctrl = new AbortController();
     setLoading(true);
-    getCatalog(categoryId)
+    getCatalog(categoryId, { signal: ctrl.signal })
       .then((data) => {
         setItems(data);
         setError(null);
       })
       .catch((err) => {
+        if (ctrl.signal.aborted) return;
         setError(err instanceof Error ? err.message : "No se pudo cargar el catálogo");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!ctrl.signal.aborted) setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [categoryId]);
 
   useEffect(() => {
@@ -86,9 +97,16 @@ export default function ShowcasePage() {
           />
           {error && <p className="error-banner">{error}</p>}
           {loading ? (
-            <p className="showcase__loading">Cargando…</p>
+            <ShowcaseGridSkeleton />
           ) : (
-            <ShowcaseGrid items={visibleItems} />
+            <ShowcaseGrid
+              items={visibleItems}
+              hasFilters={categoryId != null || debouncedQuery.length > 0}
+              onClearFilters={() => {
+                setCategoryId(null);
+                setQuery("");
+              }}
+            />
           )}
         </main>
       </div>

@@ -17,6 +17,7 @@ import {
   getProductionSummary,
   pauseProductionRun,
   replaceOrderCosts,
+  requeueProductionRun,
   resumeProductionRun,
   setOrderPayment,
   startProductionRun,
@@ -43,6 +44,7 @@ import { OrderForm } from "./OrderForm";
 import { OrderEditModal } from "./OrderEditModal";
 import { ExtraCostModal } from "./ExtraCostModal";
 import { useProductionTicker } from "./useProductionTicker";
+import { usePolling } from "../../hooks/usePolling";
 import { KpiBar } from "./board/KpiBar";
 import { PrinterHeroGrid } from "./board/PrinterHeroGrid";
 import { BoardColumns } from "./board/BoardColumns";
@@ -135,13 +137,9 @@ export function PedidosPage({
   }, [pendingQuote]);
 
   // Pull silencioso cada 30s para reflejar cambios de runs disparados en otra
-  // pestaña o por otro usuario.
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      void refreshOrders();
-    }, 30000);
-    return () => window.clearInterval(id);
-  }, [refreshOrders]);
+  // pestaña o por otro usuario. usePolling pausa solo cuando la pestaña está en
+  // background (ahorra red/batería en mobile).
+  usePolling(true, 30000, refreshOrders);
 
   const ordersById = useMemo(() => {
     const m = new Map<number, Order>();
@@ -240,11 +238,16 @@ export function PedidosPage({
     [orders, matchOrder, payOk],
   );
 
-  // Impresoras ocupadas (con una pieza EM_PRODUCAO) → el resto está libre.
+  // Impresoras ocupadas (con una pieza activa: EM_PRODUCAO o PAUSADA — una pieza
+  // pausada sigue físicamente en la impresora) → el resto está libre.
   const busyPrinterIds = useMemo(() => {
     const s = new Set<number>();
     for (const r of runs) {
-      if (r.status === "EM_PRODUCAO" && r.printer?.id != null) s.add(r.printer.id);
+      if (
+        (r.status === "EM_PRODUCAO" || r.status === "PAUSADA") &&
+        r.printer?.id != null
+      )
+        s.add(r.printer.id);
     }
     return s;
   }, [runs]);
@@ -428,6 +431,22 @@ export function PedidosPage({
     [runsByOrder, startRun],
   );
 
+  // Volver a la cola: deshace el inicio de una pieza (EM_PRODUCAO/PAUSADA →
+  // PENDENTE), libera la impresora y descarta el progreso. Pide confirmación
+  // porque se pierde el cronómetro. Reutilizado por el hero y por PiecesModal.
+  const handleRequeueRun = useCallback(
+    (id: number) => {
+      if (
+        !window.confirm(
+          "¿Devolver esta pieza a la cola? Se descarta el progreso y el cronómetro vuelve a cero.",
+        )
+      )
+        return;
+      void runAction(() => requeueProductionRun(id));
+    },
+    [runAction],
+  );
+
   const heroActions: HeroOrderActions = useMemo(
     () => ({
       onEditar: (o) => setEditing(o),
@@ -436,8 +455,9 @@ export function PedidosPage({
       onCostoExtra: (o) => setExtraFor(o),
       onGestionarPiezas: (o) => setPiecesForOrderId(o.id),
       onCancelarRun: (id) => void runAction(() => cancelProductionRun(id)),
+      onRequeueRun: handleRequeueRun,
     }),
-    [run, runAction],
+    [run, runAction, handleRequeueRun],
   );
 
   const deleteOrderWithRuns = useCallback(async (id: number) => {
@@ -674,6 +694,7 @@ export function PedidosPage({
           onCreate={handlePieceCreate}
           onCancel={(id) => void runAction(() => cancelProductionRun(id))}
           onStart={(id) => void runAction(() => startProductionRun(id))}
+          onRequeue={handleRequeueRun}
         />
       )}
     </div>

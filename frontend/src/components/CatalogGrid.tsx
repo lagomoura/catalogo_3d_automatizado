@@ -89,6 +89,12 @@ export function CatalogGrid({
     }
   }, [validSelected, onItemsRemoved, exitSelectionMode]);
 
+  // Callback estable para que React.memo de CatalogCard sea efectivo.
+  const handleItemDeleted = useCallback(
+    (id: number) => onItemsRemoved([id]),
+    [onItemsRemoved],
+  );
+
   const handleBulkAssignCategory = useCallback(
     async (raw: string) => {
       if (validSelected.length === 0 || raw === "") return;
@@ -244,7 +250,7 @@ export function CatalogGrid({
               categories={categories}
               onToggleSelect={toggleSelected}
               onItemChanged={onItemChanged}
-              onItemDeleted={(id) => onItemsRemoved([id])}
+              onItemDeleted={handleItemDeleted}
             />
           ))}
         </div>

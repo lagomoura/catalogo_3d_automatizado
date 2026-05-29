@@ -33,6 +33,8 @@ import {
 import { OnboardingModal } from "./OnboardingModal";
 import { EditingBanner } from "./EditingBanner";
 import { HistoryModal } from "./HistoryModal";
+import { ActiveQuotesSection, ArchivedQuotesSection } from "./QuoteHistorySection";
+import { ResultPanel } from "./ResultPanel";
 import { ConfirmModal } from "../../components/ConfirmModal";
 import { useToast } from "../../components/Toast";
 
@@ -491,6 +493,18 @@ export function CalculadoraPage({
     setArchived(nextArchived);
   };
 
+  /** Convierte una cotización guardada en un pedido (reusado por lista y modal). */
+  const createOrderFromQuote = (q: SavedQuote) => {
+    const minutesPerUnit =
+      Math.max(0, q.piece.printHours) * 60 + Math.max(0, q.piece.printMinutes);
+    onCreateOrder({
+      value: q.chargeOverride ?? round2(q.breakdown.total * q.quantity),
+      quantity: q.quantity,
+      costItems: breakdownToCostItems(q.breakdown),
+      estimatedMinutesPerUnit: minutesPerUnit > 0 ? minutesPerUnit : null,
+    });
+  };
+
   const requestDeleteArchived = (q: SavedQuote) => {
     const name = q.piece.pieceName?.trim() || "esta cotización";
     setConfirmDialog({
@@ -721,6 +735,7 @@ export function CalculadoraPage({
                 <label>Horas de impresión</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="1"
                   value={piece.printHours || ""}
@@ -733,6 +748,7 @@ export function CalculadoraPage({
                 <label>Minutos de impresión</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="1"
                   value={piece.printMinutes || ""}
@@ -746,6 +762,7 @@ export function CalculadoraPage({
                 <label>Cantidad de unidades</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="1"
                   step="1"
                   value={quantity || ""}
@@ -856,6 +873,7 @@ export function CalculadoraPage({
                         <div className="calc__mat-qty">
                           <input
                             type="number"
+                            inputMode="decimal"
                             min="0"
                             step={unit === "un" ? "1" : "0.1"}
                             placeholder={mat ? `cant. (${unitLabel(unit)})` : "cant."}
@@ -930,6 +948,7 @@ export function CalculadoraPage({
                     <label>Gramos de filamento (manual)</label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       min="0"
                       step="0.1"
                       value={piece.grams || ""}
@@ -945,6 +964,7 @@ export function CalculadoraPage({
                   <label>Otros insumos sueltos ($)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     step="0.01"
                     placeholder="0"
@@ -1042,6 +1062,7 @@ export function CalculadoraPage({
                 <div className="calc__fee-row">
                   <input
                     type="number"
+                    inputMode="decimal"
                     min="0"
                     max="80"
                     step="0.5"
@@ -1101,6 +1122,7 @@ export function CalculadoraPage({
                 <label>Precio kWh</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={config.kwhPrice}
@@ -1113,6 +1135,7 @@ export function CalculadoraPage({
                 <label>Consumo impresora (W)</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="1"
                   value={config.printerWatts}
@@ -1125,6 +1148,7 @@ export function CalculadoraPage({
                 <label>Vida útil máquina (horas)</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="1"
                   step="1"
                   value={config.machineLifeHours}
@@ -1137,6 +1161,7 @@ export function CalculadoraPage({
                 <label>Costo repuesto</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.01"
                   value={config.sparePartCost}
@@ -1149,6 +1174,7 @@ export function CalculadoraPage({
                 <label>Margen de error (%)</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.1"
                   value={config.errorMarginPct}
@@ -1163,229 +1189,26 @@ export function CalculadoraPage({
 
         {/* ===================== COLUMNA DERECHA: RESULTADO ===================== */}
         <aside className="calc__right">
-          <section className="caja-form calc__panel calc__result">
-            <div className="caja-form__head">
-              <h3>Resultado</h3>
-              {hasResult && (
-                <span className="hint">
-                  Para {quantity} u{piece.pieceName ? ` · ${piece.pieceName}` : ""}
-                </span>
-              )}
-            </div>
-
-            {!hasResult ? (
-              <div className="calc__result-empty">
-                <strong>¿Listo para ver el costo y precio sugerido?</strong>
-                <p className="hint">
-                  Completá horas, gramos (o filamentos) y los demás campos.
-                  Los números aparecen acá apenas haya datos suficientes.
-                </p>
-              </div>
-            ) : (
-              <>
-                <ul className="calc__lines">
-                  <li>
-                    <span>
-                      Precio material
-                      {(breakdown.totalGrams > 0 ||
-                        breakdown.accessoriesQty > 0) && (
-                        <em className="hint">
-                          {" "}
-                          (
-                          {breakdown.totalGrams > 0 &&
-                            `${breakdown.totalGrams} g × ${formatARS(breakdown.pricePerKgUsed)}/kg`}
-                          {breakdown.totalGrams > 0 &&
-                            breakdown.accessoriesQty > 0 &&
-                            " + "}
-                          {breakdown.accessoriesQty > 0 &&
-                            `insumos ${formatARS(breakdown.materialAccessories)}`}
-                          )
-                        </em>
-                      )}
-                    </span>
-                    <strong>{formatARS(breakdown.material)}</strong>
-                  </li>
-                  <li>
-                    <span>Precio luz</span>
-                    <strong>{formatARS(breakdown.electricity)}</strong>
-                  </li>
-                  <li>
-                    <span>Desgaste máquina</span>
-                    <strong>{formatARS(breakdown.machineWear)}</strong>
-                  </li>
-                  <li>
-                    <span>Margen de error</span>
-                    <strong>{formatARS(breakdown.errorMargin)}</strong>
-                  </li>
-                  <li className="calc__lines-sub">
-                    <span>Gastos operativos total</span>
-                    <strong>{formatARS(breakdown.operativos)}</strong>
-                  </li>
-                  {breakdown.suppliesBase > 0 && (
-                    <li>
-                      <span>Otros insumos sueltos (+30%)</span>
-                      <strong>{formatARS(breakdown.supplies)}</strong>
-                    </li>
-                  )}
-                  <li className="calc__lines-sub">
-                    <span>Subtotal (×{piece.profitMultiplier} + insumos)</span>
-                    <strong>{formatARS(breakdown.subtotal)}</strong>
-                  </li>
-                  {config.marketplaceFeePct > 0 ? (
-                    <li>
-                      <span>
-                        Taxa marketplace ({config.marketplaceFeePct}%)
-                      </span>
-                      <strong>{formatARS(breakdown.marketplaceFee)}</strong>
-                    </li>
-                  ) : null}
-                  <li className="calc__lines-sub">
-                    <span>Total unitario a cobrar</span>
-                    <strong>{formatARS(breakdown.total)}</strong>
-                  </li>
-                  <li>
-                    <span>Cantidad</span>
-                    <strong>× {quantity}</strong>
-                  </li>
-                  <li className="calc__lines-total">
-                    <span>Total del pedido (calculado)</span>
-                    <strong>{formatARS(computedTotal)}</strong>
-                  </li>
-                </ul>
-
-                <div className="field calc__charge">
-                  <label htmlFor="calc-charge">
-                    Total a cobrar
-                    {isOverridden && (
-                      <button
-                        type="button"
-                        className="calc__charge-reset"
-                        onClick={() => setChargeOverride("")}
-                        title={`Volver al calculado (${formatARS(computedTotal)})`}
-                      >
-                        ↺ usar {formatARS(computedTotal)}
-                      </button>
-                    )}
-                  </label>
-                  <input
-                    id="calc-charge"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    placeholder={String(computedTotal)}
-                    value={chargeOverride}
-                    onChange={(e) => setChargeOverride(e.target.value)}
-                  />
-                  <span className="hint">
-                    Vacío = usa el calculado. Si lo pisás, los cálculos usan
-                    ese valor.
-                  </span>
-                </div>
-
-                <div
-                  className="profit"
-                  data-tone={prof.profit >= 0 ? "ok" : "bad"}
-                >
-                  <div className="profit__row">
-                    <span>Costo total ({prof.quantity} u)</span>
-                    <strong>{formatARS(prof.totalCost)}</strong>
-                  </div>
-                  <div className="profit__row">
-                    <span>Total a cobrar</span>
-                    <strong>{formatARS(prof.revenue)}</strong>
-                  </div>
-                  <div className="profit__row profit__row--main">
-                    <span>Ganancia</span>
-                    <strong>
-                      {formatARS(prof.profit)}
-                      {prof.marginPct != null && (
-                        <em className="profit__pct"> · {prof.marginPct}%</em>
-                      )}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="calc__actions">
-                  {isEditing ? (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn--primary"
-                        onClick={() => handleSaveQuote("auto")}
-                        disabled={!isDirty && !savedFlash}
-                        title={
-                          isDirty
-                            ? "Actualizar la cotización abierta (Ctrl+S)"
-                            : "Sin cambios por guardar"
-                        }
-                      >
-                        {savedFlash
-                          ? "✓ Guardado"
-                          : isDirty
-                            ? "● Guardar cambios"
-                            : "✓ Sincronizada"}
-                      </button>
-                      <details className="calc__actions-more">
-                        <summary
-                          className="btn btn--ghost"
-                          title="Más acciones"
-                          aria-label="Más acciones"
-                        >
-                          ⋯ Más
-                        </summary>
-                        <div className="calc__actions-more__panel">
-                          <button
-                            type="button"
-                            className="btn btn--ghost"
-                            onClick={() => handleSaveQuote("copy")}
-                            title="Guardar como una cotización nueva (variante)"
-                          >
-                            Guardar copia
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn--ghost"
-                            onClick={handleNewQuote}
-                            title="Empezar una cotización en blanco (Ctrl+N)"
-                          >
-                            Nueva cotización
-                          </button>
-                        </div>
-                      </details>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn btn--primary"
-                      onClick={() => handleSaveQuote("auto")}
-                      title="Guardar esta cotización (Ctrl+S)"
-                    >
-                      {savedFlash ? "✓ Guardada" : "Guardar cotización"}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={handleCreateQuoteDraft}
-                    disabled={charge <= 0}
-                    title="Mandar este total al Generador de Presupuestos"
-                  >
-                    Crear Presupuesto PDF
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={handleCreateOrder}
-                    disabled={charge <= 0}
-                    title="Crear pedido con esta cotización"
-                  >
-                    Crear pedido →
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
+          <ResultPanel
+            hasResult={hasResult}
+            breakdown={breakdown}
+            config={config}
+            piece={piece}
+            prof={prof}
+            quantity={quantity}
+            computedTotal={computedTotal}
+            charge={charge}
+            chargeOverride={chargeOverride}
+            isOverridden={isOverridden}
+            isEditing={isEditing}
+            isDirty={isDirty}
+            savedFlash={savedFlash}
+            onChargeOverrideChange={setChargeOverride}
+            onSave={handleSaveQuote}
+            onNew={handleNewQuote}
+            onCreateQuoteDraft={handleCreateQuoteDraft}
+            onCreateOrder={handleCreateOrder}
+          />
 
           {/* ---- Panel educativo "¿Qué calcula?" ---- */}
           <section className="calc__guide">
@@ -1429,208 +1252,23 @@ export function CalculadoraPage({
       </div>
 
       {/* ---- Últimas cotizaciones ---- */}
-      <section className="calc__history">
-        <div className="calc__history-head">
-          <h3>
-            Últimas cotizaciones
-            {quotes.length > 5 && (
-              <span className="hint"> · mostrando 5 de {quotes.length}</span>
-            )}
-          </h3>
-          {quotes.length > 5 && (
-            <button
-              type="button"
-              className="btn btn--sm btn--ghost"
-              onClick={() => setHistoryModalOpen(true)}
-              title="Ver todas las cotizaciones guardadas con buscador"
-            >
-              Ver todas ({quotes.length})
-            </button>
-          )}
-        </div>
-        {quotes.length === 0 ? (
-          <div className="calc__history-empty">
-            <strong>Tu historial está vacío</strong>
-            <p className="hint">
-              Cuando guardes una cotización aparecerá acá — vas a poder
-              re-abrirla, duplicarla para hacer variantes, o convertirla en
-              pedido directamente.
-            </p>
-          </div>
-        ) : (
-          <ul className="calc__history-list">
-            {quotes.slice(0, 5).map((q) => {
-              const isOpen = q.id === editingQuoteId;
-              const wasEdited = !!q.updatedAt;
-              return (
-                <li
-                  key={q.id}
-                  className={`calc__history-item${
-                    isOpen ? " calc__history-item--editing" : ""
-                  }`}
-                >
-                  <div className="calc__history-main">
-                    <strong>
-                      {q.piece.pieceName || "Sin nombre"}
-                      {isOpen && (
-                        <span className="calc__history-badge" title="Esta cotización está abierta en el form">
-                          Abierta{isDirty ? " · ● sin guardar" : ""}
-                        </span>
-                      )}
-                    </strong>
-                    <span className="hint">
-                      {new Date(q.updatedAt ?? q.createdAt).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {wasEdited ? " · editada" : ""} · {q.quantity} u · ×
-                      {q.piece.profitMultiplier} ·{" "}
-                      {formatARS(q.breakdown.total)}/u
-                      {q.piece.materials && q.piece.materials.length > 1
-                        ? ` · ${q.piece.materials.length} filamentos`
-                        : ""}
-                      {q.chargeOverride != null && " · ✎ valor manual"}
-                    </span>
-                  </div>
-                  <span className="calc__history-total">
-                    {formatARS(
-                      q.chargeOverride ??
-                        round2(q.breakdown.total * q.quantity),
-                    )}
-                  </span>
-                  <div className="calc__history-actions">
-                    <button
-                      type="button"
-                      className="btn btn--sm btn--ghost"
-                      onClick={() => handleLoadQuote(q)}
-                      disabled={isOpen && !isDirty}
-                      title={
-                        isOpen
-                          ? "Ya está abierta"
-                          : "Abrir esta cotización en el form para editarla"
-                      }
-                    >
-                      {isOpen ? "Abierta" : "Abrir"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--sm btn--ghost"
-                      onClick={() => handleDuplicateQuote(q)}
-                      title="Cargar los datos como una cotización NUEVA (para hacer variantes)"
-                    >
-                      Duplicar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--sm btn--ghost"
-                      onClick={() => {
-                        const minutesPerUnit =
-                          Math.max(0, q.piece.printHours) * 60 +
-                          Math.max(0, q.piece.printMinutes);
-                        onCreateOrder({
-                          value:
-                            q.chargeOverride ??
-                            round2(q.breakdown.total * q.quantity),
-                          quantity: q.quantity,
-                          costItems: breakdownToCostItems(q.breakdown),
-                          estimatedMinutesPerUnit:
-                            minutesPerUnit > 0 ? minutesPerUnit : null,
-                        });
-                      }}
-                    >
-                      Pedido →
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--sm btn--ghost"
-                      onClick={() => requestArchive(q)}
-                      aria-label="Archivar"
-                      title="Archivar (podés restaurarla luego)"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      <ActiveQuotesSection
+        quotes={quotes}
+        editingQuoteId={editingQuoteId}
+        isDirty={isDirty}
+        onShowAll={() => setHistoryModalOpen(true)}
+        onLoad={handleLoadQuote}
+        onDuplicate={handleDuplicateQuote}
+        onCreateOrder={createOrderFromQuote}
+        onArchive={requestArchive}
+      />
 
-      {/* ---- Cotizaciones archivadas ---- */}
-      {archived.length > 0 && (
-        <section className="calc__history">
-          <div className="calc__history-head">
-            <h3>
-              Cotizaciones archivadas
-              {archived.length > 5 && (
-                <span className="hint"> · mostrando 5 de {archived.length}</span>
-              )}
-            </h3>
-            {archived.length > 5 && (
-              <button
-                type="button"
-                className="btn btn--sm btn--ghost"
-                onClick={() => setHistoryModalOpen(true)}
-                title="Ver todas las cotizaciones archivadas"
-              >
-                Ver todas ({archived.length})
-              </button>
-            )}
-          </div>
-          <ul className="calc__history-list">
-            {archived.slice(0, 5).map((q) => (
-              <li key={q.id} className="calc__history-item">
-                <div className="calc__history-main">
-                  <strong>{q.piece.pieceName || "Sin nombre"}</strong>
-                  <span className="hint">
-                    archivada{" "}
-                    {new Date(q.archivedAt ?? q.updatedAt ?? q.createdAt).toLocaleString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                    {" · "}
-                    {q.quantity} u · ×{q.piece.profitMultiplier} ·{" "}
-                    {formatARS(q.breakdown.total)}/u
-                    {q.piece.materials && q.piece.materials.length > 1
-                      ? ` · ${q.piece.materials.length} filamentos`
-                      : ""}
-                    {q.chargeOverride != null && " · ✎ valor manual"}
-                  </span>
-                </div>
-                <span className="calc__history-total">
-                  {formatARS(
-                    q.chargeOverride ?? round2(q.breakdown.total * q.quantity),
-                  )}
-                </span>
-                <div className="calc__history-actions">
-                  <button
-                    type="button"
-                    className="btn btn--sm btn--ghost"
-                    onClick={() => handleRestoreArchived(q)}
-                    title="Restaurar a cotizaciones activas"
-                  >
-                    Restaurar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--sm btn--ghost"
-                    onClick={() => requestDeleteArchived(q)}
-                    title="Eliminar permanentemente"
-                    aria-label="Eliminar permanentemente"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <ArchivedQuotesSection
+        archived={archived}
+        onShowAll={() => setHistoryModalOpen(true)}
+        onRestore={handleRestoreArchived}
+        onDelete={requestDeleteArchived}
+      />
 
       <HistoryModal
         open={historyModalOpen}
@@ -1639,18 +1277,7 @@ export function CalculadoraPage({
         editingQuoteId={editingQuoteId}
         onOpenQuote={handleLoadQuote}
         onDuplicateQuote={handleDuplicateQuote}
-        onCreateOrderFromQuote={(q) => {
-          const minutesPerUnit =
-            Math.max(0, q.piece.printHours) * 60 +
-            Math.max(0, q.piece.printMinutes);
-          onCreateOrder({
-            value: q.chargeOverride ?? round2(q.breakdown.total * q.quantity),
-            quantity: q.quantity,
-            costItems: breakdownToCostItems(q.breakdown),
-            estimatedMinutesPerUnit:
-              minutesPerUnit > 0 ? minutesPerUnit : null,
-          });
-        }}
+        onCreateOrderFromQuote={createOrderFromQuote}
         archived={archived}
         onArchiveQuote={requestArchive}
         onRestoreArchived={handleRestoreArchived}

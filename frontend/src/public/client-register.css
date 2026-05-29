@@ -2,6 +2,7 @@
 
 .creg {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,6 +52,15 @@
 .creg__submit {
   align-self: flex-start;
   margin-top: 0.5rem;
+  box-shadow: var(--glow);
+}
+
+/* En mobile el CTA de conversión va full-width y con alto cómodo para el pulgar. */
+@media (max-width: 560px) {
+  .creg__submit {
+    align-self: stretch;
+    min-height: 48px;
+  }
 }
 
 .creg__panel--success {
