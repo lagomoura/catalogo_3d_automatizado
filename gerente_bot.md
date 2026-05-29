@@ -348,14 +348,14 @@ backend:
 
 | Componente | Función |
 |---|---|
-| `AssistantFAB` | Botón flotante con badge de alertas (atrasados + stock bajo). Con la identidad **Aura3D** usa fondo en gradiente teal→teal-600 y sombra de "aura" (`--glow`) en lugar del color sólido neutro previo. |
-| `AssistantPanel` | Sheet de 420px que se desliza desde la derecha con `backdrop-filter: blur`. |
+| `AssistantFAB` | Botón flotante con badge de alertas (atrasados + stock bajo). Con la identidad **Aura3D** usa fondo en gradiente teal→teal-600 y sombra de "aura" (`--glow`) en lugar del color sólido neutro previo. Su posición respeta las safe-areas de iOS (`env(safe-area-inset-bottom/right)`) para no quedar bajo la barra de gestos. |
+| `AssistantPanel` | Sheet de 420px que se desliza desde la derecha con `backdrop-filter: blur`. Usa `height: 100dvh` (viewport dinámico) y el footer reserva `env(safe-area-inset-bottom)`, para que el teclado virtual de mobile no tape el composer ni la home-bar lo solape. |
 | `BriefingCard` | Saludo + 4 KPIs en cards + highlights en bullets animados. |
 | `MessageBubble` | Burbujas tipo iMessage. Para `assistant`, anima la aparición del texto carácter por carácter con cursor parpadeante (`▌`). |
 | `DataCards` | Tablas inline tipadas por tool (pedidos, materiales, clientes, productos, impresoras, caja). |
 | `ActionCard` | Tarjeta destacada con título + tabla de campos + botones Confirmar/Cancelar. Cambia estilo según estado (pending/confirming/done/canceled). |
 | `SuggestionChips` | 3-4 chips contextuales arriba del composer. Se regeneran tras cada turno. |
-| `Composer` | Textarea auto-resize + botón enviar. Enter envía, Shift+Enter newline. |
+| `Composer` | Textarea auto-resize + botón enviar. Enter envía, Shift+Enter newline. En mobile el textarea usa `font-size: 16px` (regla global) para que iOS Safari no haga zoom al enfocar. |
 
 Atajos:
 - `Ctrl/Cmd + /` → abrir/cerrar panel.
@@ -443,6 +443,30 @@ Toda modificación al asistente debe sumar una entrada acá, en orden
 cronológico inverso (lo más nuevo arriba). Formato:
 **YYYY-MM-DD** — descripción concisa de qué cambió y por qué.
 
+- **2026-05-29** — Consistencia de tema (Tanda 3, cosmético, sin cambios de
+  comportamiento): los KPIs credit/debit del `BriefingCard` y el ícono de
+  acción "done" del asistente pasan de hex hardcodeados a los tokens
+  `--credit`/`--debit`, que cambian solos por tema. Se elimina el override
+  dark redundante (una sola fuente de verdad).
+- **2026-05-29** — Mobile-ready (Tanda 2 de la auditoría de frontend, sin
+  cambios de comportamiento del bot): el `AssistantPanel` pasa a `height:
+  100dvh` (viewport dinámico) y su footer reserva `env(safe-area-inset-bottom)`,
+  de modo que el teclado virtual de mobile ya no tapa el composer y la home-bar
+  de iOS no solapa la fila de envío.
+- **2026-05-29** — Mobile-ready (Tanda 1 de la auditoría de frontend, sin
+  cambios de comportamiento del bot): el FAB respeta las safe-areas de iOS
+  (`env(safe-area-inset-*)`) para no quedar bajo la barra de gestos; el
+  textarea del `Composer` queda cubierto por la regla global de `font-size:
+  16px` en mobile (evita el zoom involuntario de iOS Safari al enfocar). El
+  ajuste fino del panel (`100dvh` + teclado virtual) queda para la Tanda 2.
+- **2026-05-29** — Performance (sin cambios de comportamiento): se eliminan
+  los N+1 de lectura del asistente. `build_snapshot` hace eager-load
+  (`selectinload`) de `contact`/`catalog_item` en los pedidos activos y de
+  `category` en el catálogo; las tools `list_orders`, `get_order_detail` y
+  `search_catalog` hacen lo mismo; `list_contacts` calcula la deuda por
+  cliente en una sola query con `GROUP BY` (antes: un `SUM` por contacto);
+  `list_printers` y el snapshot consultan solo `printer_id` en vez de traer
+  la fila completa de `production_runs`. Mismos resultados, muchas menos queries.
 - **2026-05-29** — Identidad visual **Aura3D** (paleta Teal & Lima + tema
   claro/oscuro): el panel del asistente y el FAB adoptan los tokens
   semánticos globales. El FAB pasa a gradiente teal con sombra de "aura"
