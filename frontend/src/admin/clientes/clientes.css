@@ -60,15 +60,15 @@
 .clientes__help:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(79, 134, 255, 0.08);
+  background: rgba(18, 181, 165, 0.08);
 }
 
 .clientes__banner {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(37, 99, 235, 0.08);
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(18, 181, 165, 0.08);
+  border: 1px solid rgba(18, 181, 165, 0.25);
   color: var(--fg);
   padding: 0.7rem 1rem;
   border-radius: 10px;
@@ -226,7 +226,7 @@
 .client-form-grid .field textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 181, 165, 0.15);
 }
 
 .client-form-grid__section {

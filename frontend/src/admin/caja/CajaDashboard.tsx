@@ -26,7 +26,7 @@ interface Props {
 
 const CREDIT = "#059669";
 const DEBIT = "#dc2626";
-const PIE = ["#2563eb", "#059669", "#d97706", "#7c3aed", "#dc2626", "#0891b2", "#db2777", "#65a30d"];
+const PIE = ["#12b5a5", "#84cc16", "#6366f1", "#f97316", "#0ea5e9", "#a21caf", "#16a34a", "#ef4444"];
 
 function Delta({ now, prev }: { now: number; prev: number }) {
   if (prev === 0) return null;
@@ -125,8 +125,8 @@ export function CajaDashboard({ summary, range, onRangeChange }: Props) {
             <AreaChart data={daily}>
               <defs>
                 <linearGradient id="flowFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#12b5a5" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#12b5a5" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
@@ -141,7 +141,7 @@ export function CajaDashboard({ summary, range, onRangeChange }: Props) {
                 type="monotone"
                 dataKey="cumulative"
                 name="Saldo acumulado"
-                stroke="#2563eb"
+                stroke="#12b5a5"
                 strokeWidth={2}
                 fill="url(#flowFill)"
               />

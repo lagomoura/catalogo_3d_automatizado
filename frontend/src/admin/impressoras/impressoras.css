@@ -63,7 +63,7 @@
 .impressoras__help:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(79, 134, 255, 0.08);
+  background: rgba(18, 181, 165, 0.08);
 }
 
 .impressoras__toolbar {
@@ -168,7 +168,7 @@
   align-items: center;
   justify-content: center;
   font-size: 1.8rem;
-  background: rgba(79, 134, 255, 0.12);
+  background: rgba(18, 181, 165, 0.12);
 }
 
 .onboarding__copy h4 {

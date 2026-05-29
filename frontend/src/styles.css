@@ -1,13 +1,160 @@
+/* ===========================================================================
+   Aura3D — sistema de identidad visual
+   Paleta Teal & Lima · personalidad amigable y cercana · temas claro + oscuro.
+   Arquitectura de tokens en 2 capas: escalas crudas (no usar directo) →
+   tokens semánticos (los que consumen los componentes). El tema solo redefine
+   los tokens semánticos, por eso el dark mode es limpio.
+   =========================================================================== */
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --bg: #fafaf7;
-  --fg: #1a1a1a;
-  --muted: #6b6b6b;
-  --accent: #2563eb;
-  --border: #e5e5e5;
-  --card-bg: #ffffff;
-  --error: #b91c1c;
+  color-scheme: light;
+
+  /* ---- Escalas crudas (no usar directo en componentes) ---- */
+  --teal-50: #e6faf7;
+  --teal-100: #c2f2ea;
+  --teal-200: #8fe6d9;
+  --teal-300: #54d5c2;
+  --teal-400: #25c2ac;
+  --teal-500: #12b5a5;
+  --teal-600: #0e9488;
+  --teal-700: #0b756c;
+  --teal-800: #0c5c55;
+  --teal-900: #0f2a2e;
+
+  --lime-50: #f4fbe6;
+  --lime-100: #e6f5c8;
+  --lime-200: #d0ec97;
+  --lime-300: #b6df63;
+  --lime-400: #9fd23a;
+  --lime-500: #84cc16;
+  --lime-600: #69a30f;
+  --lime-700: #4f7a0d;
+
+  --n-0: #ffffff;
+  --n-25: #f6fbf9;
+  --n-50: #eef4f2;
+  --n-100: #e2eae8;
+  --n-200: #cbd6d3;
+  --n-300: #a9b7b3;
+  --n-400: #7e8f8b;
+  --n-500: #5c6b68;
+  --n-600: #41504d;
+  --n-700: #2c3936;
+  --n-800: #14211f;
+  --n-900: #0b1614;
+
+  /* ---- Tokens semánticos (tema CLARO) ---- */
+  --bg: var(--n-25);
+  --bg-elev: var(--n-0);
+  --card-bg: var(--n-0);
+  --fg: var(--teal-900);
+  --muted: var(--n-500);
+  --border: var(--n-100);
+  --border-strong: var(--n-200);
+
+  --accent: var(--teal-500);        /* rellenos, iconos, bordes activos */
+  --accent-strong: var(--teal-600); /* fondos con texto blanco (AA) */
+  --accent-text: var(--teal-700);   /* texto/enlaces sobre fondo claro (AA) */
+  --accent-soft: var(--teal-50);    /* fondos suaves teñidos */
+  --pop: var(--lime-500);           /* acento lima: rellenos/destacados, nunca texto */
+  --pop-text: var(--lime-700);
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #ef4444;
+  --info: #0ea5e9;
+  --credit: #16a34a;
+  --debit: #ef4444;
+
+  /* ---- Estado de pedidos (global, antes scoped a .pedidos) ---- */
+  --st-creado: #64748b;
+  --st-creado-soft: #eef1f5;
+  --st-ejecutando: #f97316;
+  --st-ejecutando-soft: #fff1e6;
+  --st-ejecutado: #6366f1;
+  --st-ejecutado-soft: #ececfb;
+  --st-entregado: #16a34a;
+  --st-entregado-soft: #e6f5ef;
+  --st-warn: #d97706;
+  --st-warn-soft: #fef3e2;
+
+  /* ---- Tipografía ---- */
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--font-body);
+
+  /* ---- Forma ---- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* ---- Elevación (sombras tinte tinta-teal) ---- */
+  --shadow-sm: 0 1px 2px rgba(15, 42, 46, 0.06);
+  --shadow-md: 0 4px 16px -4px rgba(15, 42, 46, 0.10);
+  --shadow-lg: 0 12px 32px -8px rgba(15, 42, 46, 0.16);
+  --glow: 0 6px 24px -6px rgba(18, 181, 165, 0.40);   /* "aura" en CTAs/FAB */
+  --ring: 0 0 0 4px rgba(18, 181, 165, 0.18);         /* focus accesible */
+
+  /* ---- Espaciado (base 4px) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+
+/* ===========================================================================
+   Tema OSCURO — redefine SOLO tokens semánticos.
+   Activado por [data-theme="dark"] en <html> (toggle persistido).
+   =========================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: var(--n-900);
+  --bg-elev: #11201d;
+  --card-bg: var(--n-800);
+  --fg: #eaf4f1;
+  --muted: #9db2ad;
+  --border: #243431;
+  --border-strong: #324541;
+
+  --accent: var(--teal-400);
+  --accent-strong: var(--teal-500);
+  --accent-text: var(--teal-300);
+  --accent-soft: rgba(37, 194, 172, 0.14);
+  --pop: var(--lime-400);
+  --pop-text: var(--lime-300);
+
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #38bdf8;
+  --credit: #34d399;
+  --debit: #f87171;
+
+  --st-creado: #94a3b8;
+  --st-creado-soft: #1e2a33;
+  --st-ejecutando: #fb923c;
+  --st-ejecutando-soft: #2e2012;
+  --st-ejecutado: #818cf8;
+  --st-ejecutado-soft: #1f2140;
+  --st-entregado: #34d399;
+  --st-entregado-soft: #122a20;
+  --st-warn: #fbbf24;
+  --st-warn-soft: #2b2310;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.50);
+  --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.60);
+  --glow: 0 6px 28px -6px rgba(37, 194, 172, 0.55);
+  --ring: 0 0 0 4px rgba(37, 194, 172, 0.28);
 }
 
 * {
@@ -18,12 +165,88 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Cifras tabulares para datos numéricos en mono. */
+.mono, [class*="amount"], [class*="value"] {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 .app {
   max-width: 1100px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
+}
+
+/* ===========================================================================
+   Marca Aura3D + control de tema
+   =========================================================================== */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.brand__word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+.brand__word-accent {
+  color: var(--accent-text);
+}
+
+.brand__sub {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.theme-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* Oculta visualmente sin perder semántica — para labels que el diseño
@@ -280,7 +503,7 @@ body {
 .card__link:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(37, 99, 235, 0.06);
+  background: rgba(18, 181, 165, 0.06);
 }
 
 .card__link-arrow {
@@ -378,13 +601,26 @@ body {
 }
 
 .btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
   color: #fff;
 }
 
 .btn--primary:hover:not(:disabled) {
   filter: brightness(1.07);
+  box-shadow: var(--glow);
+}
+
+/* Focus accesible y coherente para controles interactivos. */
+.btn:focus-visible,
+.tab:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: var(--accent);
 }
 
 /* ---- Order edit modal ---- */
@@ -531,7 +767,7 @@ body {
 .help-btn:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background: rgba(79, 134, 255, 0.08);
+  background: rgba(18, 181, 165, 0.08);
 }
 
 .card {
@@ -545,7 +781,7 @@ body {
 
 .card--selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 2px rgba(18, 181, 165, 0.18);
 }
 
 .card__select {
@@ -751,12 +987,12 @@ body {
   border-radius: 999px;
   cursor: pointer;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 4px 14px rgba(18, 181, 165, 0.45);
   transition: background 0.15s ease, transform 0.15s ease;
 }
 
 .thumb__cta:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--accent-strong);
   transform: translateX(-50%) translateY(-1px);
 }
 
@@ -818,7 +1054,7 @@ body {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--accent);
-  background: rgba(37, 99, 235, 0.1);
+  background: rgba(18, 181, 165, 0.1);
   border-radius: 999px;
   letter-spacing: 0.01em;
 }
@@ -837,8 +1073,8 @@ body {
   gap: 1rem;
   padding: 0.6rem 0.9rem;
   margin: 0 0 0.9rem;
-  background: rgba(37, 99, 235, 0.06);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(18, 181, 165, 0.06);
+  border: 1px solid rgba(18, 181, 165, 0.2);
   border-radius: 10px;
   flex-wrap: wrap;
 }
@@ -1286,7 +1522,7 @@ body {
   display: inline-block;
   margin: 0.6rem 0.85rem 0.85rem;
   padding: 0.2rem 0.55rem;
-  background: rgba(37, 99, 235, 0.1);
+  background: rgba(18, 181, 165, 0.1);
   color: var(--accent);
   border-radius: 4px;
   font-size: 0.75rem;
@@ -1401,7 +1637,7 @@ body {
 .product-detail__category {
   display: inline-block;
   padding: 0.25rem 0.65rem;
-  background: rgba(37, 99, 235, 0.1);
+  background: rgba(18, 181, 165, 0.1);
   color: var(--accent);
   border-radius: 6px;
   font-size: 0.8rem;
@@ -1429,6 +1665,12 @@ body {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.25rem;
+}
+
+.app__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .app__nav-link {
@@ -1522,11 +1764,6 @@ body {
 /* ===========================================================================
    Control de caja
    =========================================================================== */
-
-:root {
-  --credit: #059669;
-  --debit: #dc2626;
-}
 
 .tabs {
   display: flex;
@@ -1905,7 +2142,7 @@ body {
 }
 
 .txn-row:not(.txn-row--head):hover {
-  background: rgba(37, 99, 235, 0.04);
+  background: rgba(18, 181, 165, 0.04);
 }
 
 .txn-desc {
@@ -1990,18 +2227,7 @@ body {
    =========================================================================== */
 
 .pedidos {
-  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
-  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --st-creado: #5b6b7f;
-  --st-creado-soft: #eef1f5;
-  --st-ejecutando: #e8590c;
-  --st-ejecutando-soft: #fff1e6;
-  --st-ejecutado: #4f46e5;
-  --st-ejecutado-soft: #ececfb;
-  --st-entregado: #0d9268;
-  --st-entregado-soft: #e6f5ef;
-  --st-warn: #b45309;
-  --st-warn-soft: #fef3e2;
+  /* Tokens de fuente y estado ahora viven en :root (soportan dark mode). */
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
@@ -2065,7 +2291,7 @@ body {
 
 .product-pick-card.is-selected {
   border-color: var(--accent);
-  box-shadow: 0 6px 16px -8px rgba(37, 99, 235, 0.55);
+  box-shadow: 0 6px 16px -8px rgba(18, 181, 165, 0.55);
 }
 
 .qty-stepper {
@@ -3732,7 +3958,7 @@ button.chip.chip--prod:hover {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--accent);
-  background: rgba(37, 99, 235, 0.12);
+  background: rgba(18, 181, 165, 0.12);
   padding: 0.12rem 0.5rem;
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
@@ -3755,7 +3981,7 @@ button.chip.chip--prod:hover {
 .category-filter:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 3px rgba(18, 181, 165, 0.18);
 }
 
 /* --- Alineación pareja de tarjetas (admin) --- */
@@ -3774,7 +4000,7 @@ button.chip.chip--prod:hover {
 
 .card--selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 0 0 2px rgba(18, 181, 165, 0.28);
 }
 
 /* --- Badge de categoría coloreado (admin + vitrina) --- */
@@ -3886,7 +4112,7 @@ button.chip.chip--prod:hover {
 .manual-form select:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 3px rgba(18, 181, 165, 0.18);
 }
 
 /* Dropzone */
@@ -3909,7 +4135,7 @@ button.chip.chip--prod:hover {
 .manual-form__drop:hover,
 .manual-form__drop.is-drag {
   border-color: var(--accent);
-  background: rgba(37, 99, 235, 0.06);
+  background: rgba(18, 181, 165, 0.06);
   color: var(--accent);
 }
 
@@ -4052,7 +4278,7 @@ button.chip.chip--prod:hover {
 .cat-manager__add input:focus-visible {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 0 0 3px rgba(18, 181, 165, 0.18);
 }
 
 .cat-manager__list {

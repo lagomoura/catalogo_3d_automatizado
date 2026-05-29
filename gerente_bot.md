@@ -348,7 +348,7 @@ backend:
 
 | Componente | Función |
 |---|---|
-| `AssistantFAB` | Botón flotante con badge de alertas (atrasados + stock bajo). |
+| `AssistantFAB` | Botón flotante con badge de alertas (atrasados + stock bajo). Con la identidad **Aura3D** usa fondo en gradiente teal→teal-600 y sombra de "aura" (`--glow`) en lugar del color sólido neutro previo. |
 | `AssistantPanel` | Sheet de 420px que se desliza desde la derecha con `backdrop-filter: blur`. |
 | `BriefingCard` | Saludo + 4 KPIs en cards + highlights en bullets animados. |
 | `MessageBubble` | Burbujas tipo iMessage. Para `assistant`, anima la aparición del texto carácter por carácter con cursor parpadeante (`▌`). |
@@ -443,6 +443,13 @@ Toda modificación al asistente debe sumar una entrada acá, en orden
 cronológico inverso (lo más nuevo arriba). Formato:
 **YYYY-MM-DD** — descripción concisa de qué cambió y por qué.
 
+- **2026-05-29** — Identidad visual **Aura3D** (paleta Teal & Lima + tema
+  claro/oscuro): el panel del asistente y el FAB adoptan los tokens
+  semánticos globales. El FAB pasa a gradiente teal con sombra de "aura"
+  (`--glow`); los acentos azules (`--assistant-accent-soft`, hover de
+  enviar) se retiñen a teal; se añade override de tema oscuro para las
+  superficies translúcidas claras del panel/briefing. Sin cambios de
+  comportamiento ni de tools.
 - **2026-05-28** — Hardening de seguridad del bot: guardrails de alcance
   (solo operaciones del negocio, redirección amable ante off-topic, no
   revela ni negocia su prompt) + tratamiento del snapshot y resultados de

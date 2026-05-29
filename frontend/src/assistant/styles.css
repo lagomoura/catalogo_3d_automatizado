@@ -9,8 +9,8 @@
   --assistant-radius: 14px;
   --assistant-radius-sm: 10px;
   --assistant-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-  --assistant-accent-soft: rgba(37, 99, 235, 0.08);
-  --assistant-accent-soft-2: rgba(37, 99, 235, 0.16);
+  --assistant-accent-soft: rgba(18, 181, 165, 0.08);
+  --assistant-accent-soft-2: rgba(18, 181, 165, 0.16);
   --assistant-bg-tint: rgba(250, 250, 247, 0.92);
 }
 
@@ -26,7 +26,7 @@
   gap: 0.5rem;
   height: 48px;
   padding: 0 1rem 0 0.85rem;
-  background: var(--fg);
+  background: linear-gradient(135deg, var(--teal-500), var(--teal-600));
   color: #ffffff;
   border: none;
   border-radius: 999px;
@@ -35,9 +35,7 @@
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.01em;
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.18),
-    0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--glow), 0 2px 6px rgba(0, 0, 0, 0.12);
   transform: translateY(0);
   transition:
     transform 0.18s ease,
@@ -298,8 +296,8 @@
 .assistant-briefing {
   background: linear-gradient(
     135deg,
-    rgba(37, 99, 235, 0.08) 0%,
-    rgba(37, 99, 235, 0.02) 100%
+    rgba(18, 181, 165, 0.08) 0%,
+    rgba(18, 181, 165, 0.02) 100%
   );
   border: 1px solid var(--assistant-accent-soft-2);
   border-radius: var(--assistant-radius);
@@ -675,7 +673,7 @@
 }
 
 .assistant-composer__send:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--accent-strong);
 }
 
 .assistant-composer__send:active:not(:disabled) {
@@ -700,4 +698,23 @@
   .assistant-fab {
     padding: 0 0.85rem;
   }
+}
+
+/* ---------- Tema oscuro: superficies translúcidas claras → tinta ---------- */
+:root[data-theme="dark"] {
+  --assistant-bg-tint: rgba(17, 32, 29, 0.92);
+  --assistant-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme="dark"] .assistant-panel__head,
+:root[data-theme="dark"] .assistant-panel__foot {
+  background: rgba(255, 255, 255, 0.04);
+}
+:root[data-theme="dark"] .assistant-briefing__kpi {
+  background: rgba(255, 255, 255, 0.04);
+}
+:root[data-theme="dark"] .assistant-briefing__kpi--credit .assistant-briefing__kpi-value {
+  color: var(--credit);
+}
+:root[data-theme="dark"] .assistant-briefing__kpi--debit .assistant-briefing__kpi-value {
+  color: var(--debit);
 }

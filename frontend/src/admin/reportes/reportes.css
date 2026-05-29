@@ -1,20 +1,23 @@
-/* Reportes — dark-themed dashboard scoped a este módulo, inspirado en Lunaro.
-   Variables locales: no tocamos las globales para no romper el resto del UI. */
+/* Reportes — dashboard que ahora hereda la identidad Aura3D y el tema global
+   (claro/oscuro). Las variables locales --rep-* se mapean a los tokens
+   semánticos para no reescribir todo el módulo. */
 
 .reportes {
-  --rep-bg: #0b0f1a;
-  --rep-surface: #111726;
-  --rep-surface-2: #161e2e;
-  --rep-border: #1f2a40;
-  --rep-text: #e6eaf2;
-  --rep-muted: #8a93a6;
-  --rep-faint: #5b6477;
-  --rep-accent: #4f86ff;
-  --rep-blue: #5eb1ff;
-  --rep-orange: #f4a65a;
-  --rep-red: #f56a6a;
-  --rep-green: #54c58a;
-  --rep-purple: #a78cf4;
+  /* Superficies y texto: heredan el tema global. */
+  --rep-bg: var(--bg);
+  --rep-surface: var(--card-bg);
+  --rep-surface-2: color-mix(in srgb, var(--fg) 8%, transparent);
+  --rep-border: var(--border);
+  --rep-text: var(--fg);
+  --rep-muted: var(--muted);
+  --rep-faint: color-mix(in srgb, var(--muted) 65%, var(--bg));
+  --rep-accent: var(--accent);
+  /* Series de gráficos — tonos legibles sobre fondo claro (override en oscuro). */
+  --rep-blue: #0284c7;
+  --rep-orange: #ea580c;
+  --rep-red: #dc2626;
+  --rep-green: #16a34a;
+  --rep-purple: #7c3aed;
 
   margin: 0 -1.5rem -4rem;
   padding: 1.75rem 2rem 4rem;
@@ -22,6 +25,15 @@
   color: var(--rep-text);
   border-radius: 16px;
   min-height: 80vh;
+}
+
+/* En tema oscuro las series usan tonos más claros para contrastar con el fondo. */
+:root[data-theme="dark"] .reportes {
+  --rep-blue: #5eb1ff;
+  --rep-orange: #f4a65a;
+  --rep-red: #f56a6a;
+  --rep-green: #54c58a;
+  --rep-purple: #a78cf4;
 }
 
 .reportes__header {
@@ -64,7 +76,7 @@
 .reportes__error {
   background: rgba(245, 106, 106, 0.08);
   border: 1px solid rgba(245, 106, 106, 0.4);
-  color: #ffb3b3;
+  color: var(--rep-red);
   border-radius: 10px;
   padding: 0.7rem 1rem;
   margin-bottom: 1rem;
@@ -98,7 +110,7 @@
 }
 
 .kpi-card:hover {
-  border-color: #2a3856;
+  border-color: var(--border-strong);
   transform: translateY(-1px);
 }
 
@@ -125,7 +137,7 @@
   height: 32px;
   border-radius: 10px;
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
 .kpi-card__value {
@@ -311,7 +323,7 @@
 }
 
 .profit-table__row {
-  border-bottom: 1px solid rgba(31, 42, 64, 0.5);
+  border-bottom: 1px solid var(--rep-border);
 }
 
 .profit-table__name {
@@ -341,9 +353,9 @@
 }
 
 .reportes .preset-chip--active {
-  background: var(--rep-accent);
-  color: white;
-  border-color: var(--rep-accent);
+  background: var(--accent-strong);
+  color: #fff;
+  border-color: var(--accent-strong);
 }
 
 .reportes .caja-range input[type="date"] {
@@ -352,7 +364,6 @@
   border: 1px solid var(--rep-border);
   border-radius: 8px;
   padding: 0.3rem 0.5rem;
-  color-scheme: dark;
 }
 
 .reportes .caja-range label {
@@ -373,7 +384,7 @@
   padding: 1.4rem 1.5rem 1.5rem;
   border-radius: 18px;
   background:
-    radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, 0.05), transparent 60%),
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--fg) 5%, transparent), transparent 60%),
     var(--rep-surface);
   position: relative;
   overflow: hidden;
@@ -458,7 +469,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.7rem 0.2rem;
-  border-bottom: 1px solid rgba(31, 42, 64, 0.6);
+  border-bottom: 1px solid var(--rep-border);
 }
 
 .alert-row:last-child {
@@ -548,8 +559,8 @@
   border-radius: 999px;
 }
 
-.alert-badge--red    { background: rgba(245, 106, 106, 0.16); color: #ff9d9d; }
-.alert-badge--orange { background: rgba(244, 166, 90, 0.16); color: #ffc78a; }
+.alert-badge--red    { background: rgba(245, 106, 106, 0.16); color: var(--rep-red); }
+.alert-badge--orange { background: rgba(244, 166, 90, 0.16); color: var(--rep-orange); }
 
 .alert-empty {
   display: flex;
@@ -601,7 +612,7 @@
 }
 
 .sales-table__row {
-  border-bottom: 1px solid rgba(31, 42, 64, 0.5);
+  border-bottom: 1px solid var(--rep-border);
 }
 
 .sales-table__row:last-child {

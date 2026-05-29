@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Aura3D">
+  <defs>
+    <linearGradient id="auraGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12B5A5" />
+      <stop offset="1" stop-color="#84CC16" />
+    </linearGradient>
+  </defs>
+  <!-- Anillos de "aura" = capas de impresión 3D, abiertos -->
+  <circle cx="32" cy="32" r="22" stroke="url(#auraGrad)" stroke-width="5.5"
+          stroke-linecap="round" stroke-dasharray="104 34" transform="rotate(135 32 32)" />
+  <circle cx="32" cy="32" r="12.5" stroke="url(#auraGrad)" stroke-width="5.5"
+          stroke-linecap="round" stroke-dasharray="56 23" transform="rotate(135 32 32)" opacity="0.9" />
+  <!-- Chispa de filamento -->
+  <circle cx="49" cy="20" r="4.6" fill="#84CC16" />
+</svg>

@@ -1,5 +1,6 @@
 import type { QuoteItem } from "../../types";
 import { resolveStorageUrl } from "../../api/client";
+import { AuraMark } from "../../components/Brand";
 
 interface Props {
   /** Datos en edición — el preview los renderiza tal cual. */
@@ -60,7 +61,9 @@ export function QuotePreview({ draft }: Props) {
               alt="logo"
               className="quote-preview__logo"
             />
-          ) : null}
+          ) : (
+            <AuraMark size={42} />
+          )}
           <div>
             <h2>{draft.business_name || "Tu Empresa"}</h2>
             {draft.business_slogan ? (

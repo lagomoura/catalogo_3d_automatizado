@@ -16,6 +16,7 @@ import { OrcamentoPage } from "./orcamento/OrcamentoPage";
 import { PedidosPage } from "./pedidos/PedidosPage";
 import { ReportesPage } from "./reportes/ReportesPage";
 import { ToastProvider } from "../components/Toast";
+import { Logo, ThemeToggle } from "../components/Brand";
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
@@ -132,8 +133,11 @@ export default function AdminPage() {
     <div className="app">
       <header className="app__header">
         <div className="app__header-row">
-          <h1>Catálogo 3D Automatizado — Admin</h1>
-          <Link to="/" className="app__nav-link">← Ver vitrina pública</Link>
+          <Logo size={32} subtitle="Panel de gestión" />
+          <div className="app__header-actions">
+            <ThemeToggle />
+            <Link to="/" className="app__nav-link">← Ver vitrina pública</Link>
+          </div>
         </div>
         <p className="app__subtitle">
           Pega una URL de MakerWorld y genera tarjetas de catálogo con tu identidad visual.

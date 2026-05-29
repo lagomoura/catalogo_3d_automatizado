@@ -5,6 +5,7 @@ import type { CatalogItem, CategoryNode } from "../types";
 import { ShowcaseGrid } from "./ShowcaseGrid";
 import { ShowcaseSidebar } from "./ShowcaseSidebar";
 import { ShowcaseToolbar, type SortKey } from "./ShowcaseToolbar";
+import { Logo, ThemeToggle } from "../components/Brand";
 
 export default function ShowcasePage() {
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -56,10 +57,13 @@ export default function ShowcasePage() {
     <div className="showcase">
       <header className="showcase__header">
         <div className="showcase__header-row">
-          <h1 className="showcase__title">Vitrina 3D</h1>
-          <Link to="/admin" className="showcase__admin-link" aria-label="Acceso administrador">
-            Admin
-          </Link>
+          <Logo size={34} subtitle="Tienda 3D" />
+          <div className="app__header-actions">
+            <ThemeToggle />
+            <Link to="/admin" className="showcase__admin-link" aria-label="Acceso administrador">
+              Admin
+            </Link>
+          </div>
         </div>
         <p className="showcase__subtitle">
           Explora todos los modelos disponibles. Filtra por categoría o busca por nombre.

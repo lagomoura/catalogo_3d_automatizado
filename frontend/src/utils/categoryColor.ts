@@ -6,22 +6,22 @@ import type { CategoryNode, CategoryRef } from "../types";
  * y el borde, de forma que cada categoría sea reconocible de un vistazo.
  */
 const PALETTE = [
-  "#2563eb", // azul
-  "#e8590c", // naranja
-  "#0d9268", // verde
-  "#7c3aed", // violeta
-  "#d6336c", // rosa
-  "#0891b2", // cyan
-  "#ca8a04", // ámbar
-  "#dc2626", // rojo
+  "#0b756c", // teal (marca)
+  "#4f7a0d", // lima (marca)
   "#4f46e5", // índigo
-  "#15803d", // esmeralda
-  "#9333ea", // púrpura
-  "#b45309", // ocre
+  "#c2410c", // naranja
+  "#be185d", // rosa
+  "#0e7490", // cyan
+  "#b45309", // ámbar
+  "#7c3aed", // violeta
+  "#be123c", // rojo
+  "#047857", // esmeralda
+  "#0369a1", // azul
+  "#a21caf", // fucsia
 ];
 
 /** Color neutro para productos sin categoría asignada. */
-export const NO_CATEGORY_COLOR = "#9ca3af";
+export const NO_CATEGORY_COLOR = "#94a3b8";
 
 function hashString(value: string): number {
   let hash = 0;
