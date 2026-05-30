@@ -9,6 +9,7 @@ import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job, PendingQuote, PendingQuoteDraft } from "../types";
 import { ToastProvider } from "../components/Toast";
 import { Logo, ThemeToggle } from "../components/Brand";
+import { AdminSidebar, type Tab } from "./AdminSidebar";
 
 // Las páginas de cada tab se cargan bajo demanda: recortan el bundle inicial
 // del admin (sobre todo Caja/Reportes, que arrastran recharts). Son named
@@ -40,16 +41,6 @@ const PedidosPage = lazy(() =>
 
 const TERMINAL: ReadonlySet<Job["status"]> = new Set(["done", "failed"]);
 
-type Tab =
-  | "catalogo"
-  | "reportes"
-  | "caja"
-  | "pedidos"
-  | "calculadora"
-  | "impressoras"
-  | "estoque"
-  | "clientes"
-  | "orcamento";
 type SubmitMode = "makerworld" | "manual";
 
 export default function AdminPage() {
@@ -69,6 +60,19 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Desktop: el sidebar se puede ocultar; la preferencia se recuerda.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("admin-sidebar-collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  // Viewport: decide si la hamburguesa abre el drawer (móvil) o colapsa (desktop).
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia("(max-width: 900px)").matches,
+  );
 
   const refreshCatalog = useCallback(
     async (categoryId: number | null = filterCategoryId) => {
@@ -116,6 +120,33 @@ export default function AdminPage() {
     setTab("orcamento");
   }, []);
 
+  // Cierre del drawer estable: evita re-suscribir el efecto del sidebar.
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("admin-sidebar-collapsed", sidebarCollapsed ? "1" : "0");
+    } catch {
+      /* almacenamiento no disponible — se ignora */
+    }
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // En móvil la hamburguesa abre el drawer; en desktop oculta/muestra el sidebar.
+  const onToggleMenu = useCallback(() => {
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      setMenuOpen(true);
+    } else {
+      setSidebarCollapsed((c) => !c);
+    }
+  }, []);
+
   const handleSubmit = useCallback(async (url: string, n: number, generate3d: boolean) => {
     const job = await createJob(url, n, generate3d);
     setActiveJobs((prev) => [...prev, job]);
@@ -150,108 +181,53 @@ export default function AdminPage() {
 
   return (
     <ToastProvider>
-    <div className="app">
+    <div className="app app--admin">
       <header className="app__header">
         <div className="app__header-row">
-          <Logo size={32} subtitle="Panel de gestión" />
+          <div className="app__header-left">
+            <button
+              type="button"
+              className="app__menu-toggle"
+              aria-label={
+                isMobile
+                  ? "Abrir menú de navegación"
+                  : sidebarCollapsed
+                    ? "Mostrar menú lateral"
+                    : "Ocultar menú lateral"
+              }
+              aria-expanded={isMobile ? menuOpen : !sidebarCollapsed}
+              aria-controls="admin-nav"
+              onClick={onToggleMenu}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+            </button>
+            <span className="app__header-divider" aria-hidden="true" />
+            <Logo size={32} subtitle="Panel de gestión" />
+          </div>
           <div className="app__header-actions">
             <ThemeToggle />
             <Link to="/" className="app__nav-link">← Ver vitrina pública</Link>
           </div>
         </div>
-        <p className="app__subtitle">
-          Pega una URL de MakerWorld y genera tarjetas de catálogo con tu identidad visual.
-        </p>
       </header>
 
-      <nav className="tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "reportes"}
-          className={`tab ${tab === "reportes" ? "tab--active" : ""}`}
-          onClick={() => setTab("reportes")}
-        >
-          Reportes
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "catalogo"}
-          className={`tab ${tab === "catalogo" ? "tab--active" : ""}`}
-          onClick={() => setTab("catalogo")}
-        >
-          Catálogo
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "calculadora"}
-          className={`tab ${tab === "calculadora" ? "tab--active" : ""}`}
-          onClick={() => setTab("calculadora")}
-        >
-          Calculadora & Cotizaciones
-        </button>
-        <button
-          type="button"
-          role="tab"
-          data-tab="pedidos"
-          aria-selected={tab === "pedidos"}
-          className={`tab ${tab === "pedidos" ? "tab--active" : ""}`}
-          onClick={() => setTab("pedidos")}
-        >
-          Pedidos & Producción
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "impressoras"}
-          className={`tab ${tab === "impressoras" ? "tab--active" : ""}`}
-          onClick={() => setTab("impressoras")}
-        >
-          Impresoras
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "estoque"}
-          className={`tab ${tab === "estoque" ? "tab--active" : ""}`}
-          onClick={() => setTab("estoque")}
-        >
-          Inventario
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "clientes"}
-          className={`tab ${tab === "clientes" ? "tab--active" : ""}`}
-          onClick={() => setTab("clientes")}
-        >
-          Clientes
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "caja"}
-          className={`tab ${tab === "caja" ? "tab--active" : ""}`}
-          onClick={() => setTab("caja")}
-        >
-          Control de caja
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "orcamento"}
-          className={`tab ${tab === "orcamento" ? "tab--active" : ""}`}
-          onClick={() => setTab("orcamento")}
-        >
-          Generador de Presupuestos (PDF)
-        </button>
-      </nav>
-
-      <Suspense fallback={<p className="showcase__loading">Cargando…</p>}>
+      <div className={`admin-layout ${sidebarCollapsed ? "admin-layout--collapsed" : ""}`}>
+        <AdminSidebar
+          tab={tab}
+          onSelect={setTab}
+          open={menuOpen}
+          onClose={closeMenu}
+        />
+        <main className="admin-main" tabIndex={-1}>
+        <Suspense fallback={<p className="showcase__loading">Cargando…</p>}>
       {tab === "catalogo" ? (
         <>
+          <p className="app__subtitle">
+            Pega una URL de MakerWorld y genera tarjetas de catálogo con tu identidad visual.
+          </p>
           <div className="tabs" role="tablist" aria-label="Modo de carga">
             <button
               type="button"
@@ -332,6 +308,8 @@ export default function AdminPage() {
         />
       )}
       </Suspense>
+        </main>
+      </div>
     </div>
     </ToastProvider>
   );
