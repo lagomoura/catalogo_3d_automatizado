@@ -50,23 +50,56 @@ const API_BASE: string =
 
 export const STORAGE_BASE = API_BASE;
 
-const ADMIN_AUTH_STORAGE_KEY = "admin_basic_auth";
+// JWT de sesión del SaaS (reemplaza el viejo token Basic single-admin).
+const TOKEN_STORAGE_KEY = "aura3d_token";
+// Dominio raíz para derivar el slug de tienda desde el subdominio del browser.
+const BASE_DOMAIN: string =
+  (import.meta.env.VITE_BASE_DOMAIN as string | undefined) ?? "lvh.me";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+export function setToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
 
 /**
- * Devuelve los headers de auth admin si `AdminGate` ya validó la password.
- * El backend descarta el header en rutas públicas (catalog GET, /storage, etc.),
- * así que sumarlo siempre es safe y simplifica el call site.
+ * Slug de la tienda según el subdominio actual (`<slug>.BASE_DOMAIN`).
+ * En localhost / apex devuelve null → el backend cae al tenant "default".
+ * Se manda como header `X-Store-Slug` porque la API suele vivir en otro host
+ * que el subdominio de la tienda, así que el Host de la request no lo lleva.
  */
-function adminAuthHeaders(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const token = window.sessionStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-  return token ? { Authorization: `Basic ${token}` } : {};
+export function storeSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  const host = window.location.hostname.toLowerCase();
+  if (host === BASE_DOMAIN || !host.endsWith("." + BASE_DOMAIN)) return null;
+  const label = host.slice(0, host.length - BASE_DOMAIN.length - 1).split(".").pop();
+  if (!label || ["www", "app", "api", "admin"].includes(label)) return null;
+  return label;
+}
+
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const slug = storeSlug();
+  if (slug) headers["X-Store-Slug"] = slug;
+  return headers;
+}
+
+/** Notifica a la app (AuthProvider) que la sesión expiró o quedó suspendida. */
+function notifyAuthEvent(name: "aura3d:unauthorized" | "aura3d:suspended"): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(name));
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...adminAuthHeaders(),
+    ...authHeaders(),
     ...((init?.headers as Record<string, string> | undefined) ?? {}),
   };
   const resp = await fetch(`${API_BASE}${path}`, {
@@ -74,6 +107,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
   });
   if (!resp.ok) {
+    if (resp.status === 401) {
+      setToken(null);
+      notifyAuthEvent("aura3d:unauthorized");
+    } else if (resp.status === 402) {
+      notifyAuthEvent("aura3d:suspended");
+    }
     const text = await resp.text().catch(() => "");
     throw new Error(`${resp.status} ${resp.statusText}: ${text}`);
   }
@@ -81,6 +120,41 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return undefined as T;
   }
   return (await resp.json()) as T;
+}
+
+// --- Auth del SaaS -------------------------------------------------------
+
+export interface TenantInfo {
+  id: number;
+  slug: string;
+  name: string;
+  subscription_status: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user_id: number;
+  email: string;
+  tenant: TenantInfo;
+}
+
+export function signup(payload: {
+  store_name: string;
+  slug: string;
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  return request<AuthResponse>("/api/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function login(email: string, password: string): Promise<AuthResponse> {
+  return request<AuthResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
 }
 
 export function createJob(url: string, n_images: number, generate_3d: boolean = true): Promise<Job> {
@@ -106,7 +180,7 @@ export async function createManualProduct(data: {
   const resp = await fetch(`${API_BASE}/api/catalog/manual`, {
     method: "POST",
     body: form,
-    headers: adminAuthHeaders(),
+    headers: authHeaders(),
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
@@ -853,9 +927,14 @@ export function getPublicQuote(token: string, signal?: AbortSignal): Promise<Quo
   return request<Quote>(`/api/quotes/public/${encodeURIComponent(token)}`, { signal });
 }
 
-/** URL absoluta del PDF del quote (para `<a download>` o `window.open`). */
-export function quotePdfUrl(id: number): string {
-  return `${API_BASE}/api/quotes/${id}/pdf`;
+/**
+ * URL absoluta del PDF del quote por `share_token` (para `<a download>` o
+ * `window.open`). Usa el endpoint público por token — funciona como URL plana
+ * (sin header de auth) y no expone ids enumerables entre tiendas. La usan tanto
+ * el back-office como la página pública del quote.
+ */
+export function quotePdfUrl(shareToken: string): string {
+  return `${API_BASE}/api/quotes/public/${encodeURIComponent(shareToken)}/pdf`;
 }
 
 export async function uploadQuoteLogo(
@@ -866,7 +945,7 @@ export async function uploadQuoteLogo(
   const resp = await fetch(`${API_BASE}/api/quotes/upload-logo`, {
     method: "POST",
     body: form,
-    headers: adminAuthHeaders(),
+    headers: authHeaders(),
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");

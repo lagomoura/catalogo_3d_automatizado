@@ -443,6 +443,17 @@ Toda modificación al asistente debe sumar una entrada acá, en orden
 cronológico inverso (lo más nuevo arriba). Formato:
 **YYYY-MM-DD** — descripción concisa de qué cambió y por qué.
 
+- **2026-05-30** — Multi-tenant (SaaS): el asistente queda **aislado por
+  tienda** sin tocar sus tools ni el snapshot. El snapshot (`snapshot.py`) y las
+  23 tools usan la sesión del request, que el listener de aislamiento
+  (`app/tenancy.py`) filtra al `tenant_id` del usuario logueado (vía JWT) — así
+  el bot sólo ve/manipula datos de su propia tienda. Cambios concretos: (1)
+  `snapshot.py` dejó de leer el `BusinessProfile` singleton (`id == 1`) y ahora
+  toma `.first()` (scopeado al tenant); (2) `confirmations.py` guarda el
+  `tenant_id` en cada acción pendiente y lo **verifica al confirmar** — una
+  tienda no puede ejecutar la acción pendiente de otra adivinando el
+  `confirmation_id`. Las tools de escritura estampan `tenant_id` automáticamente
+  vía el listener `before_flush`.
 - **2026-05-29** — Consistencia de tema (Tanda 3, cosmético, sin cambios de
   comportamiento): los KPIs credit/debit del `BriefingCard` y el ícono de
   acción "done" del asistente pasan de hex hardcodeados a los tokens

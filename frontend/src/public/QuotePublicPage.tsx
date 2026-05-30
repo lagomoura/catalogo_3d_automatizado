@@ -51,7 +51,7 @@ export default function QuotePublicPage() {
         <div className="qpub__actions">
           <a
             className="btn-primary"
-            href={quotePdfUrl(quote.id)}
+            href={quotePdfUrl(quote.share_token)}
             target="_blank"
             rel="noopener"
           >

@@ -285,7 +285,7 @@ export function OrcamentoPage({
       setError("Guardá el presupuesto antes de descargar el PDF.");
       return;
     }
-    window.open(quotePdfUrl(editing.id), "_blank", "noopener");
+    window.open(quotePdfUrl(editing.share_token), "_blank", "noopener");
   };
 
   const handleCopyLink = async () => {

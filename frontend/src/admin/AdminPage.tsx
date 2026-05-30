@@ -9,6 +9,7 @@ import { usePolling } from "../hooks/usePolling";
 import type { CatalogItem, CategoryNode, Job, PendingQuote, PendingQuoteDraft } from "../types";
 import { ToastProvider } from "../components/Toast";
 import { Logo, ThemeToggle } from "../components/Brand";
+import { AccountMenu } from "./AccountMenu";
 import { AdminSidebar, type Tab } from "./AdminSidebar";
 
 // Las páginas de cada tab se cargan bajo demanda: recortan el bundle inicial
@@ -208,6 +209,7 @@ export default function AdminPage() {
             <Logo size={32} subtitle="Panel de gestión" />
           </div>
           <div className="app__header-actions">
+            <AccountMenu />
             <ThemeToggle />
             <Link to="/" className="app__nav-link">← Ver vitrina pública</Link>
           </div>

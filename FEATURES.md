@@ -2,7 +2,7 @@
 
 > **Documento vivo.** Cada vez que sumamos una funcionalidad importante,
 > la registramos acá con el formato del final del archivo.
-> Última actualización: 2026-05-22.
+> Última actualización: 2026-05-30.
 
 ## Stack
 
@@ -19,6 +19,7 @@
 4. [Herramientas — Calculadora, Reportes](#4-herramientas)
 5. [Acceso público sin login](#5-acceso-público-sin-login)
 6. [Cómo sumar nuevas funcionalidades](#6-cómo-sumar-nuevas-funcionalidades)
+7. [SaaS multi-tenant](#7-saas-multi-tenant)
 
 ---
 
@@ -241,11 +242,70 @@ Cuando agreguemos una funcionalidad importante, **siempre** sumamos una entrada 
 
 ---
 
+## 7. SaaS multi-tenant
+
+Aura3D es un **SaaS multi-tienda**: N usuarios, cada uno con su login y su
+tienda, con datos **completamente aislados**. (El cobro de la mensualidad es
+una fase posterior; por ahora la suscripción es un flag manual por tienda.)
+
+### 7.1 Cuentas y autenticación (signup + login con JWT)
+
+- **Qué hace**: cualquiera crea su tienda en `/signup` (nombre + slug + email +
+  password), o entra en `/login`. La sesión usa un **JWT** (Bearer) que lleva el
+  usuario y su tienda; reemplaza el viejo Basic Auth single-admin.
+- **Backend**: `routes/auth.py` (`POST /api/auth/signup`, `POST /api/auth/login`),
+  `security.py` (bcrypt + PyJWT HS256), `auth.py` (`get_current_user` + la
+  dependencia `resolve_request_context`). Modelos nuevos `Tenant` y `User`.
+- **Frontend**: `auth/AuthProvider.tsx` (contexto de sesión + manejo de 401/402),
+  `auth/LoginPage.tsx`, `auth/SignupPage.tsx`, `auth/RequireAuth.tsx` (protege
+  `/admin`), chip de cuenta + logout en `admin/AccountMenu.tsx`.
+- **Endpoints**: `POST /api/auth/signup`, `POST /api/auth/login`.
+
+### 7.2 Aislamiento de datos por tienda (`tenant_id` + auto-scoping)
+
+- **Qué hace**: cada fila de las 20 tablas tenant-owned lleva `tenant_id`. Toda
+  lectura se filtra y toda escritura se estampa al tenant del request — **sin**
+  filtrar a mano las ~94 consultas. El asistente (snapshot + tools) hereda el
+  aislamiento por usar la sesión del request.
+- **Backend**: `app/tenancy.py` (FUENTE DE VERDAD): `ContextVar` del tenant +
+  listener `do_orm_execute` (filtro de lectura, vía `with_loader_criteria` con
+  `propagate_to_loaders`) + listener `before_flush` (estampa `tenant_id` y
+  **lanza error** si no hay tenant en contexto) + `unscoped()` (escape hatch para
+  resolver slug/token/login). `Category` queda global (taxonomía MakerWorld).
+- **Notas**: `Account.name` y `Quote.number` pasan a únicos por `(tenant_id, …)`;
+  `BusinessProfile` deja de ser singleton `id=1` y es uno por tenant. El pipeline
+  de fondo (`services/pipeline.py`) y los flujos por token (`/c`, `/q`) fijan el
+  tenant explícitamente. La migración de la instalación single-tenant existente
+  crea un tenant `"default"` y backfillea todas las filas a él (`db.py:init_db`).
+
+### 7.3 Vitrina pública por subdominio
+
+- **Qué hace**: la vitrina de cada tienda vive en `<slug>.aura3d.com` (dev:
+  `<slug>.lvh.me`). El catálogo público se resuelve al tenant del subdominio.
+- **Backend**: `auth.py:resolve_request_context` resuelve el slug por header
+  `X-Store-Slug` → query `?store=` → subdominio del Host; sin slug cae al tenant
+  `default`. `BASE_DOMAIN` configurable.
+- **Frontend**: `api/client.ts:storeSlug()` deriva el slug del subdominio del
+  browser y lo manda como `X-Store-Slug` (la API suele vivir en otro host, así
+  que el Host de la request no lo lleva).
+
+### 7.4 Suscripción (flag manual, gate de acceso)
+
+- **Qué hace**: `Tenant.subscription_status` (`trialing` / `active` /
+  `suspended`). Con `suspended` el back-office devuelve **402** y el frontend
+  muestra el estado. El cobro real (proveedor de pago + webhook) es fase
+  posterior; este flag ya deja el gate listo para enchufarlo.
+- **Backend**: chequeo en `auth.py:_authenticate`. **Frontend**: badge en
+  `admin/AccountMenu.tsx`.
+
+---
+
 ## Anexo — Inventario rápido
 
 **Backend routers actuales** (`backend/app/main.py`):
 
 ```
+/api/auth           → signup + login (JWT) del SaaS
 /api/jobs           → catálogo (pipeline async)
 /api/catalog        → CRUD de items
 /api/categories     → árbol de categorías
@@ -268,6 +328,7 @@ impressoras · estoque · clientes · produccion · orcamento
 **Modelos SQLAlchemy** (`backend/app/models.py`):
 
 ```
+Tenant · User
 Job · Category · CatalogItem · CatalogImage
 Contact · ClientLink
 Account · TransactionCategory · RecurringExpense · CashTransaction
