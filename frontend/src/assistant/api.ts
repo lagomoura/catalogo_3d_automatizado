@@ -1,6 +1,8 @@
-// Wrappers tipados sobre fetch para el asistente. Reutiliza la base URL y
-// los headers de auth del cliente API principal.
+// Wrappers tipados sobre fetch para el asistente. Usa el MISMO JWT (Bearer) que
+// el cliente API principal — el asistente es admin, así el backend resuelve el
+// tenant del usuario logueado y el snapshot/tools quedan scopeados a su tienda.
 
+import { getToken, setToken } from "../api/client";
 import type {
   BriefResponse,
   ChatTurnResponse,
@@ -11,22 +13,28 @@ const API_BASE: string =
   (import.meta.env.VITE_API_BASE as string | undefined) ??
   "http://localhost:8000";
 
-const ADMIN_AUTH_STORAGE_KEY = "admin_basic_auth";
-
-function adminAuthHeaders(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const token = window.sessionStorage.getItem(ADMIN_AUTH_STORAGE_KEY);
-  return token ? { Authorization: `Basic ${token}` } : {};
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...adminAuthHeaders(),
+    ...authHeaders(),
     ...((init?.headers as Record<string, string> | undefined) ?? {}),
   };
   const resp = await fetch(`${API_BASE}${path}`, { ...init, headers });
   if (!resp.ok) {
+    // Mismo manejo que el cliente principal: 401 → sesión caída → logout.
+    if (resp.status === 401) {
+      setToken(null);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("aura3d:unauthorized"));
+      }
+    } else if (resp.status === 402 && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("aura3d:suspended"));
+    }
     const text = await resp.text().catch(() => "");
     throw new Error(`${resp.status} ${resp.statusText}: ${text}`);
   }

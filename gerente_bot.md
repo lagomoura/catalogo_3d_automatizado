@@ -443,6 +443,14 @@ Toda modificación al asistente debe sumar una entrada acá, en orden
 cronológico inverso (lo más nuevo arriba). Formato:
 **YYYY-MM-DD** — descripción concisa de qué cambió y por qué.
 
+- **2026-05-30** — Fix auth multi-tenant del frontend del asistente: su cliente
+  (`frontend/src/assistant/api.ts`) seguía mandando el viejo token **Basic** (de
+  `sessionStorage`, ya inexistente tras migrar a JWT), por lo que `GET
+  /api/assistant/brief` devolvía **401 "Sesión requerida"** ("No pude cargar el
+  resumen"). Ahora usa el **Bearer JWT** del cliente principal (`getToken` de
+  `api/client.ts`) + manejo de 401→logout / 402→suspendido. Con esto el brief
+  carga y, al autenticar, el backend resuelve el tenant del usuario → el snapshot
+  y las tools quedan **scopeados a su tienda** (cierra el aislamiento del bot).
 - **2026-05-30** — Multi-tenant (SaaS): el asistente queda **aislado por
   tienda** sin tocar sus tools ni el snapshot. El snapshot (`snapshot.py`) y las
   23 tools usan la sesión del request, que el listener de aislamiento
