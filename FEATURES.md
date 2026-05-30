@@ -283,8 +283,10 @@ una fase posterior; por ahora la suscripción es un flag manual por tienda.)
 - **Qué hace**: la vitrina de cada tienda vive en `<slug>.aura3d.com` (dev:
   `<slug>.lvh.me`). El catálogo público se resuelve al tenant del subdominio.
 - **Backend**: `auth.py:resolve_request_context` resuelve el slug por header
-  `X-Store-Slug` → query `?store=` → subdominio del Host; sin slug cae al tenant
-  `default`. `BASE_DOMAIN` configurable.
+  `X-Store-Slug` → query `?store=` → subdominio del Host. Con slug → esa tienda
+  (vitrina pública). Sin slug: si hay JWT → la tienda del admin logueado (el
+  back-office comparte el path GET de catálogo/categorías con la vitrina); si no,
+  el tenant `default`. `BASE_DOMAIN` configurable.
 - **Frontend**: `api/client.ts:storeSlug()` deriva el slug del subdominio del
   browser y lo manda como `X-Store-Slug` (la API suele vivir en otro host, así
   que el Host de la request no lo lleva).
@@ -298,6 +300,28 @@ una fase posterior; por ahora la suscripción es un flag manual por tienda.)
 - **Backend**: chequeo en `auth.py:_authenticate`. **Frontend**: badge en
   `admin/AccountMenu.tsx`.
 
+### 7.5 Fairness y aislamiento de archivos (hardening de auditoría)
+
+- **Rate-limit por tenant** (`ratelimit.py`): límite in-memory por ventana
+  deslizante en los endpoints caros — `POST /api/jobs` (pipeline) y
+  `POST /api/assistant/chat` — para que una tienda no degrade a las demás
+  (noisy-neighbor). Por proceso; para multi-instancia migrar a Redis.
+- **Storage namespaced por tenant**: `image_service` y el upload de logo guardan
+  bajo `storage/<dir>/<tenant_id>/...` (`_tenant_dir`), aislando archivos por
+  tienda y habilitando el borrado por tienda. Los paths viejos planos siguen
+  sirviéndose (back-compat). Nota: catálogo/3D/logos de presupuesto son contenido
+  **público por diseño** (vitrina, `/q/:token`); el namespacing es organizativo,
+  no confidencialidad.
+- **Deprovisioning de tienda** (`routes/account.py`): `GET /api/account` (info de
+  la tienda/usuario) y `DELETE /api/account` (baja irreversible — requiere
+  confirmar el slug). Borra todos los datos (`delete_tenant_data`: cascada por FK
+  en Postgres; explícito por tabla en SQLite) + el storage `storage/*/<tenant_id>/`.
+  **Frontend**: `admin/AccountModal.tsx` (zona de peligro con confirmación de slug)
+  abierto desde `admin/AccountMenu.tsx`; al borrar hace logout + redirige a `/login`.
+- **Pool de conexiones acotado** (`db.py`): en Postgres `pool_size=5` +
+  `max_overflow=10` (15 máx por proceso) para no agotar el tope de conexiones del
+  Postgres gestionado.
+
 ---
 
 ## Anexo — Inventario rápido
@@ -306,6 +330,7 @@ una fase posterior; por ahora la suscripción es un flag manual por tienda.)
 
 ```
 /api/auth           → signup + login (JWT) del SaaS
+/api/account        → info de la tienda + baja (deprovisioning)
 /api/jobs           → catálogo (pipeline async)
 /api/catalog        → CRUD de items
 /api/categories     → árbol de categorías

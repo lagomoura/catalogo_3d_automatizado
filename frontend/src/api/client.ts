@@ -157,6 +157,14 @@ export function login(email: string, password: string): Promise<AuthResponse> {
   });
 }
 
+/** Baja irreversible de la tienda del usuario logueado. Requiere confirmar el slug. */
+export function deleteAccount(confirmSlug: string): Promise<void> {
+  return request<void>("/api/account", {
+    method: "DELETE",
+    body: JSON.stringify({ confirm_slug: confirmSlug }),
+  });
+}
+
 export function createJob(url: string, n_images: number, generate_3d: boolean = true): Promise<Job> {
   return request<Job>("/api/jobs", {
     method: "POST",

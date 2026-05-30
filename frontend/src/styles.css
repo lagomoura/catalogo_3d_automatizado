@@ -1952,6 +1952,64 @@ a:focus-visible {
   min-width: 0;
 }
 
+.account-menu__trigger {
+  background: none;
+  border: none;
+  padding: 0.2rem 0.3rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.account-menu__trigger:hover {
+  background: var(--card-bg);
+}
+
+/* --- panel de cuenta --- */
+
+.account-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.8rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.account-info dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.account-info dd {
+  margin: 0;
+  color: var(--fg);
+}
+
+.danger-zone {
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.danger-zone__title {
+  margin: 0;
+  color: var(--error);
+  font-size: 0.95rem;
+}
+
+.danger-zone__text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.danger-zone__label {
+  font-size: 0.85rem;
+  color: var(--fg);
+}
+
 .account-menu__store {
   font-size: 0.85rem;
   font-weight: 600;

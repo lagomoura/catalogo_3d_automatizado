@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { AccountModal } from "./AccountModal";
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Prueba",
@@ -13,6 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 export function AccountMenu() {
   const { session, suspended, logout } = useAuth();
   const navigate = useNavigate();
+  const [accountOpen, setAccountOpen] = useState(false);
   if (!session) return null;
 
   const status = session.tenant.subscription_status;
@@ -25,16 +28,19 @@ export function AccountMenu() {
 
   return (
     <div className="account-menu">
-      <div className="account-menu__info">
-        <span className="account-menu__store" title={session.email}>
-          {session.tenant.name}
-        </span>
+      <button
+        type="button"
+        className="account-menu__info account-menu__trigger"
+        onClick={() => setAccountOpen(true)}
+        title="Cuenta y suscripción"
+      >
+        <span className="account-menu__store">{session.tenant.name}</span>
         <span
           className={`account-menu__badge account-menu__badge--${isWarn ? "suspended" : status}`}
         >
           {STATUS_LABEL[status] ?? status}
         </span>
-      </div>
+      </button>
       <button
         type="button"
         className="app__nav-link account-menu__logout"
@@ -42,6 +48,7 @@ export function AccountMenu() {
       >
         Salir
       </button>
+      <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
     </div>
   );
 }
