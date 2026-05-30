@@ -76,6 +76,12 @@ npm run dev
 
 Vite arranca en http://localhost:5173 y habla con el backend en `http://localhost:8000` (configurable vía `VITE_API_BASE` en un archivo `frontend/.env`).
 
+> **Multi-tenant en dev**: la ruta `/` es host-aware. En `http://localhost:5173`
+> (dominio de app) ahora se ve la **landing** pública, no un catálogo. Para ver la
+> **vitrina de un tenant** usá su subdominio: `http://<slug>.lvh.me:5173` (`lvh.me`
+> resuelve a `127.0.0.1`). El back-office (`/login`, `/admin`) funciona en cualquiera
+> de los dos hosts.
+
 ## Identidad visual
 
 El prompt que se envía a nano-banana junto a cada imagen está en `backend/config/visual_identity.txt`. Edítalo libremente y reinicia (o no — se lee en cada job).

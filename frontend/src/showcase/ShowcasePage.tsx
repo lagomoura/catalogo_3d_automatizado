@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { getCatalog, getCategories } from "../api/client";
 import type { CatalogItem, CategoryNode } from "../types";
 import { ShowcaseGrid } from "./ShowcaseGrid";
@@ -71,9 +70,6 @@ export default function ShowcasePage() {
           <Logo size={34} subtitle="Tienda 3D" />
           <div className="app__header-actions">
             <ThemeToggle />
-            <Link to="/admin" className="showcase__admin-link" aria-label="Acceso administrador">
-              Admin
-            </Link>
           </div>
         </div>
         <p className="showcase__subtitle">

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
+import { Logo } from "../components/Brand";
 
 function slugify(s: string): string {
   return s
@@ -54,6 +55,9 @@ export default function SignupPage() {
   return (
     <div className="admin-gate">
       <form className="admin-gate__form" onSubmit={handleSubmit}>
+        <Link to="/" className="admin-gate__brand" aria-label="Inicio">
+          <Logo size={32} />
+        </Link>
         <h2>Creá tu tienda</h2>
         <p className="admin-gate__hint">Empezá a gestionar tu negocio de impresión 3D.</p>
         <input
@@ -96,7 +100,6 @@ export default function SignupPage() {
         <p className="admin-gate__hint">
           ¿Ya tenés cuenta? <Link to="/login">Ingresá</Link>
         </p>
-        <Link to="/" className="admin-gate__back">← Volver a la vitrina</Link>
       </form>
     </div>
   );

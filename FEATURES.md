@@ -322,6 +322,26 @@ una fase posterior; por ahora la suscripción es un flag manual por tienda.)
   `max_overflow=10` (15 máx por proceso) para no agotar el tope de conexiones del
   Postgres gestionado.
 
+### 7.6 Landing de app vs vitrina de tenant (routing host-aware de `/`)
+
+- **Qué hace**: no existe "una vitrina sobre las demás". La ruta `/` se resuelve
+  según el host: en un **subdominio de tenant** (`<slug>.aura3d.com`) muestra la
+  **vitrina** de ese tenant (`ShowcasePage`); en el **dominio de app / apex**
+  (`aura3d.com`, `app.aura3d.com`, `localhost`) muestra la **landing pública**, que
+  no consulta el catálogo. Quien se registra todavía no tiene vitrina, así que su
+  destino natural es la landing, no un catálogo placeholder.
+- **Frontend**: `App.tsx:RootRoute` usa `api/client.ts:storeSlug()` (devuelve `null`
+  fuera de un subdominio de tenant) para elegir `LandingPage` vs `ShowcasePage`, en
+  `path="/"` y en el catch-all `path="*"`. La landing (`landing/LandingPage.tsx`) es
+  hoy un **placeholder enrutado** con CTAs a `/signup` y `/login` (la landing de
+  marketing definitiva se construye sobre esta misma URL).
+- **Auth**: Login/Signup (`auth/{LoginPage,SignupPage}.tsx`) muestran el logo Aura3D
+  enlazado a `/` (la landing), reemplazando el viejo "Volver a la vitrina".
+- **Vitrina del tenant**: el header ya **no** expone el acceso "Admin" — la vitrina
+  es 100% para clientes finales; el dueño ingresa desde el dominio de app (`/login`).
+- **Nota**: el fallback al tenant `default` en `auth.py` sigue existiendo a nivel API
+  pero queda dormido para la vitrina (la landing no llama a `/api/catalog`).
+
 ---
 
 ## Anexo — Inventario rápido

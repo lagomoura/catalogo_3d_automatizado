@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
+import { Logo } from "../components/Brand";
 
 export default function LoginPage() {
   const { session, login } = useAuth();
@@ -31,6 +32,9 @@ export default function LoginPage() {
   return (
     <div className="admin-gate">
       <form className="admin-gate__form" onSubmit={handleSubmit}>
+        <Link to="/" className="admin-gate__brand" aria-label="Inicio">
+          <Logo size={32} />
+        </Link>
         <h2>Ingresar</h2>
         <p className="admin-gate__hint">Accedé a tu tienda Aura3D.</p>
         <input
@@ -57,7 +61,6 @@ export default function LoginPage() {
         <p className="admin-gate__hint">
           ¿No tenés cuenta? <Link to="/signup">Creá tu tienda</Link>
         </p>
-        <Link to="/" className="admin-gate__back">← Volver a la vitrina</Link>
       </form>
     </div>
   );

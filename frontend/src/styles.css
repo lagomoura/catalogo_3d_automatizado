@@ -1514,20 +1514,6 @@ a:focus-visible {
   letter-spacing: -0.01em;
 }
 
-.showcase__admin-link {
-  color: var(--muted);
-  font-size: 0.85rem;
-  text-decoration: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.35rem 0.7rem;
-  background: var(--card-bg);
-}
-
-.showcase__admin-link:hover {
-  color: var(--fg);
-}
-
 .showcase__subtitle {
   margin: 0.35rem 0 0;
   color: var(--muted);
@@ -2103,12 +2089,84 @@ a:focus-visible {
   font-size: 0.88rem;
 }
 
-.admin-gate__back {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--muted);
+.admin-gate__brand {
+  align-self: center;
   text-decoration: none;
-  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* =============================================================================
+   Landing pública del dominio de app / apex (placeholder enrutado).
+   La vitrina de cada tenant vive en su subdominio; esta URL NO muestra catálogo.
+   ============================================================================= */
+.landing {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem max(1.5rem, env(safe-area-inset-right)) 1.5rem
+    max(1.5rem, env(safe-area-inset-left));
+}
+
+.landing__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.landing__hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1.1rem;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.landing__badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+}
+
+.landing__title {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1.1;
+}
+
+.landing__lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.landing__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.landing__cta-btn {
+  height: auto;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
 @media (max-width: 900px) {
