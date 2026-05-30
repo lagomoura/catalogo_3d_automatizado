@@ -196,19 +196,20 @@ export function ReportesPage() {
             catálogo — todo en un solo lugar.
           </p>
         </div>
-        <div className="reportes__filters">
-          <button
-            type="button"
-            className="help-btn"
-            onClick={() => setOnboardingOpen(true)}
-            aria-label="Qué son los Reportes y cómo se conectan"
-            title="¿Qué es esto?"
-          >
-            ?
-          </button>
-          <RangePicker range={range} onChange={setRange} />
-        </div>
+        <button
+          type="button"
+          className="help-btn"
+          onClick={() => setOnboardingOpen(true)}
+          aria-label="Qué son los Reportes y cómo se conectan"
+          title="¿Qué es esto?"
+        >
+          ?
+        </button>
       </header>
+
+      <div className="reportes__toolbar">
+        <RangePicker range={range} onChange={setRange} />
+      </div>
 
       <OnboardingModal
         open={onboardingOpen}

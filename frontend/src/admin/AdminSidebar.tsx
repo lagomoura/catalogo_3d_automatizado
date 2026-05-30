@@ -148,7 +148,20 @@ export function AdminSidebar({ tab, onSelect, open, onClose }: Props) {
         id="admin-nav"
         className={`admin-sidebar ${open ? "admin-sidebar--open" : ""}`}
         aria-label="Navegación del back-office"
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? true : undefined}
       >
+        <button
+          type="button"
+          className="admin-sidebar__close"
+          onClick={onClose}
+          aria-label="Cerrar menú"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
         {GROUPS.map((group) => (
           <div className="admin-sidebar__group" key={group.label}>
             <p className="admin-sidebar__group-title">{group.label}</p>
