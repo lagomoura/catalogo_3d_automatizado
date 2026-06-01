@@ -1,39 +1,50 @@
-import { Link } from "react-router-dom";
-import { Logo, ThemeToggle } from "../components/Brand";
+import { useEffect } from "react";
+import "./landing.css";
+import { useScrollReveal } from "./useScrollReveal";
+import { LandingNav } from "./sections/LandingNav";
+import { Hero } from "./sections/Hero";
+import { Stats } from "./sections/Stats";
+import { HowItWorks } from "./sections/HowItWorks";
+import { Features } from "./sections/Features";
+import { FeatureGrid } from "./sections/FeatureGrid";
+import { CtaBand } from "./sections/CtaBand";
+import { LandingFooter } from "./sections/LandingFooter";
+import { MobileCtaBar } from "./sections/MobileCtaBar";
+
+const PAGE_TITLE = "Aura3D · Tu impresión 3D, convertida en tienda";
 
 /**
- * Landing pública del dominio de app / apex (`aura3d.com`).
+ * Landing de marketing del dominio de app / apex (`aura3d.com`).
  *
- * Placeholder enrutado: la landing de marketing definitiva se construye en un paso
- * posterior sobre esta misma URL. Lo importante es que `/` en el dominio de app ya
- * NO muestra la vitrina del tenant "default" — la vitrina vive en `<slug>.aura3d.com`.
+ * En subdominios de tienda (`<slug>.aura3d.com`) `RootRoute` muestra la vitrina,
+ * no esta página. Acá vendemos el producto y empujamos a /signup.
  */
 export default function LandingPage() {
+  useScrollReveal();
+
+  // Título por ruta: el de `index.html` es genérico/admin-leaning. Como es una
+  // SPA sin SSR, lo ajustamos en cliente para esta página de marketing.
+  useEffect(() => {
+    const prev = document.title;
+    document.title = PAGE_TITLE;
+    return () => {
+      document.title = prev;
+    };
+  }, []);
+
   return (
     <div className="landing">
-      <header className="landing__header">
-        <Logo size={34} subtitle="Tiendas 3D" />
-        <ThemeToggle />
-      </header>
-
-      <main className="landing__hero">
-        <span className="landing__badge">Landing en construcción</span>
-        <h1 className="landing__title">
-          Tu catálogo 3D, hecho vitrina
-        </h1>
-        <p className="landing__lead">
-          Aura3D arma tu tienda de impresión 3D: catálogo público, back-office comercial
-          y un asistente para gestionar tu negocio. Cada tienda con su propia vitrina.
-        </p>
-        <div className="landing__cta">
-          <Link to="/signup" className="btn btn--primary landing__cta-btn">
-            Crear mi tienda
-          </Link>
-          <Link to="/login" className="btn landing__cta-btn">
-            Ingresar
-          </Link>
-        </div>
+      <LandingNav />
+      <main>
+        <Hero />
+        <Stats />
+        <HowItWorks />
+        <Features />
+        <FeatureGrid />
+        <CtaBand />
       </main>
+      <LandingFooter />
+      <MobileCtaBar />
     </div>
   );
 }

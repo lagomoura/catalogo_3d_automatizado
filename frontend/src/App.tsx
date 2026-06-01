@@ -27,7 +27,22 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={<p className="showcase__loading">Cargando…</p>}>
+        <Suspense
+          fallback={
+            <div
+              role="status"
+              aria-live="polite"
+              style={{
+                minHeight: "60vh",
+                display: "grid",
+                placeItems: "center",
+                color: "var(--muted)",
+              }}
+            >
+              Cargando…
+            </div>
+          }
+        >
           <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/producto/:id" element={<ProductDetailPage />} />
