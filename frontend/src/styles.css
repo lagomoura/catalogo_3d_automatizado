@@ -4582,6 +4582,38 @@ button.chip.chip--prod:hover {
   grid-template-columns: 70px 1.3fr 1fr 110px 100px 120px 150px;
 }
 
+/* Buscador de la barra de "Por cobrar": empujado a la derecha. */
+.txn-search {
+  margin-left: auto;
+  flex: 0 1 280px;
+  min-width: 200px;
+}
+
+/* Celdas densas de "Por cobrar": dato principal + sub-líneas de detalle. */
+.recv-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.recv-cell__main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.recv-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .txn-table--prof .txn-row {
   grid-template-columns: 1.6fr 80px 70px 130px 130px 130px 90px;
 }

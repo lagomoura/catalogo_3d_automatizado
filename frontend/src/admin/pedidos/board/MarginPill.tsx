@@ -1,7 +1,11 @@
 import type { Order } from "../../../types";
 import { computeProfitability } from "../../calculadora/calc";
 
-export function MarginPill({ order }: { order: Order }) {
+export function MarginPill({
+  order,
+}: {
+  order: Pick<Order, "cost_items" | "value" | "quantity">;
+}) {
   if (order.cost_items.length === 0 || order.value == null) return null;
   const prof = computeProfitability(
     order.cost_items.map((c) => ({ amount: c.amount, per_unit: c.per_unit })),

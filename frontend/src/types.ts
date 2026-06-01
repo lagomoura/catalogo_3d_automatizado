@@ -262,6 +262,10 @@ export interface Receivable {
   order_status: OrderStatus;
   quantity: number;
   created_at: string;
+  note: string | null;
+  sale_date: string | null;
+  deadline: string | null;
+  cost_items: OrderCostItem[];
 }
 
 export interface ReceivablesSummary {
