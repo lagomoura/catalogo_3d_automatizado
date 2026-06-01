@@ -100,7 +100,7 @@ Al abrir el panel, sin llamar a Gemini, el backend calcula y muestra:
 
 | Tool | Para qué sirve | Ejemplo de pregunta del usuario |
 |---|---|---|
-| `list_orders` | Lista pedidos filtrando por estado, pago, vencimiento o cliente. | "Mostrame los pedidos atrasados", "¿qué pedidos vencen esta semana?" |
+| `list_orders` | Lista pedidos filtrando por estado, pago, vencimiento o cliente. Los **CANCELADO** quedan fuera del listado por default; se ven solo pidiendo `status="CANCELADO"`. | "Mostrame los pedidos atrasados", "¿qué pedidos vencen esta semana?" |
 | `get_order_detail` | Detalle completo de un pedido: costos, impresiones, cliente. | "Contame del pedido #237" |
 | `search_catalog` | Busca productos del catálogo por nombre. | "¿Tenés algún dragón en el catálogo?" |
 | `list_materials` | Stock y costo de filamentos/insumos. Filtra por tipo o "low stock". | "¿Qué material me falta reponer?", "¿Cuánto PLA tengo?" |
@@ -120,7 +120,7 @@ En lugar de eso:
 | Tool | Qué hace | Ejemplo |
 |---|---|---|
 | `create_order` | Crea un pedido (producto + cliente + cantidad + opcional: valor, deadline, prioridad, nota). | "Creame un pedido para Mariana, 2 dragones rojos, $30.000, entrega el viernes." |
-| `advance_order_status` | Avanza el pedido al siguiente estado del flujo (CREADO → EJECUTANDO → EJECUTADO → ENTREGADO). | "Marcame el pedido 234 como entregado." |
+| `advance_order_status` | Avanza el pedido al siguiente estado del flujo (CREADO → EJECUTANDO → EJECUTADO → ENTREGADO). Un pedido **CANCELADO** no es avanzable (devuelve error: hay que reactivarlo primero desde la UI). | "Marcame el pedido 234 como entregado." |
 | `mark_order_paid` | Marca un pedido como `PAGADO`. El pedido debe tener valor cargado. | "Cobré el pedido de Juan." |
 | `log_material_movement` | Registra IN (entrada), OUT (salida) o ADJUST (ajuste, delta) de stock. | "Registrame entrada de 1kg de PLA rojo." |
 
@@ -443,6 +443,15 @@ Toda modificación al asistente debe sumar una entrada acá, en orden
 cronológico inverso (lo más nuevo arriba). Formato:
 **YYYY-MM-DD** — descripción concisa de qué cambió y por qué.
 
+- **2026-06-01** — Nuevo estado de pedido **CANCELADO** (soft-cancel) reflejado
+  en el bot: (1) `list_orders` excluye los cancelados por default y los acepta
+  como filtro explícito (`status="CANCELADO"`); (2) `advance_order_status` ya
+  rechazaba estados no avanzables → un CANCELADO devuelve error (reactivar desde
+  la UI); (3) el snapshot (`snapshot.py`) deja de contar pedidos cancelados en
+  "por cobrar" / deuda de clientes (`pending_payment` y `debtor_rows` excluyen
+  CANCELADO) para que los KPI del bot no inflen plata que ya no se va a cobrar.
+  El bot **no** cancela pedidos: la cancelación vive en su flujo dedicado
+  (`POST /api/orders/{id}/cancel`, con manejo de piezas en curso y stock).
 - **2026-05-30** — Fix auth multi-tenant del frontend del asistente: su cliente
   (`frontend/src/assistant/api.ts`) seguía mandando el viejo token **Basic** (de
   `sessionStorage`, ya inexistente tras migrar a JWT), por lo que `GET

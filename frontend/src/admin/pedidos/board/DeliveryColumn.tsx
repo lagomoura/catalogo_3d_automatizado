@@ -14,6 +14,7 @@ interface DeliveryColumnProps {
   onCostoExtra: (order: Order) => void;
   onDelete: (id: number) => void;
   onChangeStatus: (id: number, target: OrderStatus) => void;
+  onCancel: (id: number) => void;
 }
 
 export function DeliveryColumn({
@@ -24,6 +25,7 @@ export function DeliveryColumn({
   onCostoExtra,
   onDelete,
   onChangeStatus,
+  onCancel,
 }: DeliveryColumnProps) {
   return (
     <section className="pb-col" aria-label="Listos para entrega">
@@ -45,6 +47,7 @@ export function DeliveryColumn({
               onCostoExtra={onCostoExtra}
               onDelete={onDelete}
               onChangeStatus={onChangeStatus}
+              onCancel={onCancel}
             />
           ))}
         </div>

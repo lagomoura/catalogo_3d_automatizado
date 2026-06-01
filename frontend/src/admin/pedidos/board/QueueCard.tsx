@@ -22,6 +22,7 @@ interface QueueCardProps {
   onCostoExtra: (order: Order) => void;
   onDelete: (orderId: number) => void;
   onChangeStatus: (id: number, target: OrderStatus) => void;
+  onCancel: (id: number) => void;
 }
 
 export function QueueCard({
@@ -38,6 +39,7 @@ export function QueueCard({
   onCostoExtra,
   onDelete,
   onChangeStatus,
+  onCancel,
 }: QueueCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: order.id });
@@ -55,7 +57,7 @@ export function QueueCard({
     { label: "🖨 Gestionar piezas", onClick: () => onGestionarPiezas(order) },
     { label: "✎ Editar pedido", onClick: () => onEditar(order) },
     { label: "＋ Costo extra", onClick: () => onCostoExtra(order) },
-    ...statusKebabItems(order, onChangeStatus),
+    ...statusKebabItems(order, onChangeStatus, onCancel),
     { label: "Eliminar pedido", danger: true, onClick: () => onDelete(order.id) },
   ];
 

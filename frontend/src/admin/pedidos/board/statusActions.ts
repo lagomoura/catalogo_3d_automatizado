@@ -18,13 +18,27 @@ const MANUAL_TARGETS: { status: OrderStatus; label: string }[] = [
 export function statusKebabItems(
   order: Order,
   onChangeStatus: (id: number, target: OrderStatus) => void,
+  onCancel?: (id: number) => void,
 ): KebabItem[] {
-  return MANUAL_TARGETS.filter((t) => t.status !== order.order_status).map((t) => {
-    // Caso frecuente: deshacer una entrega vuelve a "listo".
-    const label =
-      order.order_status === "ENTREGADO" && t.status === "EJECUTADO"
-        ? "↩ Deshacer entrega"
-        : t.label;
-    return { label, onClick: () => onChangeStatus(order.id, t.status) };
-  });
+  const items: KebabItem[] = MANUAL_TARGETS.filter(
+    (t) => t.status !== order.order_status,
+  ).map((t) => {
+      // Caso frecuente: deshacer una entrega vuelve a "listo".
+      const label =
+        order.order_status === "ENTREGADO" && t.status === "EJECUTADO"
+          ? "↩ Deshacer entrega"
+          : t.label;
+      return { label, onClick: () => onChangeStatus(order.id, t.status) };
+    },
+  );
+  // Cancelar pedido (soft): estado terminal que preserva historial y libera la
+  // producción. No es una transición lineal, por eso va aparte de MANUAL_TARGETS.
+  if (onCancel && order.order_status !== "CANCELADO") {
+    items.push({
+      label: "✕ Cancelar pedido",
+      danger: true,
+      onClick: () => onCancel(order.id),
+    });
+  }
+  return items;
 }

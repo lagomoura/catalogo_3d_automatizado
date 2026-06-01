@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   advanceOrder,
   appendOrderCost,
-  cancelOrderRuns,
+  cancelOrder,
   cancelProductionRun,
   createOrder,
   createProductionRun,
@@ -57,6 +57,7 @@ import { BoardColumns } from "./board/BoardColumns";
 import { PiecesModal } from "./board/PiecesModal";
 import { StartPrinterModal } from "./board/StartPrinterModal";
 import { EntregadosPanel } from "./board/EntregadosPanel";
+import { CanceladosPanel } from "./board/CanceladosPanel";
 import type { HeroOrderActions } from "./board/PrinterHeroCard";
 import "./pedidos.css";
 import "./board/board.css";
@@ -91,10 +92,12 @@ export function PedidosPage({
   const [error, setError] = useState<string | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  // Vista: tablero operativo vs. histórico de entregados.
-  const [estadoView, setEstadoView] = useState<"tablero" | "entregados">(
-    "tablero",
-  );
+  // Vista: tablero operativo · histórico de entregados · cancelados.
+  const [estadoView, setEstadoView] = useState<
+    "tablero" | "entregados" | "cancelados"
+  >("tablero");
+  // Cancelados: se cargan aparte (el listado principal los excluye por default).
+  const [cancelledOrders, setCancelledOrders] = useState<Order[]>([]);
   // Filtro de pago (aplica a "Listos para entrega" y "Entregados").
   const [payFilter, setPayFilter] = useState<"todos" | "pagado" | "pendiente">(
     "todos",
@@ -153,6 +156,18 @@ export function PedidosPage({
   // pestaña o por otro usuario. usePolling pausa solo cuando la pestaña está en
   // background (ahorra red/batería en mobile).
   usePolling(true, 30000, refreshOrders);
+
+  // Cancelados: se cargan aparte (el listado principal los excluye). Se refresca
+  // al abrir la vista y cada vez que cambian los pedidos (cancelar / reactivar).
+  useEffect(() => {
+    if (estadoView !== "cancelados") return;
+    getOrders({
+      order_status: "CANCELADO",
+      catalog_item_id: filterProductId ?? undefined,
+    })
+      .then(setCancelledOrders)
+      .catch(() => undefined);
+  }, [estadoView, filterProductId, orders]);
 
   const ordersById = useMemo(() => {
     const m = new Map<number, Order>();
@@ -277,6 +292,7 @@ export function PedidosPage({
       EJECUTANDO: 0,
       EJECUTADO: 0,
       ENTREGADO: 0,
+      CANCELADO: 0,
     };
     for (const o of orders) {
       if (matchOrder(o.id)) counts[o.order_status] += 1;
@@ -609,12 +625,59 @@ export function PedidosPage({
             `Cancelar las producciones y eliminar el pedido?`,
         );
         if (!ok) return;
-        await cancelOrderRuns(id);
-        await deleteOrder(id);
+        // Una sola request: cancela las producciones y borra (sin carrera).
+        await deleteOrder(id, { forceCancelRuns: true });
       } else {
         throw e;
       }
     }
+  }, []);
+
+  // Cancelar (soft) un pedido: pasa a CANCELADO, preserva historial y libera la
+  // producción. Si hay piezas en curso el backend pide confirmación (409
+  // confirm_force) → reintentamos con force. Si el pedido estaba cobrado, el
+  // ingreso se conserva (la respuesta vuelve PAGADO) y avisamos.
+  const cancelOrderConfirm = useCallback(async (id: number) => {
+    const reason = window.prompt(
+      "Cancelar pedido — motivo (opcional). Se preserva el historial y se " +
+        "libera la producción. Aceptá para confirmar.",
+      "",
+    );
+    if (reason === null) return; // Cancel del prompt = no hacer nada.
+    const trimmed = reason.trim() || null;
+    const finish = (o: Order) => {
+      if (o.payment_status === "PAGADO") {
+        window.alert(
+          `Pedido #${o.id} cancelado. El cobro registrado se conservó en caja ` +
+            "(seña). Si querés revertirlo, hacelo desde el movimiento de caja.",
+        );
+      }
+    };
+    try {
+      const updated = await cancelOrder(id, { reason: trimmed, force: false });
+      finish(updated);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.startsWith("409") && /confirm_force/.test(msg)) {
+        const m = msg.match(/"active_runs":\s*\[([^\]]*)\]/);
+        const count = m ? (m[1].match(/"id"/g)?.length ?? 0) : 0;
+        const ok = window.confirm(
+          `Este pedido tiene ${count} pieza(s) en curso. Cancelarlo las ` +
+            `cancelará y devolverá su material al stock. ¿Continuar?`,
+        );
+        if (!ok) return;
+        const updated = await cancelOrder(id, { reason: trimmed, force: true });
+        finish(updated);
+      } else {
+        throw e;
+      }
+    }
+  }, []);
+
+  // Reactivar un pedido cancelado: vuelve a la cola (CREADO) y resembra su
+  // producción. Es un cambio de estado normal — reusa el handler manual.
+  const reactivateOrder = useCallback(async (id: number) => {
+    await setOrderStatus(id, "CREADO", false);
   }, []);
 
   // Cambio manual de estado del pedido (deshacer entrega, volver a la cola, etc.).
@@ -719,11 +782,14 @@ export function PedidosPage({
           className="pb-select"
           value={estadoView}
           onChange={(e) =>
-            setEstadoView(e.target.value as "tablero" | "entregados")
+            setEstadoView(
+              e.target.value as "tablero" | "entregados" | "cancelados",
+            )
           }
         >
           <option value="tablero">Tablero (activos)</option>
           <option value="entregados">Entregados</option>
+          <option value="cancelados">Cancelados</option>
         </select>
         <select
           aria-label="Filtrar por pago"
@@ -833,8 +899,34 @@ export function PedidosPage({
             onChangeStatus={(id, target) =>
               void run(() => changeOrderStatus(id, target))
             }
+            onCancel={(id) => void run(() => cancelOrderConfirm(id))}
           />
         </>
+      ) : estadoView === "cancelados" ? (
+        <section className="pb-col" aria-label="Cancelados">
+          <header className="pb-col__head">
+            <span className="pb-col__icon" aria-hidden="true">✕</span>
+            Cancelados{" "}
+            <span className="pb-col__count">{cancelledOrders.length}</span>
+          </header>
+          <CanceladosPanel
+            orders={cancelledOrders.filter((o) => {
+              const q = query.trim().toLowerCase();
+              if (!q) return true;
+              return [
+                o.catalog_item?.name,
+                o.contact?.name,
+                o.person_label,
+                o.note,
+                String(o.id),
+              ]
+                .filter(Boolean)
+                .some((s) => s!.toLowerCase().includes(q));
+            })}
+            onReactivate={(id) => void run(() => reactivateOrder(id))}
+            onDelete={(id) => void run(() => deleteOrderWithRuns(id))}
+          />
+        </section>
       ) : (
         <section className="pb-col" aria-label="Entregados">
           <header className="pb-col__head">

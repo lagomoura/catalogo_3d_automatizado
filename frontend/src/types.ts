@@ -304,7 +304,12 @@ export interface ContactStatement {
   receivables: Receivable[];
 }
 
-export type OrderStatus = "CREADO" | "EJECUTANDO" | "EJECUTADO" | "ENTREGADO";
+export type OrderStatus =
+  | "CREADO"
+  | "EJECUTANDO"
+  | "EJECUTADO"
+  | "ENTREGADO"
+  | "CANCELADO";
 export type PaymentStatus = "PENDIENTE" | "PAGADO";
 export type OrderPriority = 1 | 2 | 3;
 

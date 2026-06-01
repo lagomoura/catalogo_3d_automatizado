@@ -16,6 +16,7 @@ interface DeliveryCardProps {
   onCostoExtra: (order: Order) => void;
   onDelete: (id: number) => void;
   onChangeStatus: (id: number, target: OrderStatus) => void;
+  onCancel: (id: number) => void;
 }
 
 function buyer(o: Order): string {
@@ -31,6 +32,7 @@ export function DeliveryCard({
   onCostoExtra,
   onDelete,
   onChangeStatus,
+  onCancel,
 }: DeliveryCardProps) {
   const paid = order.payment_status === "PAGADO";
 
@@ -42,7 +44,7 @@ export function DeliveryCard({
       disabled: !paid && order.value == null,
     },
     { label: "＋ Costo extra", onClick: () => onCostoExtra(order) },
-    ...statusKebabItems(order, onChangeStatus),
+    ...statusKebabItems(order, onChangeStatus, onCancel),
     { label: "Eliminar pedido", danger: true, onClick: () => onDelete(order.id) },
   ];
 

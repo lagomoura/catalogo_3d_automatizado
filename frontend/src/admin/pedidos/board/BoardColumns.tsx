@@ -23,6 +23,7 @@ interface BoardColumnsProps {
   onCostoExtra: (order: Order) => void;
   onDelete: (orderId: number) => void;
   onChangeStatus: (id: number, target: OrderStatus) => void;
+  onCancel: (id: number) => void;
 }
 
 export function BoardColumns({
@@ -41,6 +42,7 @@ export function BoardColumns({
   onCostoExtra,
   onDelete,
   onChangeStatus,
+  onCancel,
 }: BoardColumnsProps) {
   return (
     <div className="pb-columns">
@@ -57,6 +59,7 @@ export function BoardColumns({
         onCostoExtra={onCostoExtra}
         onDelete={onDelete}
         onChangeStatus={onChangeStatus}
+        onCancel={onCancel}
       />
       <DeliveryColumn
         items={deliveryItems}
@@ -66,6 +69,7 @@ export function BoardColumns({
         onCostoExtra={onCostoExtra}
         onDelete={onDelete}
         onChangeStatus={onChangeStatus}
+        onCancel={onCancel}
       />
     </div>
   );

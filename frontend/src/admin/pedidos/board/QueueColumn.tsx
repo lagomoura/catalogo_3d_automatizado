@@ -35,6 +35,7 @@ interface QueueColumnProps {
   onCostoExtra: (order: Order) => void;
   onDelete: (orderId: number) => void;
   onChangeStatus: (id: number, target: OrderStatus) => void;
+  onCancel: (id: number) => void;
 }
 
 export function QueueColumn({
@@ -50,6 +51,7 @@ export function QueueColumn({
   onCostoExtra,
   onDelete,
   onChangeStatus,
+  onCancel,
 }: QueueColumnProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -137,6 +139,7 @@ export function QueueColumn({
                     onCostoExtra={onCostoExtra}
                     onDelete={onDelete}
                     onChangeStatus={onChangeStatus}
+                    onCancel={onCancel}
                   />
                 );
               })}

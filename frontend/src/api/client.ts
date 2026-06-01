@@ -579,6 +579,8 @@ export interface OrderFilters {
   catalog_item_id?: number;
   order_status?: OrderStatus;
   payment_status?: PaymentStatus;
+  /** Incluir pedidos CANCELADO en el listado (por default quedan fuera). */
+  include_cancelled?: boolean;
 }
 
 export interface OrderCostItemInput {
@@ -609,6 +611,8 @@ export interface OrderCreatePayload {
   deadline?: string | null;
   is_draft?: boolean;
   quote_id?: number | null;
+  /** Crear otro pedido desde un Quote que ya generó uno (tras confirmar el aviso). */
+  allow_duplicate_quote?: boolean;
   /** Minutos por pieza para propagar a las ProductionRun que el backend genera. */
   estimated_minutes_per_unit?: number | null;
   /**
@@ -741,12 +745,38 @@ export function setOrderPriority(
   });
 }
 
-export function deleteOrder(id: number): Promise<void> {
-  return request<void>(`/api/orders/${id}`, { method: "DELETE" });
+export function deleteOrder(
+  id: number,
+  opts: { forceCancelRuns?: boolean } = {},
+): Promise<void> {
+  const query = opts.forceCancelRuns ? "?force_cancel_runs=true" : "";
+  return request<void>(`/api/orders/${id}${query}`, { method: "DELETE" });
 }
 
 export function cancelOrderRuns(id: number): Promise<Order> {
   return request<Order>(`/api/orders/${id}/cancel-runs`, { method: "POST" });
+}
+
+/**
+ * Cancela (soft) un pedido: pasa a CANCELADO, cancela sus piezas y devuelve el
+ * material al stock. Reversible (reactivar = setOrderStatus(id, "CREADO")).
+ * - `force`: confirma la cancelación cuando hay piezas en curso (el backend
+ *   devuelve 409 con `action: "confirm_force"` si force es false).
+ * - `revertPayment`: si el pedido estaba cobrado, además revierte el ingreso de
+ *   caja. Por default el cobro se conserva (el pedido devuelto sigue PAGADO).
+ */
+export function cancelOrder(
+  id: number,
+  opts: { reason?: string | null; force?: boolean; revertPayment?: boolean } = {},
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({
+      reason: opts.reason ?? null,
+      force: opts.force ?? false,
+      revert_payment: opts.revertPayment ?? false,
+    }),
+  });
 }
 
 export function resolveStorageUrl(relativeOrAbsolute: string): string {
