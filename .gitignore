@@ -21,3 +21,13 @@ frontend/dist/
 .benchmarking/
 .agents/
 skills-lock.json
+
+# Secretos / entorno local — NUNCA al repo
+.env
+.env.local
+.env.*.local
+
+# Dependencias e índices/IDE locales
+node_modules/
+.codegraph/
+.cursor/
