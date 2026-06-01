@@ -32,31 +32,32 @@ interface NavGroup {
  */
 const GROUPS: NavGroup[] = [
   {
-    label: "Catálogo",
-    items: [{ key: "catalogo", label: "Catálogo" }],
+    label: "Resumen",
+    items: [{ key: "reportes", label: "Reportes" }],
+  },
+  {
+    label: "Operación",
+    items: [
+      { key: "pedidos", label: "Pedidos & Producción" },
+      { key: "impressoras", label: "Impresoras" },
+      { key: "estoque", label: "Inventario" },
+    ],
   },
   {
     label: "Comercial",
     items: [
       { key: "calculadora", label: "Calculadora & Cotizaciones" },
       { key: "orcamento", label: "Presupuestos (PDF)" },
-      { key: "pedidos", label: "Pedidos & Producción" },
       { key: "clientes", label: "Clientes" },
     ],
   },
   {
     label: "Finanzas",
-    items: [
-      { key: "caja", label: "Control de caja" },
-      { key: "reportes", label: "Reportes" },
-    ],
+    items: [{ key: "caja", label: "Control de caja" }],
   },
   {
-    label: "Operación",
-    items: [
-      { key: "impressoras", label: "Impresoras" },
-      { key: "estoque", label: "Inventario" },
-    ],
+    label: "Catálogo",
+    items: [{ key: "catalogo", label: "Catálogo" }],
   },
 ];
 
