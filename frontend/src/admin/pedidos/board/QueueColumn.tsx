@@ -126,6 +126,7 @@ export function QueueColumn({
                     pieceTotal={rs.length || order.quantity}
                     canStart={canStartByOrder.get(order.id) ?? false}
                     noPrinter={noPrinter}
+                    hasPending={rs.some((r) => r.status === "PENDENTE")}
                     isNext={i === 0}
                     etaStart={etaByOrder.get(order.id) ?? null}
                     onStart={onStart}

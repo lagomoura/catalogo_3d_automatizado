@@ -7,6 +7,7 @@ import {
   createOrder,
   createProductionRun,
   deleteOrder,
+  deleteProductionRun,
   finishProductionRun,
   getCatalog,
   getContacts,
@@ -16,6 +17,7 @@ import {
   getProductionRuns,
   getProductionSummary,
   pauseProductionRun,
+  reopenProductionRun,
   replaceOrderCosts,
   reprintOrder,
   requeueProductionRun,
@@ -50,6 +52,7 @@ import { KpiBar } from "./board/KpiBar";
 import { PrinterHeroGrid } from "./board/PrinterHeroGrid";
 import { BoardColumns } from "./board/BoardColumns";
 import { PiecesModal } from "./board/PiecesModal";
+import { StartPrinterModal } from "./board/StartPrinterModal";
 import { EntregadosPanel } from "./board/EntregadosPanel";
 import type { HeroOrderActions } from "./board/PrinterHeroCard";
 import "./pedidos.css";
@@ -101,6 +104,8 @@ export function PedidosPage({
   const [extraFor, setExtraFor] = useState<Order | null>(null);
   const [extraBusy, setExtraBusy] = useState(false);
   const [piecesForOrderId, setPiecesForOrderId] = useState<number | null>(null);
+  // Pieza esperando elección de impresora (solo cuando hay 2+ libres).
+  const [startPicker, setStartPicker] = useState<ProductionRun | null>(null);
   const { now } = useProductionTicker();
 
   const refreshOrders = useCallback(async () => {
@@ -218,10 +223,11 @@ export function PedidosPage({
         out.push({ order: o, awaitingReady: false });
       } else if (o.order_status === "EJECUTANDO") {
         const rs = runsByOrder.get(o.id) ?? [];
-        const done =
-          rs.length > 0 &&
-          rs.every((r) => !ACTIVE_RUN.has(r.status)) &&
-          rs.some((r) => r.status === "CONCLUIDA");
+        // Producción terminada = ninguna pieza activa (ni PENDENTE/EM_PRODUCAO/
+        // PAUSADA). No exigimos ≥1 CONCLUIDA: un pedido cuyas piezas quedaron todas
+        // CANCELADA también debe poder destrabarse desde acá (red de seguridad; el
+        // backend ya auto-avanza el caso normal a EJECUTADO).
+        const done = rs.length > 0 && rs.every((r) => !ACTIVE_RUN.has(r.status));
         if (done) out.push({ order: o, awaitingReady: true });
       }
     }
@@ -384,24 +390,44 @@ export function PedidosPage({
     [runsByOrder, refreshOrders],
   );
 
-  // Arranca un run asignándole una impresora si no tiene (auto-assign): primero
-  // respeta la asignada; si no hay, usa la impresora libre indicada o la primera
-  // disponible. Sin impresora libre → error claro.
-  const startRun = useCallback(
-    (run: ProductionRun, preferPrinterId?: number) =>
+  // Asigna la impresora (si hace falta) e inicia la pieza.
+  const doStartRun = useCallback(
+    (run: ProductionRun, printerId: number | null) =>
       runAction(async () => {
-        let printerId = run.printer?.id ?? null;
-        if (printerId == null) {
-          printerId =
-            preferPrinterId ?? idlePrinters[0]?.id ?? null;
-          if (printerId == null) {
-            throw new Error("No hay impresora libre para iniciar esta pieza.");
-          }
+        if (run.printer?.id == null && printerId != null) {
           await updateProductionRun(run.id, { printer_id: printerId });
         }
         await startProductionRun(run.id);
       }),
-    [runAction, idlePrinters],
+    [runAction],
+  );
+
+  // Arranca un run eligiendo impresora según el contexto:
+  //  - pieza ya asignada → se usa esa;
+  //  - impresora preferida (ej. "Iniciar próximo" desde una impresora concreta) → esa;
+  //  - 1 sola impresora libre → se asigna automáticamente;
+  //  - 2+ impresoras libres → abre el selector para que el usuario elija;
+  //  - 0 libres → error claro.
+  const startRun = useCallback(
+    (run: ProductionRun, preferPrinterId?: number) => {
+      if (run.printer?.id != null) {
+        void doStartRun(run, run.printer.id);
+        return;
+      }
+      const chosen =
+        preferPrinterId ??
+        (idlePrinters.length === 1 ? (idlePrinters[0]?.id ?? null) : null);
+      if (chosen != null) {
+        void doStartRun(run, chosen);
+        return;
+      }
+      if (idlePrinters.length === 0) {
+        setError("No hay impresora libre para iniciar esta pieza.");
+        return;
+      }
+      setStartPicker(run);
+    },
+    [doStartRun, idlePrinters],
   );
 
   // "Iniciar próximo" desde una impresora libre: toma la primera pieza pendiente
@@ -479,6 +505,31 @@ export function PedidosPage({
       void runAction(() => cancelProductionRun(id, restock));
     },
     [runs, runAction],
+  );
+
+  // Reabrir una pieza terminada (CONCLUIDA/CANCELADA): vuelve a su estado previo.
+  // Si vuelve a un estado iniciado, el backend re-descuenta material.
+  const handleReopenRun = useCallback(
+    (id: number) => {
+      if (!window.confirm("¿Reabrir esta pieza? Vuelve al estado previo a terminarse."))
+        return;
+      void runAction(() => reopenProductionRun(id));
+    },
+    [runAction],
+  );
+
+  // Borrar definitivamente una pieza terminada. No devuelve material al stock.
+  const handleDeleteRun = useCallback(
+    (id: number) => {
+      if (
+        !window.confirm(
+          "¿Borrar esta pieza definitivamente? No se devuelve material al stock.",
+        )
+      )
+        return;
+      void runAction(() => deleteProductionRun(id));
+    },
+    [runAction],
   );
 
   const heroActions: HeroOrderActions = useMemo(
@@ -683,6 +734,7 @@ export function PedidosPage({
             orders={entregados}
             onPayment={(id, paid) => void run(() => setOrderPayment(id, paid))}
             onEditar={(o) => setEditing(o)}
+            onDelete={(id) => void run(() => deleteOrderWithRuns(id))}
           />
         </section>
       )}
@@ -739,6 +791,21 @@ export function PedidosPage({
           onCancel={handleCancelRun}
           onStart={(id) => void runAction(() => startProductionRun(id))}
           onRequeue={handleRequeueRun}
+          onReopen={handleReopenRun}
+          onDeleteRun={handleDeleteRun}
+        />
+      )}
+
+      {startPicker && (
+        <StartPrinterModal
+          printers={idlePrinters}
+          pieceName={startPicker.piece_name}
+          onClose={() => setStartPicker(null)}
+          onPick={(printerId) => {
+            const target = startPicker;
+            setStartPicker(null);
+            void doStartRun(target, printerId);
+          }}
         />
       )}
     </div>

@@ -26,6 +26,8 @@ interface PiecesModalProps {
   onCancel: (id: number) => void;
   onStart: (id: number) => void;
   onRequeue: (id: number) => void;
+  onReopen: (id: number) => void;
+  onDeleteRun: (id: number) => void;
 }
 
 /**
@@ -43,6 +45,8 @@ export function PiecesModal({
   onCancel,
   onStart,
   onRequeue,
+  onReopen,
+  onDeleteRun,
 }: PiecesModalProps) {
   const [busy, setBusy] = useState(false);
   const activePrinters = printers.filter((p) => !p.archived);
@@ -186,6 +190,30 @@ export function PiecesModal({
                           onClick={() => onCancel(run.id)}
                         >
                           Cancelar
+                        </button>
+                      )}
+                      {(run.status === "CONCLUIDA" ||
+                        run.status === "CANCELADA") && (
+                        <button
+                          type="button"
+                          className="tbtn"
+                          disabled={busy}
+                          title="Reabrir la pieza (vuelve al estado previo)"
+                          onClick={() => onReopen(run.id)}
+                        >
+                          ↺ Reabrir
+                        </button>
+                      )}
+                      {(run.status === "CONCLUIDA" ||
+                        run.status === "CANCELADA") && (
+                        <button
+                          type="button"
+                          className="tbtn tbtn--del"
+                          disabled={busy}
+                          title="Borrar la pieza definitivamente (no devuelve material)"
+                          onClick={() => onDeleteRun(run.id)}
+                        >
+                          🗑 Borrar
                         </button>
                       )}
                     </div>

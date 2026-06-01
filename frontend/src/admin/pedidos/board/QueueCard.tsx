@@ -11,6 +11,8 @@ interface QueueCardProps {
   canStart: boolean;
   /** Las piezas pendientes no tienen impresora asignada (se auto-asigna al iniciar). */
   noPrinter: boolean;
+  /** ¿El pedido tiene al menos una pieza PENDENTE para iniciar? (false = sin piezas). */
+  hasPending: boolean;
   isNext: boolean;
   etaStart: Date | null;
   onStart: (orderId: number) => void;
@@ -25,6 +27,7 @@ export function QueueCard({
   pieceTotal,
   canStart,
   noPrinter,
+  hasPending,
   isNext,
   etaStart,
   onStart,
@@ -106,7 +109,9 @@ export function QueueCard({
           title={
             canStart
               ? "Iniciar producción"
-              : "No hay impresora libre — esperá a que una termine"
+              : !hasPending
+                ? "Este pedido no tiene piezas — agregá una en «Gestionar piezas»"
+                : "No hay impresora libre — esperá a que una termine"
           }
           onClick={() => onStart(order.id)}
         >

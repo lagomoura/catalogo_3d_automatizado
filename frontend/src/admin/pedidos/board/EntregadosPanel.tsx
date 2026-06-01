@@ -7,6 +7,7 @@ interface EntregadosPanelProps {
   orders: Order[];
   onPayment: (id: number, paid: boolean) => void;
   onEditar: (order: Order) => void;
+  onDelete: (id: number) => void;
 }
 
 function buyer(o: Order): string {
@@ -17,6 +18,7 @@ export function EntregadosPanel({
   orders,
   onPayment,
   onEditar,
+  onDelete,
 }: EntregadosPanelProps) {
   if (orders.length === 0) {
     return <p className="pb-col__empty">No hay pedidos entregados con este filtro.</p>;
@@ -51,6 +53,15 @@ export function EntregadosPanel({
               title={paid ? "Revertir el cobro" : "Registrar cobro"}
             >
               {paid ? "↺ Pago" : "$ Cobrar"}
+            </button>
+            <button
+              type="button"
+              className="tbtn tbtn--del"
+              onClick={() => onDelete(o.id)}
+              title="Eliminar pedido"
+              aria-label={`Eliminar pedido #${o.id}`}
+            >
+              🗑
             </button>
           </article>
         );

@@ -877,6 +877,23 @@ a:focus-visible {
 
 .modal-panel--sm { max-width: 420px; }
 .modal-panel--md { max-width: 560px; }
+
+.pb-printer-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pb-printer-pick__btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.pb-printer-pick__env {
+  opacity: 0.75;
+  font-weight: 400;
+}
 .modal-panel--lg { max-width: 800px; }
 
 /* Cuando el panel envuelve un <form> (vez de los slots sueltos), el form

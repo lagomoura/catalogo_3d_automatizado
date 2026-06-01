@@ -61,6 +61,7 @@ export function BoardColumns({
         onPayment={onPayment}
         onEditar={onEditar}
         onCostoExtra={onCostoExtra}
+        onDelete={onDelete}
       />
     </div>
   );

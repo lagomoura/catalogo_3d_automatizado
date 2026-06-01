@@ -713,6 +713,17 @@ export function advanceOrder(id: number): Promise<Order> {
   return request<Order>(`/api/orders/${id}/advance`, { method: "POST" });
 }
 
+export function setOrderStatus(
+  id: number,
+  order_status: OrderStatus,
+  force = false,
+): Promise<Order> {
+  return request<Order>(`/api/orders/${id}/status`, {
+    method: "POST",
+    body: JSON.stringify({ order_status, force }),
+  });
+}
+
 export function setOrderPayment(id: number, paid: boolean): Promise<Order> {
   return request<Order>(`/api/orders/${id}/payment`, {
     method: "POST",
