@@ -28,6 +28,7 @@ interface PiecesModalProps {
   onRequeue: (id: number) => void;
   onReopen: (id: number) => void;
   onDeleteRun: (id: number) => void;
+  onRetry: (id: number) => void;
 }
 
 /**
@@ -47,6 +48,7 @@ export function PiecesModal({
   onRequeue,
   onReopen,
   onDeleteRun,
+  onRetry,
 }: PiecesModalProps) {
   const [busy, setBusy] = useState(false);
   const activePrinters = printers.filter((p) => !p.archived);
@@ -202,6 +204,18 @@ export function PiecesModal({
                           onClick={() => onReopen(run.id)}
                         >
                           ↺ Reabrir
+                        </button>
+                      )}
+                      {(run.status === "CONCLUIDA" ||
+                        run.status === "CANCELADA") && (
+                        <button
+                          type="button"
+                          className="tbtn"
+                          disabled={busy}
+                          title="Reintentar: crea una pieza nueva en la cola (deja esta como histórico)"
+                          onClick={() => onRetry(run.id)}
+                        >
+                          ⟳ Reintentar
                         </button>
                       )}
                       {(run.status === "CONCLUIDA" ||

@@ -14,7 +14,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import type { Order, ProductionRun } from "../../../types";
+import type { Order, OrderStatus, ProductionRun } from "../../../types";
 import { computeRemainingSeconds } from "../useProductionTicker";
 import { QueueCard } from "./QueueCard";
 
@@ -34,6 +34,7 @@ interface QueueColumnProps {
   onEditar: (order: Order) => void;
   onCostoExtra: (order: Order) => void;
   onDelete: (orderId: number) => void;
+  onChangeStatus: (id: number, target: OrderStatus) => void;
 }
 
 export function QueueColumn({
@@ -48,6 +49,7 @@ export function QueueColumn({
   onEditar,
   onCostoExtra,
   onDelete,
+  onChangeStatus,
 }: QueueColumnProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -134,6 +136,7 @@ export function QueueColumn({
                     onEditar={onEditar}
                     onCostoExtra={onCostoExtra}
                     onDelete={onDelete}
+                    onChangeStatus={onChangeStatus}
                   />
                 );
               })}

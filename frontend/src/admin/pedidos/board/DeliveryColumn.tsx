@@ -1,4 +1,4 @@
-import type { Order } from "../../../types";
+import type { Order, OrderStatus } from "../../../types";
 import { DeliveryCard } from "./DeliveryCard";
 
 interface DeliveryItem {
@@ -13,6 +13,7 @@ interface DeliveryColumnProps {
   onEditar: (order: Order) => void;
   onCostoExtra: (order: Order) => void;
   onDelete: (id: number) => void;
+  onChangeStatus: (id: number, target: OrderStatus) => void;
 }
 
 export function DeliveryColumn({
@@ -22,6 +23,7 @@ export function DeliveryColumn({
   onEditar,
   onCostoExtra,
   onDelete,
+  onChangeStatus,
 }: DeliveryColumnProps) {
   return (
     <section className="pb-col" aria-label="Listos para entrega">
@@ -42,6 +44,7 @@ export function DeliveryColumn({
               onEditar={onEditar}
               onCostoExtra={onCostoExtra}
               onDelete={onDelete}
+              onChangeStatus={onChangeStatus}
             />
           ))}
         </div>

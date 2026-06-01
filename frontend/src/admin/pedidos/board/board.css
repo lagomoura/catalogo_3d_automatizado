@@ -964,6 +964,88 @@
   font-variant-numeric: tabular-nums;
 }
 
+.pb-erow__note {
+  font-size: 0.82rem;
+  color: var(--fg);
+  font-weight: 500;
+  max-width: 16rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb-erow__date {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Nota del pedido (lo que va impreso) como detalle de tarjeta. La mostramos
+   destacada porque suele ser el diferenciador real entre pedidos del mismo
+   producto (ej. el nombre en cada "caja de figus"). */
+.pb-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: var(--fg);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb-hero__note {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22rem;
+}
+
+/* Banner de resultados de búsqueda cross-vista (¿ya está hecho?). */
+.pb-search-results {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.pb-search-results__label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.pb-search-results__chip {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+}
+
+.pb-search-results__chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pb-search-results__chip[data-empty="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {

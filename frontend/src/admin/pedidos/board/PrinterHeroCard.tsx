@@ -68,6 +68,8 @@ export function PrinterHeroCard({
   const productName =
     order?.catalog_item?.name ?? run.order?.catalog_item?.name ?? run.piece_name;
   const orderId = order?.id ?? run.order?.id ?? null;
+  // Nota del pedido = lo que va impreso (ej. el nombre). Clave para el operario.
+  const note = order?.note ?? null;
 
   const kebabItems: KebabItem[] = order
     ? [
@@ -118,6 +120,11 @@ export function PrinterHeroCard({
           <span className="pb-hero__sub">
             👤 {buyer(order)} · pieza {pieceIndex} de {pieceTotal} · 🖨 {printer.name}
           </span>
+          {note && (
+            <span className="pb-hero__note" title={note}>
+              📝 {note}
+            </span>
+          )}
         </div>
         <span className="pb-hero__spacer" />
         <KebabMenu items={kebabItems} />

@@ -1,7 +1,8 @@
 import { resolveStorageUrl } from "../../../api/client";
-import type { Order } from "../../../types";
+import type { Order, OrderStatus } from "../../../types";
 import { formatARS } from "../../../utils/format";
 import { KebabMenu, type KebabItem } from "./KebabMenu";
+import { statusKebabItems } from "./statusActions";
 import { MarginPill } from "./MarginPill";
 import { PaymentPill } from "./PaymentPill";
 
@@ -14,6 +15,7 @@ interface DeliveryCardProps {
   onEditar: (order: Order) => void;
   onCostoExtra: (order: Order) => void;
   onDelete: (id: number) => void;
+  onChangeStatus: (id: number, target: OrderStatus) => void;
 }
 
 function buyer(o: Order): string {
@@ -28,6 +30,7 @@ export function DeliveryCard({
   onEditar,
   onCostoExtra,
   onDelete,
+  onChangeStatus,
 }: DeliveryCardProps) {
   const paid = order.payment_status === "PAGADO";
 
@@ -39,6 +42,7 @@ export function DeliveryCard({
       disabled: !paid && order.value == null,
     },
     { label: "＋ Costo extra", onClick: () => onCostoExtra(order) },
+    ...statusKebabItems(order, onChangeStatus),
     { label: "Eliminar pedido", danger: true, onClick: () => onDelete(order.id) },
   ];
 
@@ -76,6 +80,12 @@ export function DeliveryCard({
         <span className="pb-dcard__spacer" />
         <KebabMenu items={kebabItems} />
       </div>
+
+      {order.note && (
+        <p className="pb-note" title={order.note}>
+          📝 {order.note}
+        </p>
+      )}
 
       <div className="pb-dcard__meta">
         {order.value != null && (

@@ -1,8 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Order } from "../../../types";
+import type { Order, OrderStatus } from "../../../types";
 import { formatARS } from "../../../utils/format";
 import { KebabMenu, type KebabItem } from "./KebabMenu";
+import { statusKebabItems } from "./statusActions";
 
 interface QueueCardProps {
   order: Order;
@@ -20,6 +21,7 @@ interface QueueCardProps {
   onEditar: (order: Order) => void;
   onCostoExtra: (order: Order) => void;
   onDelete: (orderId: number) => void;
+  onChangeStatus: (id: number, target: OrderStatus) => void;
 }
 
 export function QueueCard({
@@ -35,6 +37,7 @@ export function QueueCard({
   onEditar,
   onCostoExtra,
   onDelete,
+  onChangeStatus,
 }: QueueCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: order.id });
@@ -52,6 +55,7 @@ export function QueueCard({
     { label: "🖨 Gestionar piezas", onClick: () => onGestionarPiezas(order) },
     { label: "✎ Editar pedido", onClick: () => onEditar(order) },
     { label: "＋ Costo extra", onClick: () => onCostoExtra(order) },
+    ...statusKebabItems(order, onChangeStatus),
     { label: "Eliminar pedido", danger: true, onClick: () => onDelete(order.id) },
   ];
 
@@ -81,6 +85,12 @@ export function QueueCard({
             {order.catalog_item?.name ?? "(producto eliminado)"}
           </span>
         </div>
+
+        {order.note && (
+          <p className="pb-note" title={order.note}>
+            📝 {order.note}
+          </p>
+        )}
 
         <div className="pb-qcard__row3">
           {isNext && etaTxt ? (

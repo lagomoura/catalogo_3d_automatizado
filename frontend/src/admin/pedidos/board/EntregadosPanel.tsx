@@ -1,5 +1,5 @@
-import type { Order } from "../../../types";
-import { formatARS } from "../../../utils/format";
+import type { Order, OrderStatus } from "../../../types";
+import { formatARS, formatDate } from "../../../utils/format";
 import { MarginPill } from "./MarginPill";
 import { PaymentPill } from "./PaymentPill";
 
@@ -8,6 +8,7 @@ interface EntregadosPanelProps {
   onPayment: (id: number, paid: boolean) => void;
   onEditar: (order: Order) => void;
   onDelete: (id: number) => void;
+  onChangeStatus: (id: number, target: OrderStatus) => void;
 }
 
 function buyer(o: Order): string {
@@ -19,6 +20,7 @@ export function EntregadosPanel({
   onPayment,
   onEditar,
   onDelete,
+  onChangeStatus,
 }: EntregadosPanelProps) {
   if (orders.length === 0) {
     return <p className="pb-col__empty">No hay pedidos entregados con este filtro.</p>;
@@ -39,7 +41,15 @@ export function EntregadosPanel({
               {o.catalog_item?.name ?? "(producto eliminado)"}
             </button>
             <span className="pb-erow__client">{buyer(o)}</span>
+            {o.note && (
+              <span className="pb-erow__note" title={o.note}>
+                📝 {o.note}
+              </span>
+            )}
             <span className="pb-erow__spacer" />
+            <span className="pb-erow__date" title="Fecha de entrega">
+              📅 {formatDate(o.updated_at)}
+            </span>
             {o.value != null && (
               <span className="pb-erow__price">{formatARS(o.value)}</span>
             )}
@@ -53,6 +63,14 @@ export function EntregadosPanel({
               title={paid ? "Revertir el cobro" : "Registrar cobro"}
             >
               {paid ? "↺ Pago" : "$ Cobrar"}
+            </button>
+            <button
+              type="button"
+              className="tbtn"
+              onClick={() => onChangeStatus(o.id, "EJECUTADO")}
+              title="Deshacer entrega (vuelve a 'listo')"
+            >
+              ↩ Reabrir
             </button>
             <button
               type="button"

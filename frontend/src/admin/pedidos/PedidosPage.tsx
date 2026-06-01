@@ -22,7 +22,9 @@ import {
   reprintOrder,
   requeueProductionRun,
   resumeProductionRun,
+  retryProductionRun,
   setOrderPayment,
+  setOrderStatus,
   startProductionRun,
   updateOrder,
   updateProductionRun,
@@ -34,6 +36,7 @@ import type {
   CatalogItem,
   Contact,
   Order,
+  OrderStatus,
   OrderSummary,
   PendingQuote,
   Printer,
@@ -95,6 +98,10 @@ export function PedidosPage({
   // Filtro de pago (aplica a "Listos para entrega" y "Entregados").
   const [payFilter, setPayFilter] = useState<"todos" | "pagado" | "pendiente">(
     "todos",
+  );
+  // Rango de fecha de la vista "Entregados" (sobre updated_at = fecha de entrega).
+  const [entregadosRange, setEntregadosRange] = useState<"mes" | "30d" | "todo">(
+    "mes",
   );
 
   const [runs, setRuns] = useState<ProductionRun[]>([]);
@@ -234,16 +241,50 @@ export function PedidosPage({
     return out;
   }, [orders, runsByOrder, matchOrder, payOk]);
 
-  // Histórico de entregados (vista dedicada), con filtro de pago + búsqueda.
-  const entregados = useMemo(
-    () =>
-      orders
-        .filter(
-          (o) => o.order_status === "ENTREGADO" && matchOrder(o.id) && payOk(o),
-        )
-        .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1)),
-    [orders, matchOrder, payOk],
-  );
+  // Histórico de entregados (vista dedicada), con filtro de pago + búsqueda +
+  // rango de fecha de entrega (updated_at).
+  const entregados = useMemo(() => {
+    const nowMs = Date.now();
+    const ref = new Date(nowMs);
+    const inRange = (iso: string): boolean => {
+      if (entregadosRange === "todo") return true;
+      const d = new Date(iso);
+      if (entregadosRange === "30d") {
+        return nowMs - d.getTime() <= 30 * 24 * 3600 * 1000;
+      }
+      // "mes": mismo mes y año actual.
+      return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+    };
+    return orders
+      .filter(
+        (o) =>
+          o.order_status === "ENTREGADO" &&
+          matchOrder(o.id) &&
+          payOk(o) &&
+          inRange(o.updated_at),
+      )
+      .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+  }, [orders, matchOrder, payOk, entregadosRange]);
+
+  // Resumen de búsqueda cross-vista: cuando hay texto, cuenta los matches por
+  // estado sobre TODOS los pedidos (ignora vista/pago/rango). Responde de un
+  // vistazo "¿el pedido de X ya está hecho?" y lleva a la vista correcta.
+  const searchSummary = useMemo(() => {
+    const q = query.trim();
+    if (!q) return null;
+    const counts: Record<OrderStatus, number> = {
+      CREADO: 0,
+      EJECUTANDO: 0,
+      EJECUTADO: 0,
+      ENTREGADO: 0,
+    };
+    for (const o of orders) {
+      if (matchOrder(o.id)) counts[o.order_status] += 1;
+    }
+    const total =
+      counts.CREADO + counts.EJECUTANDO + counts.EJECUTADO + counts.ENTREGADO;
+    return { q, counts, total };
+  }, [query, orders, matchOrder]);
 
   // Impresoras ocupadas (con una pieza activa: EM_PRODUCAO o PAUSADA — una pieza
   // pausada sigue físicamente en la impresora) → el resto está libre.
@@ -532,6 +573,15 @@ export function PedidosPage({
     [runAction],
   );
 
+  // Reintentar una pieza terminada: crea una pieza nueva en la cola (clon) y deja
+  // la original como histórico. No pide confirmación (no es destructivo).
+  const handleRetryRun = useCallback(
+    (id: number) => {
+      void runAction(() => retryProductionRun(id));
+    },
+    [runAction],
+  );
+
   const heroActions: HeroOrderActions = useMemo(
     () => ({
       onEditar: (o) => setEditing(o),
@@ -566,6 +616,32 @@ export function PedidosPage({
       }
     }
   }, []);
+
+  // Cambio manual de estado del pedido (deshacer entrega, volver a la cola, etc.).
+  // El backend reconcilia con la producción; si la reversión choca con piezas en
+  // curso responde 409 confirm_force → pedimos confirmación y reintentamos con force.
+  const changeOrderStatus = useCallback(
+    async (id: number, target: OrderStatus) => {
+      try {
+        await setOrderStatus(id, target, false);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        if (msg.startsWith("409") && /confirm_force/.test(msg)) {
+          const m = msg.match(/"active_runs":\s*\[([^\]]*)\]/);
+          const count = m ? (m[1].match(/"id"/g)?.length ?? 0) : 0;
+          const ok = window.confirm(
+            `Este pedido tiene ${count} pieza(s) en curso. Revertir el estado las ` +
+              `cancelará y devolverá su material al stock. ¿Continuar?`,
+          );
+          if (!ok) return;
+          await setOrderStatus(id, target, true);
+        } else {
+          throw e;
+        }
+      }
+    },
+    [],
+  );
 
   // Handlers de piezas (PiecesModal): asignar impresora / minutos, agregar,
   // cancelar e iniciar piezas individuales.
@@ -691,6 +767,38 @@ export function PedidosPage({
 
       <KpiBar orders={orders} />
 
+      {searchSummary && (
+        <div className="pb-search-results" role="status">
+          <span className="pb-search-results__label">
+            “{searchSummary.q}” · {searchSummary.total}{" "}
+            {searchSummary.total === 1 ? "resultado" : "resultados"}:
+          </span>
+          {(
+            [
+              ["En cola", searchSummary.counts.CREADO, "tablero"],
+              ["En producción", searchSummary.counts.EJECUTANDO, "tablero"],
+              ["Listos", searchSummary.counts.EJECUTADO, "tablero"],
+              ["Entregados", searchSummary.counts.ENTREGADO, "entregados"],
+            ] as const
+          ).map(([label, count, view]) => (
+            <button
+              key={label}
+              type="button"
+              className="pb-search-results__chip"
+              data-empty={count === 0 ? "true" : undefined}
+              disabled={count === 0}
+              onClick={() => {
+                setEstadoView(view);
+                // Garantizar que el match entregado sea visible (puede ser viejo).
+                if (view === "entregados") setEntregadosRange("todo");
+              }}
+            >
+              {label}: {count}
+            </button>
+          ))}
+        </div>
+      )}
+
       {estadoView === "tablero" ? (
         <>
           <PrinterHeroGrid
@@ -722,6 +830,9 @@ export function PedidosPage({
             onEditar={(o) => setEditing(o)}
             onCostoExtra={(o) => setExtraFor(o)}
             onDelete={(id) => void run(() => deleteOrderWithRuns(id))}
+            onChangeStatus={(id, target) =>
+              void run(() => changeOrderStatus(id, target))
+            }
           />
         </>
       ) : (
@@ -729,12 +840,28 @@ export function PedidosPage({
           <header className="pb-col__head">
             <span className="pb-col__icon" aria-hidden="true">✓</span>
             Entregados <span className="pb-col__count">{entregados.length}</span>
+            <span className="pb-toolbar__spacer" />
+            <select
+              aria-label="Rango de entrega"
+              className="pb-select"
+              value={entregadosRange}
+              onChange={(e) =>
+                setEntregadosRange(e.target.value as "mes" | "30d" | "todo")
+              }
+            >
+              <option value="mes">Este mes</option>
+              <option value="30d">Últimos 30 días</option>
+              <option value="todo">Todo</option>
+            </select>
           </header>
           <EntregadosPanel
             orders={entregados}
             onPayment={(id, paid) => void run(() => setOrderPayment(id, paid))}
             onEditar={(o) => setEditing(o)}
             onDelete={(id) => void run(() => deleteOrderWithRuns(id))}
+            onChangeStatus={(id, target) =>
+              void run(() => changeOrderStatus(id, target))
+            }
           />
         </section>
       )}
@@ -793,6 +920,7 @@ export function PedidosPage({
           onRequeue={handleRequeueRun}
           onReopen={handleReopenRun}
           onDeleteRun={handleDeleteRun}
+          onRetry={handleRetryRun}
         />
       )}
 

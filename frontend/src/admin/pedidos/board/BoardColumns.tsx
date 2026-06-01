@@ -1,4 +1,4 @@
-import type { Order, ProductionRun } from "../../../types";
+import type { Order, OrderStatus, ProductionRun } from "../../../types";
 import { DeliveryColumn } from "./DeliveryColumn";
 import { QueueColumn } from "./QueueColumn";
 
@@ -22,6 +22,7 @@ interface BoardColumnsProps {
   onEditar: (order: Order) => void;
   onCostoExtra: (order: Order) => void;
   onDelete: (orderId: number) => void;
+  onChangeStatus: (id: number, target: OrderStatus) => void;
 }
 
 export function BoardColumns({
@@ -39,6 +40,7 @@ export function BoardColumns({
   onEditar,
   onCostoExtra,
   onDelete,
+  onChangeStatus,
 }: BoardColumnsProps) {
   return (
     <div className="pb-columns">
@@ -54,6 +56,7 @@ export function BoardColumns({
         onEditar={onEditar}
         onCostoExtra={onCostoExtra}
         onDelete={onDelete}
+        onChangeStatus={onChangeStatus}
       />
       <DeliveryColumn
         items={deliveryItems}
@@ -62,6 +65,7 @@ export function BoardColumns({
         onEditar={onEditar}
         onCostoExtra={onCostoExtra}
         onDelete={onDelete}
+        onChangeStatus={onChangeStatus}
       />
     </div>
   );

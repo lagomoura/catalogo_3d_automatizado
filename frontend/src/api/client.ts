@@ -909,6 +909,10 @@ export function deleteProductionRun(id: number): Promise<void> {
   return request<void>(`/api/production/${id}`, { method: "DELETE" });
 }
 
+export function retryProductionRun(id: number): Promise<ProductionRun> {
+  return request<ProductionRun>(`/api/production/${id}/retry`, { method: "POST" });
+}
+
 // ---------------------------------------------------------------------------
 // Quotes
 // ---------------------------------------------------------------------------
